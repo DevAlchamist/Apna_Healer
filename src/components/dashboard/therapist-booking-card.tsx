@@ -7,7 +7,7 @@ type TherapistBookingCardProps = {
   therapist: {
     name: string;
     role: string;
-    fee: number;
+    fee: string;
     image: string;
   };
   availableTimes: readonly string[];
