@@ -1,0 +1,305 @@
+import type { UserRole } from "@/types/api";
+
+export type DashboardSurface = "dashboard" | "admin";
+export type DashboardPlacement = "sidebar" | "top-nav";
+export type DashboardGroup = "primary" | "personal" | "system";
+export type DashboardIcon =
+  | "reports"
+  | "profile"
+  | "settings"
+  | "plans"
+  | "packages"
+  | "currency"
+  | "dashboard"
+  | "blog"
+  | "journal"
+  | "circle";
+
+export type DashboardModule = {
+  id: string;
+  href: string;
+  label: string;
+  surface: DashboardSurface;
+  placement: DashboardPlacement;
+  group?: DashboardGroup;
+  icon?: DashboardIcon;
+  roles: readonly UserRole[];
+};
+
+const MEMBER_ROLES: readonly UserRole[] = ["USER", "THERAPIST", "LISTENER", "ADMIN"] as const;
+const LISTENER_ROLES: readonly UserRole[] = ["LISTENER", "ADMIN"] as const;
+const THERAPIST_ROLES: readonly UserRole[] = ["THERAPIST", "ADMIN"] as const;
+const ADMIN_ROLES: readonly UserRole[] = ["ADMIN"] as const;
+
+export const dashboardModules: readonly DashboardModule[] = [
+  // Member surface — top nav
+  {
+    id: "dashboard.top.events",
+    href: "/dashboard/events",
+    label: "Events",
+    surface: "dashboard",
+    placement: "top-nav",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.top.clubs",
+    href: "/dashboard/clubs",
+    label: "Clubs",
+    surface: "dashboard",
+    placement: "top-nav",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.top.therapists",
+    href: "/dashboard/therapists",
+    label: "Therapists",
+    surface: "dashboard",
+    placement: "top-nav",
+    roles: MEMBER_ROLES,
+  },
+
+  // Member surface — primary sidebar
+  {
+    id: "dashboard.side.home",
+    href: "/dashboard",
+    label: "Dashboard",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "dashboard",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.side.blog",
+    href: "/dashboard/blog",
+    label: "Blogs",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "blog",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.side.journal",
+    href: "/dashboard/journal",
+    label: "Journal",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "journal",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.side.safe-circle",
+    href: "/dashboard/safe-circle",
+    label: "Safe Circle",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "circle",
+    roles: MEMBER_ROLES,
+  },
+
+  // Listener-only sidebar entry — appears inside the member surface for listeners + admins.
+  {
+    id: "dashboard.side.listener-inbox",
+    href: "/dashboard/listener-inbox",
+    label: "Listener Inbox",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "reports",
+    roles: LISTENER_ROLES,
+  },
+  {
+    id: "dashboard.side.consultations",
+    href: "/dashboard/consultations",
+    label: "Consultations",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "plans",
+    roles: THERAPIST_ROLES,
+  },
+
+  // Member surface — personal sidebar
+  {
+    id: "dashboard.personal.profile",
+    href: "/dashboard/profile",
+    label: "Profile",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "personal",
+    icon: "profile",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.personal.wallet",
+    href: "/dashboard/wallet",
+    label: "Wallet",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "personal",
+    icon: "currency",
+    roles: MEMBER_ROLES,
+  },
+  {
+    id: "dashboard.personal.packages",
+    href: "/dashboard/packages",
+    label: "Packages",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "personal",
+    icon: "packages",
+    roles: MEMBER_ROLES,
+  },
+
+  // Admin surface — top nav
+  {
+    id: "admin.top.sessions",
+    href: "/admin/sessions",
+    label: "Sessions",
+    surface: "admin",
+    placement: "top-nav",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.top.communities",
+    href: "/admin/communities",
+    label: "Communities",
+    surface: "admin",
+    placement: "top-nav",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.top.clubs",
+    href: "/admin/clubs",
+    label: "Clubs",
+    surface: "admin",
+    placement: "top-nav",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.top.events",
+    href: "/admin/events",
+    label: "Events",
+    surface: "admin",
+    placement: "top-nav",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.top.healers",
+    href: "/admin/healers",
+    label: "Healers",
+    surface: "admin",
+    placement: "top-nav",
+    roles: ADMIN_ROLES,
+  },
+
+  // Admin surface — primary sidebar
+  {
+    id: "admin.side.overview",
+    href: "/admin",
+    label: "Overview",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "dashboard",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.side.applications",
+    href: "/admin/applications",
+    label: "Applications",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "reports",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.side.listener-requests",
+    href: "/admin/listener-requests",
+    label: "Listener Queue",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "circle",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.side.moderation",
+    href: "/admin/moderation",
+    label: "Moderation",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "blog",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.side.users",
+    href: "/admin/users",
+    label: "Users",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "circle",
+    roles: ADMIN_ROLES,
+  },
+
+  // Admin surface — system sidebar
+  {
+    id: "admin.system.audit",
+    href: "/admin/audit",
+    label: "Audit log",
+    surface: "admin",
+    placement: "sidebar",
+    group: "system",
+    icon: "journal",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.system.settings",
+    href: "/admin/settings",
+    label: "Settings",
+    surface: "admin",
+    placement: "sidebar",
+    group: "system",
+    icon: "settings",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.system.finance",
+    href: "/admin/finance",
+    label: "Finance",
+    surface: "admin",
+    placement: "sidebar",
+    group: "system",
+    icon: "currency",
+    roles: ADMIN_ROLES,
+  },
+];
+
+export type ModuleFilter = {
+  surface: DashboardSurface;
+  placement: DashboardPlacement;
+  group?: DashboardGroup;
+  role?: UserRole | null;
+};
+
+export function getDashboardModules(filter: ModuleFilter): DashboardModule[] {
+  return dashboardModules.filter((module) => {
+    if (module.surface !== filter.surface) return false;
+    if (module.placement !== filter.placement) return false;
+    if (filter.group !== undefined && module.group !== filter.group) return false;
+    if (filter.role && !module.roles.includes(filter.role)) return false;
+    return true;
+  });
+}
+
+export function canAccessSurface(role: UserRole | null | undefined, surface: DashboardSurface) {
+  if (!role) return false;
+  if (surface === "admin") return role === "ADMIN";
+  return role === "USER" || role === "THERAPIST" || role === "LISTENER" || role === "ADMIN";
+}

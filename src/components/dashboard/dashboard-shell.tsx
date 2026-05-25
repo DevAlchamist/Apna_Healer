@@ -2,41 +2,36 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { ActivityFeedSkeleton } from "@/components/skeletons";
+import { apiFetch } from "@/lib/api-client";
+import { getDashboardModules } from "@/config/dashboard-modules";
 import {
-  BookSessionModalProvider,
+  displayAccountLabel,
+  formatCurrency,
+  formatDateTime,
+  sessionCounterpartyLabel,
+  toSentenceCase,
+} from "@/lib/display";
+import type { ApiCareSession, ApiTransaction, ApiUser } from "@/types/api";
+import {
   useBookSessionModal,
 } from "./book-session-modal";
 import { ListenerAvailabilityChip } from "./listener-availability-chip";
+import { SessionDetailsModalProvider } from "./session-details-modal";
+import { SignOutDialog } from "@/components/auth/sign-out-dialog";
+import { UserAvatarCircle } from "@/components/dashboard/user-avatar-circle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { dashboardSuggestedEvents } from "@/data/events";
+import { morphTransition } from "@/components/ui/fade-in";
 
 type DashboardShellProps = {
   children: ReactNode;
 };
 
-const topNavItems = [
-  { href: "/dashboard/events", label: "Events" },
-  { href: "/dashboard/clubs", label: "Clubs" },
-  { href: "/dashboard/therapists", label: "Therapists" },
-];
-
-const sideNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
-  { href: "/dashboard/blog", label: "Blogs", icon: "blog" as const },
-  { href: "/dashboard/journal", label: "Journal", icon: "journal" as const },
-  {
-    href: "/dashboard/safe-circle",
-    label: "Safe Circle",
-    icon: "circle" as const,
-  },
-];
-
-const personalNavItems = [
-  { href: "/dashboard/profile", label: "Profile", icon: "profile" as const },
-  { href: "/dashboard/wallet", label: "Wallet", icon: "currency" as const },
-  { href: "/dashboard/packages", label: "Packages", icon: "packages" as const },
-];
-
-function SidebarIcon({
+export function SidebarIcon({
   icon,
 }: {
   icon:
@@ -188,7 +183,7 @@ function SidebarIcon({
   );
 }
 
-function NavItem({ href, label }: { href: string; label: string }) {
+export function NavItem({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
   const isActive = pathname === href;
 
@@ -206,7 +201,7 @@ function NavItem({ href, label }: { href: string; label: string }) {
   );
 }
 
-function SidebarItem({
+export function SidebarItem({
   href,
   label,
   icon,
@@ -247,45 +242,139 @@ function toTitleCase(value: string) {
 
 type ReportType = "technical" | "safety" | "billing" | "other";
 
+function describeTransaction(transaction: ApiTransaction) {
+  if (transaction.type === "CREDIT") {
+    return {
+      title: "Wallet topped up",
+      detail: formatCurrency(transaction.amount),
+    };
+  }
+
+  if (transaction.type === "REFUND") {
+    return {
+      title: "Refund processed",
+      detail: formatCurrency(transaction.amount),
+    };
+  }
+
+  if (transaction.type === "PAYOUT") {
+    return {
+      title: "Session payout received",
+      detail: formatCurrency(transaction.amount),
+    };
+  }
+
+  if (transaction.type === "DEBIT") {
+    return {
+      title: "Wallet withdrawal",
+      detail: formatCurrency(transaction.amount),
+    };
+  }
+
+  return {
+    title: "Session payment reserved",
+    detail: formatCurrency(transaction.amount),
+  };
+}
+
+function describeSession(
+  session: ApiCareSession,
+  viewerUserId?: string | null,
+) {
+  return {
+    title: `Session with ${sessionCounterpartyLabel(session, viewerUserId)}`,
+    detail: `${session.duration} mins • ${toSentenceCase(session.status)}`,
+  };
+}
+
 function DashboardShellContent({ children }: DashboardShellProps) {
   const pathname = usePathname();
   const { open: openBookSession } = useBookSessionModal();
   const [isSupportOpen, setIsSupportOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [reportType, setReportType] = useState<ReportType>("safety");
-  const notificationContainerRef = useRef<HTMLDivElement | null>(null);
   const isDashboardHome = pathname === "/dashboard";
   const breadcrumbSegments = pathname
     .split("/")
     .filter(Boolean)
     .map((segment) => toTitleCase(segment));
 
-  useEffect(() => {
-    if (!isNotificationOpen) return;
+  const userQuery = useQuery({
+    queryKey: ["user-me"],
+    queryFn: () => apiFetch<ApiUser>("/api/users/me"),
+  });
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationContainerRef.current &&
-        !notificationContainerRef.current.contains(event.target as Node)
-      ) {
-        setIsNotificationOpen(false);
-      }
-    };
+  const transactionsQuery = useQuery({
+    queryKey: ["dashboard-shell-transactions"],
+    queryFn: () => apiFetch<ApiTransaction[]>("/api/transactions?take=4"),
+    enabled: isDashboardHome,
+  });
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsNotificationOpen(false);
-      }
-    };
+  const sessionsQuery = useQuery({
+    queryKey: ["dashboard-shell-sessions"],
+    queryFn: () => apiFetch<ApiCareSession[]>("/api/sessions?take=8"),
+    enabled: isDashboardHome,
+  });
 
-    window.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("keydown", handleEscape);
+  const user = userQuery.data;
+  const sidebarName = user
+    ? displayAccountLabel(user.name, user.email)
+    : userQuery.isLoading
+      ? "Loading…"
+      : displayAccountLabel(undefined, undefined);
+  const sidebarSubtitle = user ? toSentenceCase(user.role) : "Loading profile";
+  const walletBalance = formatCurrency(user?.wallet?.availableBalance);
+  const role = user?.role ?? null;
 
-    return () => {
-      window.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [isNotificationOpen]);
+  const topNavItems = useMemo(
+    () => getDashboardModules({ surface: "dashboard", placement: "top-nav", role }),
+    [role],
+  );
+  const sideNavItems = useMemo(
+    () =>
+      getDashboardModules({
+        surface: "dashboard",
+        placement: "sidebar",
+        group: "primary",
+        role,
+      }),
+    [role],
+  );
+  const personalNavItems = useMemo(
+    () =>
+      getDashboardModules({
+        surface: "dashboard",
+        placement: "sidebar",
+        group: "personal",
+        role,
+      }),
+    [role],
+  );
+  const recentActivity = useMemo(() => {
+    const activity = [
+      ...(transactionsQuery.data ?? []).map((transaction) => ({
+        id: `txn-${transaction.id}`,
+        sortValue: new Date(transaction.createdAt).getTime(),
+        date: formatDateTime(transaction.createdAt),
+        ...describeTransaction(transaction),
+      })),
+      ...(sessionsQuery.data ?? []).map((session) => ({
+        id: `session-${session.id}`,
+        sortValue: new Date(session.startTime).getTime(),
+        date: formatDateTime(session.startTime),
+        ...describeSession(session, user?.id),
+      })),
+    ];
+
+    return activity
+      .sort((left, right) => right.sortValue - left.sortValue)
+      .slice(0, 4);
+  }, [sessionsQuery.data, transactionsQuery.data, user?.id]);
+
+  const completedSessions = (sessionsQuery.data ?? []).filter(
+    (session) => session.status === "COMPLETED",
+  ).length;
+  const totalTrackedSessions = Math.max((sessionsQuery.data ?? []).length, 1);
 
   return (
     <div className="min-h-screen bg-background">
@@ -305,33 +394,39 @@ function DashboardShellContent({ children }: DashboardShellProps) {
           </div>
 
           <div className="mt-8 grid gap-2">
-            {sideNavItems.map((item) => (
-              <SidebarItem
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-              />
-            ))}
+            {sideNavItems.map((item) =>
+              item.icon ? (
+                <SidebarItem
+                  key={item.id}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                />
+              ) : null,
+            )}
           </div>
 
-          <div className="mt-8">
-            <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary/40">
-              Personal
-            </p>
-            <div className="mt-3 grid gap-1">
-              {personalNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-gentle px-4 py-3 text-sm text-text-primary/65 transition-colors duration-300 ease-(--ease-calm) hover:bg-accent/50"
-                >
-                  <SidebarIcon icon={item.icon} />
-                  <span>{item.label}</span>
-                </Link>
-              ))}
+          {personalNavItems.length > 0 ? (
+            <div className="mt-8">
+              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary/40">
+                Personal
+              </p>
+              <div className="mt-3 grid gap-1">
+                {personalNavItems.map((item) =>
+                  item.icon ? (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="flex items-center gap-3 rounded-gentle px-4 py-3 text-sm text-text-primary/65 transition-colors duration-300 ease-(--ease-calm) hover:bg-accent/50"
+                    >
+                      <SidebarIcon icon={item.icon} />
+                      <span>{item.label}</span>
+                    </Link>
+                  ) : null,
+                )}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="mt-auto space-y-5">
             <button
@@ -352,21 +447,21 @@ function DashboardShellContent({ children }: DashboardShellProps) {
 
             <div className="flex items-center justify-between gap-3 rounded-gentle bg-accent/35 px-3 py-2.5 transition-colors duration-300 hover:bg-accent/45">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-text-secondary text-xs font-semibold text-white">
-                  MV
-                </div>
+                <UserAvatarCircle
+                  name={user?.name}
+                  email={user?.email}
+                  image={user?.image}
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-text-primary">
-                    Maya Verma
+                    {sidebarName}
                   </p>
-                  <p className="truncate text-xs text-text-primary/60">Premium Member</p>
+                  <p className="truncate text-xs text-text-primary/60">{sidebarSubtitle}</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  window.location.href = "/api/auth/signout";
-                }}
+                onClick={() => setIsSignOutOpen(true)}
                 className="shrink-0 rounded-full border border-accent/90 bg-white px-3 py-1.5 text-xs font-semibold text-text-primary/70 transition-colors hover:bg-accent/40"
               >
                 Sign out
@@ -381,7 +476,7 @@ function DashboardShellContent({ children }: DashboardShellProps) {
               <nav className="flex items-center gap-1 md:gap-2">
                 {topNavItems.map((item) => (
                   <NavItem
-                    key={item.href}
+                    key={item.id}
                     href={item.href}
                     label={item.label}
                   />
@@ -412,97 +507,9 @@ function DashboardShellContent({ children }: DashboardShellProps) {
                   className="inline-flex items-center rounded-full bg-[#e9e3da] px-4 py-2 font-semibold text-text-primary/85 transition-colors hover:bg-[#dfd7cc]"
                   aria-label="Wallet balance"
                 >
-                  ₹ 2,450
+                  {walletBalance}
                 </button>
-                <div className="relative" ref={notificationContainerRef}>
-                  <button
-                    type="button"
-                    onClick={() => setIsNotificationOpen((prev) => !prev)}
-                    className={`rounded-full border bg-white p-2 text-text-primary/70 transition-colors ${
-                      isNotificationOpen
-                        ? "border-primary/35 bg-primary/10"
-                        : "border-accent/80 hover:bg-accent/45"
-                    }`}
-                    aria-label="Notifications"
-                    aria-expanded={isNotificationOpen}
-                    aria-haspopup="dialog"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    >
-                      <path
-                        d="M6 9a6 6 0 1 1 12 0v4l1.5 2h-15L6 13V9Z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path d="M10 18a2 2 0 0 0 4 0" strokeLinecap="round" />
-                    </svg>
-                  </button>
-
-                  {isNotificationOpen ? (
-                    <div
-                      role="dialog"
-                      aria-label="Notifications"
-                      className="absolute right-0 top-[calc(100%+0.65rem)] z-40 w-[340px] rounded-calm border border-accent/80 bg-white p-4 shadow-[0_16px_40px_-20px_rgb(0_0_0/35%)]"
-                    >
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-primary/45">
-                        Notifications
-                      </p>
-
-                      <div className="mt-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-primary/40">
-                          Recent
-                        </p>
-                        <div className="mt-2 space-y-2.5">
-                          <div className="rounded-gentle bg-primary/10 px-3 py-2.5">
-                            <p className="text-sm font-semibold text-text-primary">
-                              New reflection in Quiet Waters
-                            </p>
-                            <p className="mt-0.5 text-xs text-text-primary/55">
-                              Elena Vance posted 8 mins ago
-                            </p>
-                          </div>
-                          <div className="rounded-gentle bg-background px-3 py-2.5">
-                            <p className="text-sm font-semibold text-text-primary">
-                              3 members supported your post
-                            </p>
-                            <p className="mt-0.5 text-xs text-text-primary/55">
-                              Marcus, Liam and Sarah reacted
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 border-t border-accent/80 pt-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-primary/40">
-                          Older
-                        </p>
-                        <div className="mt-2 space-y-2.5">
-                          <div className="rounded-gentle bg-background px-3 py-2.5">
-                            <p className="text-sm font-semibold text-text-primary">
-                              Circle reminder: evening check-in starts soon
-                            </p>
-                            <p className="mt-0.5 text-xs text-text-primary/55">
-                              Yesterday, 8:20 PM
-                            </p>
-                          </div>
-                          <div className="rounded-gentle bg-background px-3 py-2.5">
-                            <p className="text-sm font-semibold text-text-primary">
-                              Community guideline update
-                            </p>
-                            <p className="mt-0.5 text-xs text-text-primary/55">
-                              2 days ago
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+                <NotificationBell />
 
                 <Link
                   href="/"
@@ -521,68 +528,87 @@ function DashboardShellContent({ children }: DashboardShellProps) {
             <div
               className={
                 isDashboardHome
-                  ? "grid gap-5 xl:grid-cols-[1fr_280px]"
+                  ? "grid min-h-0 gap-5 xl:grid-cols-[1fr_280px] xl:items-start"
                   : "grid grid-cols-1"
               }
             >
-              <div className="">{children}</div>
+              <div className="min-h-0">{children}</div>
 
               {isDashboardHome ? (
-                <aside className="hidden rounded-calm border border-accent/70 bg-white/88 p-5 xl:block">
+                <aside className="scrollbar-hide hidden min-h-0 self-start rounded-calm border border-accent/70 bg-white/88 p-5 xl:sticky xl:top-24 xl:block xl:max-h-[min(calc(100vh-7rem),calc(100dvh-7rem))] xl:overflow-y-auto xl:overscroll-y-contain">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-primary/45">
                     Recent Activity
                   </p>
 
                   <div className="mt-6 space-y-5">
-                    <div className="relative pl-5">
-                      <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-primary/45">
-                        Yesterday
+                    {transactionsQuery.isLoading || sessionsQuery.isLoading ? (
+                      <ActivityFeedSkeleton />
+                    ) : recentActivity.length > 0 ? (
+                      recentActivity.map((activity, index) => (
+                        <div key={activity.id} className="relative pl-5">
+                          <span
+                            className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${
+                              index === 0 ? "bg-primary" : "bg-primary/70"
+                            }`}
+                          />
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-primary/45">
+                            {activity.date}
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-text-primary">
+                            {activity.title}
+                          </p>
+                          <p className="text-xs text-text-primary/60">{activity.detail}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-text-primary/55">
+                        Your recent wallet and session activity will appear here once you start
+                        using the platform.
                       </p>
-                      <p className="mt-1 text-sm font-medium text-text-primary">
-                        Completed &quot;Emotional Regulation&quot; module
-                      </p>
-                      <p className="text-xs text-text-primary/60">
-                        Earned +50 Growth Points
-                      </p>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="relative pl-5">
-                      <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-primary/70" />
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-primary/45">
-                        Oct 21, 11:40 AM
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-text-primary">
-                        Wallet topped up
-                      </p>
-                      <p className="text-xs font-semibold text-text-secondary">
-                        + 2,000.00
-                      </p>
+                  <div className="mt-8 rounded-[1rem] bg-[#f9f7f2] p-4 ring-1 ring-black/[0.04]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/40">
+                      Suggested events
+                    </p>
+                    <div className="mt-4 space-y-5">
+                      {dashboardSuggestedEvents.map((event, index) => (
+                        <motion.div
+                          key={event.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...morphTransition, delay: 0.04 + index * 0.06 }}
+                        >
+                          <Link
+                            href={`/dashboard/events/${event.id}`}
+                            className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2"
+                          >
+                            <div className="relative overflow-hidden rounded-2xl">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={event.image}
+                                alt={event.title}
+                                className="aspect-[16/10] w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.03]"
+                              />
+                              <span className="absolute bottom-2.5 left-2.5 rounded-md bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-text-primary/75 shadow-sm">
+                                {event.dateBadge}
+                              </span>
+                            </div>
+                            <h3 className="mt-3 text-[15px] font-semibold leading-snug text-text-primary group-hover:text-text-secondary">
+                              {event.title}
+                            </h3>
+                            <p className="mt-1 text-xs font-medium text-text-primary/55">{event.metaLine}</p>
+                          </Link>
+                        </motion.div>
+                      ))}
                     </div>
-
-                    <div className="relative pl-5">
-                      <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-accent" />
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-primary/45">
-                        Oct 20, 09:15 PM
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-text-primary">
-                        Spoke with Listener Sarah J.
-                      </p>
-                      <p className="text-xs text-text-primary/60">
-                        Duration: 45 mins
-                      </p>
-                    </div>
-
-                    <div className="relative pl-5">
-                      <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-primary/70" />
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-primary/45">
-                        Oct 19, 04:00 PM
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-text-primary">
-                        Left a review for Dr. Thorne
-                      </p>
-                      <p className="text-xs text-text-secondary">5.0 stars</p>
-                    </div>
+                    <Link
+                      href="/dashboard/events"
+                      className="mt-6 flex w-full items-center justify-center rounded-full border border-text-primary/15 bg-transparent py-2.5 text-center text-xs font-semibold text-text-primary/65 transition hover:border-text-primary/25 hover:bg-white/60 hover:text-text-primary"
+                    >
+                      View all events
+                    </Link>
                   </div>
 
                   <div className="mt-8 rounded-calm bg-text-secondary p-4 text-white shadow-soft transition-shadow duration-500 hover:shadow-[0_12px_40px_-16px_rgb(47_93_80/55%)]">
@@ -590,10 +616,18 @@ function DashboardShellContent({ children }: DashboardShellProps) {
                       Weekly Goal
                     </p>
                     <p className="mt-2 text-sm text-white/85">
-                      3/5 Sessions Completed
+                      {completedSessions}/{totalTrackedSessions} Sessions Completed
                     </p>
                     <div className="mt-3 h-2 rounded-full bg-white/25">
-                      <div className="h-full w-3/5 rounded-full bg-white/90" />
+                      <div
+                        className="h-full rounded-full bg-white/90"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round((completedSessions / totalTrackedSessions) * 100),
+                          )}%`,
+                        }}
+                      />
                     </div>
                   </div>
                 </aside>
@@ -708,14 +742,20 @@ function DashboardShellContent({ children }: DashboardShellProps) {
           </div>
         </div>
       ) : null}
+      <SignOutDialog
+        open={isSignOutOpen}
+        onClose={() => setIsSignOutOpen(false)}
+        userLabel={user?.name ?? user?.email ?? null}
+        callbackUrl="/"
+      />
     </div>
   );
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <BookSessionModalProvider>
+    <SessionDetailsModalProvider>
       <DashboardShellContent>{children}</DashboardShellContent>
-    </BookSessionModalProvider>
+    </SessionDetailsModalProvider>
   );
 }

@@ -1,54 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Apna Healer
 
-## Getting Started
+Mental wellness platform built with Next.js App Router, NextAuth, Prisma, and PostgreSQL.
 
-### 1) Configure Google Login
+## Local setup
 
-- **Create OAuth client**: Google Cloud Console → APIs & Services → Credentials → Create Credentials → OAuth client ID → **Web application**
-- **Authorized JavaScript origins**: `http://localhost:3000`
-- **Authorized redirect URIs**: `http://localhost:3000/api/auth/callback/google`
-
-Then copy `.env.example` to `.env.local` and fill in values:
+### 1. Install dependencies
 
 ```bash
-cp .env.example .env.local
+npm install
 ```
 
-First, run the development server:
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env.local` and set the values for:
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+
+Google OAuth should allow:
+
+- Origin: `http://localhost:3000`
+- Redirect URI: `http://localhost:3000/api/auth/callback/google`
+
+### 3. Generate Prisma client and run migrations
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+```
+
+### 4. (Optional) Seed development data
+
+```bash
+npm run prisma:seed
+```
+
+This creates an admin (`admin@apnahealer.dev`), two members, a therapist, a listener, sample provider profiles, a couple of applications, and a pending booking with a wallet hold. The seed is idempotent — running it twice does not duplicate rows.
+
+### 5. Start the app
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-### 2) Try the backend routes
+## Useful scripts
 
-- **Public**: `GET /api/hello`
-- **Protected (requires login)**: `GET /api/protected`
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run test
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:studio
+npm run prisma:seed
+```
 
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
+## Auth and platform flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Google sign-in is handled by NextAuth.
+- Users are persisted through the Prisma adapter.
+- A wallet is bootstrapped on first login.
+- `/dashboard/*` is for authenticated non-admin users.
+- `/admin/*` is restricted to `ADMIN` users.
 
-## Learn More
+## API areas currently wired
 
-To learn more about Next.js, take a look at the following resources:
+- `/api/users/me`
+- `/api/wallet`
+- `/api/wallet/add-money`
+- `/api/wallet/withdraw`
+- `/api/transactions`
+- `/api/bookings`
+- `/api/sessions`
+- `/api/applications`
+- `/api/admin/users`
+- `/api/admin/applications/[id]`
+- `/api/admin/payouts`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# Apna_Healer
+- Prisma schema lives in `prisma/schema.prisma`.
+- Prisma config lives in `prisma.config.ts`.
+- Shared server services live under `src/server/services`.
+- React Query is used for the live dashboard/admin data flows.

@@ -34,53 +34,310 @@ const staggerContainer = {
 const imgLeaf =
   "https://images.unsplash.com/photo-1518531933037-91b2f5c22950?w=700&h=700&fit=crop&q=80";
 const imgInterior =
-  "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=900&h=1100&fit=crop&q=80";
+  "/images/cp1.jpeg";
 const imgSeed =
-  "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=640&h=640&fit=crop&q=80";
+  "/images/lodhi_garden1.jpeg";
 const imgForest =
-  "https://images.unsplash.com/photo-1441974231531-622684791016?w=640&h=640&fit=crop&q=80";
+  "/images/lodhi_garden2.jpeg";
 const imgAtrium =
-  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c0b?w=640&h=640&fit=crop&q=80";
+  "/images/hauzkhas.jpeg";
 
-const teamTop = [
+type LivingRootsMember = {
+  name: string;
+  role: string;
+  src: string;
+};
+
+const livingRootsMembers: LivingRootsMember[] = [
   {
     name: "Elena S.",
     role: "Listener",
-    src: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&q=80",
-    blob: "60% 40% 30% 70% / 60% 30% 70% 40%",
+    src: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&h=500&fit=crop&q=80",
   },
   {
     name: "Marcus J.",
     role: "Therapist",
-    src: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop&q=80",
-    blob: "30% 60% 70% 40% / 50% 60% 30% 60%",
+    src: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=500&h=500&fit=crop&q=80",
   },
   {
     name: "Sarah K.",
     role: "Psychologist",
-    src: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&h=400&fit=crop&q=80",
-    blob: "50% 40% 60% 50% / 40% 50% 60% 50%",
+    src: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=500&h=500&fit=crop&q=80",
   },
   {
     name: "David L.",
     role: "Guide",
-    src: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&q=80",
-    blob: "45% 55% 35% 65% / 55% 45% 65% 35%",
+    src: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=500&h=500&fit=crop&q=80",
   },
   {
     name: "Aria M.",
     role: "Breathwork",
-    src: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop&q=80",
-    blob: "40% 60% 55% 45% / 50% 40% 60% 50%",
+    src: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=500&h=500&fit=crop&q=80",
   },
-] as const;
+  {
+    name: "Noah P.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Priya R.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Leo F.",
+    role: "Guide",
+    src: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Maya O.",
+    role: "Breathwork",
+    src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Kim H.",
+    role: "Psychologist",
+    src: "/images/kirti.jpeg",
+  },
+  {
+    name: "Ravi N.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Zoe A.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "James T.",
+    role: "Guide",
+    src: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Nina C.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1489424731084-a5d8a2dd0111?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Omar B.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Clara V.",
+    role: "Psychologist",
+    src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Ethan W.",
+    role: "Breathwork",
+    src: "https://images.unsplash.com/photo-1504257432387-30543a6e4920?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Hana J.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Felix R.",
+    role: "Guide",
+    src: "https://images.unsplash.com/photo-1463453091185-98a43d326b2d?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Iris L.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1531746020798-e6953b6b8610?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Theo M.",
+    role: "Psychologist",
+    src: "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Luna K.",
+    role: "Breathwork",
+    src: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Vik S.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Emma D.",
+    role: "Guide",
+    src: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Raj P.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1506277886164-33535f372f37?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Sofia G.",
+    role: "Psychologist",
+    src: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Chen Y.",
+    role: "Breathwork",
+    src: "https://images.unsplash.com/photo-1539577195318-6cc49c83f749?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Aiden C.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Bella F.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Cole H.",
+    role: "Guide",
+    src: "https://images.unsplash.com/photo-1500043357865-c6b882ee3b0c?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Dina A.",
+    role: "Psychologist",
+    src: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Evan R.",
+    role: "Breathwork",
+    src: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Faye L.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Gus M.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1502823403499-6a1b47d1f8d0?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Hope W.",
+    role: "Guide",
+    src: "https://images.unsplash.com/photo-1519345182560-3f2907c472ef?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Ines P.",
+    role: "Psychologist",
+    src: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Jude K.",
+    role: "Listener",
+    src: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Kira N.",
+    role: "Breathwork",
+    src: "https://images.unsplash.com/photo-1524502397800-2eeaad7d3ca5?w=500&h=500&fit=crop&q=80",
+  },
+  {
+    name: "Liam O.",
+    role: "Therapist",
+    src: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=500&h=500&fit=crop&q=80",
+  },
+];
 
-const founder = {
+const founder: LivingRootsMember = {
   name: "Dr. Aris Varma",
   role: "Founder & Visionary",
-  src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=560&h=560&fit=crop&q=80",
-  blob: "55% 45% 45% 55% / 45% 55% 55% 45%",
-} as const;
+  src: "/images/deepak.jpg",
+};
+
+type LivingRootsMosaicMember = LivingRootsMember & {
+  isCenter?: boolean;
+  /** Equal col/row span keeps every tile square — only scale varies. */
+  gridClass: string;
+};
+
+/** Center = largest tile (3×3). Peripherals mix 1×1 and 2×2 squares only. */
+const LIVING_ROOTS_CENTER_GRID =
+  "z-[3] col-span-3 row-span-3 col-start-4 row-start-3 sm:col-start-5 md:col-start-7 lg:col-start-9 xl:col-start-11";
+
+const PERIPHERAL_SPAN_PATTERN = [
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-2 row-span-2",
+  "col-span-1 row-span-1",
+  "col-span-1 row-span-1",
+] as const;
+
+const livingRootsMosaic: LivingRootsMosaicMember[] = [
+  ...livingRootsMembers.map((member, index) => ({
+    ...member,
+    gridClass:
+      PERIPHERAL_SPAN_PATTERN[index % PERIPHERAL_SPAN_PATTERN.length] ??
+      "col-span-1 row-span-1",
+  })),
+  { ...founder, isCenter: true, gridClass: LIVING_ROOTS_CENTER_GRID },
+];
+
+/** Organic blob radii — each tile gets a distinct silhouette. */
+const LIVING_ROOTS_BLOB_SHAPES = [
+  "rounded-[44%_56%_62%_38%/42%_58%_42%_58%]",
+  "rounded-[58%_42%_38%_62%/48%_52%_58%_42%]",
+  "rounded-[36%_64%_54%_46%/56%_44%_56%_44%]",
+  "rounded-[52%_48%_64%_36%/38%_62%_38%_62%]",
+  "rounded-[62%_38%_44%_56%/52%_48%_62%_38%]",
+  "rounded-[40%_60%_58%_42%/44%_56%_44%_56%]",
+  "rounded-[48%_52%_36%_64%/58%_42%_48%_52%]",
+  "rounded-[56%_44%_52%_48%/42%_58%_56%_44%]",
+  "rounded-[38%_62%_48%_52%/54%_46%_38%_62%]",
+  "rounded-[64%_36%_42%_58%/46%_54%_64%_36%]",
+  "rounded-[46%_54%_60%_40%/52%_48%_46%_54%]",
+  "rounded-[54%_46%_38%_62%/44%_56%_54%_46%]",
+  "rounded-[42%_58%_50%_50%/50%_50%_50%_50%]",
+  "rounded-[50%_50%_58%_42%/46%_54%_50%_50%]",
+  "rounded-[60%_40%_48%_52%/44%_56%_60%_40%]",
+  "rounded-[34%_66%_56%_44%/58%_42%_34%_66%]",
+  "rounded-[48%_52%_62%_38%/40%_60%_48%_52%]",
+  "rounded-[56%_44%_40%_60%/52%_48%_56%_44%]",
+  "rounded-[44%_56%_54%_46%/48%_52%_44%_56%]",
+] as const;
+
+const LIVING_ROOTS_CENTER_BLOB =
+  "rounded-[48%_52%_54%_46%/50%_50%_52%_48%]";
 
 export function AboutLanding() {
   return (
@@ -370,68 +627,61 @@ export function AboutLanding() {
             </p>
           </motion.div>
 
-          <motion.ul
-            className="mx-auto mt-12 flex max-w-[1100px] flex-wrap justify-center gap-x-6 gap-y-10 px-6 md:gap-x-8 md:px-10"
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-          >
-            {teamTop.map((member) => (
-              <motion.li
-                key={member.name}
-                variants={fadeUp}
-                className="flex w-[45%] max-w-[140px] flex-col items-center sm:w-auto sm:max-w-none"
-              >
-                <div
-                  className="relative h-28 w-28 overflow-hidden shadow-md ring-1 ring-black/5 sm:h-32 sm:w-32"
-                  style={{
-                    borderRadius: member.blob,
-                  }}
-                >
-                  <Image
-                    src={member.src}
-                    alt={member.name}
-                    fill
-                    className="object-cover"
-                    sizes="128px"
-                  />
-                </div>
-                <p className="mt-4 text-center text-[12px] font-bold uppercase tracking-[0.08em] text-[#2d5a4c]">
-                  {member.name}
-                </p>
-                <p className="mt-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9aa6a1]">
-                  {member.role}
-                </p>
-              </motion.li>
-            ))}
-          </motion.ul>
-
           <motion.div
-            className="mx-auto mt-14 flex max-w-[1100px] flex-col items-center px-6 md:px-10"
-            initial={{ opacity: 0, y: 36 }}
+            className="relative mt-12 w-full"
+            initial={{ opacity: 0, y: 28 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={viewport}
-            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div
-              className="relative h-44 w-44 overflow-hidden shadow-[0_20px_50px_-28px_rgba(0,0,0,0.35)] ring-1 ring-black/5 sm:h-52 sm:w-52"
-              style={{ borderRadius: founder.blob }}
-            >
-              <Image
-                src={founder.src}
-                alt={founder.name}
-                fill
-                className="object-cover contrast-125"
-                sizes="208px"
+            <div className="relative w-full overflow-hidden px-2 sm:px-4 md:px-6">
+              <div className="grid w-full grid-flow-dense grid-cols-8 auto-rows-[64px] gap-1.5 sm:grid-cols-10 sm:auto-rows-[72px] sm:gap-2 md:grid-cols-14 md:auto-rows-[76px] lg:grid-cols-16 lg:auto-rows-[80px] xl:grid-cols-[repeat(18,minmax(0,1fr))] xl:auto-rows-[84px]">
+                {livingRootsMosaic.map((member, index) => (
+                  <LivingRootsTile
+                    key={`${member.name}-${index}`}
+                    member={member}
+                    isCenter={member.isCenter}
+                    className={member.gridClass}
+                    blobClass={
+                      member.isCenter
+                        ? LIVING_ROOTS_CENTER_BLOB
+                        : (LIVING_ROOTS_BLOB_SHAPES[index % LIVING_ROOTS_BLOB_SHAPES.length] ??
+                          LIVING_ROOTS_BLOB_SHAPES[0])
+                    }
+                  />
+                ))}
+              </div>
+
+              {/* Light edge fade — narrow, low opacity */}
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 sm:w-14 md:w-20"
+                style={{
+                  background:
+                    "linear-gradient(to right, #f9f8f4 0%, rgba(249,248,244,0.45) 35%, rgba(249,248,244,0.12) 65%, transparent 100%)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 sm:w-14 md:w-20"
+                style={{
+                  background:
+                    "linear-gradient(to left, #f9f8f4 0%, rgba(249,248,244,0.45) 35%, rgba(249,248,244,0.12) 65%, transparent 100%)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 sm:h-10 md:h-12"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, #f9f8f4 0%, rgba(249,248,244,0.4) 40%, transparent 100%)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8 sm:h-10 md:h-12"
+                style={{
+                  background:
+                    "linear-gradient(to top, #f9f8f4 0%, rgba(249,248,244,0.4) 40%, transparent 100%)",
+                }}
               />
             </div>
-            <p className="mt-5 text-center text-sm font-bold uppercase tracking-[0.1em] text-[#2d5a4c]">
-              {founder.name}
-            </p>
-            <p className="mt-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9aa6a1]">
-              {founder.role}
-            </p>
           </motion.div>
         </section>
 
@@ -478,6 +728,49 @@ export function AboutLanding() {
       </main>
 
       <LandingFooter />
+    </div>
+  );
+}
+
+function LivingRootsTile({
+  member,
+  className,
+  blobClass,
+  isCenter,
+}: {
+  member: LivingRootsMember;
+  className: string;
+  blobClass: string;
+  isCenter?: boolean;
+}) {
+  return (
+    <div className={`group relative min-h-0 w-full ${className}`}>
+      <div
+        className={`relative h-full w-full overflow-hidden shadow-[0_6px_18px_-16px_rgba(0,0,0,0.3)] ${blobClass}`}
+      >
+        <Image
+          src={member.src}
+          alt=""
+          fill
+          className="object-cover object-center"
+          sizes={
+            isCenter
+              ? "(max-width: 768px) 22vw, 140px"
+              : "(max-width: 768px) 12vw, 88px"
+          }
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:p-2">
+          <span
+            className={`inline-flex max-w-[calc(100%-0.5rem)] items-center rounded-full bg-white/95 px-2.5 py-1 font-semibold uppercase tracking-[0.06em] text-[#2d5a4c] shadow-sm ${
+              isCenter ? "text-[9px] sm:text-[10px]" : "text-[8px] sm:text-[9px]"
+            }`}
+          >
+            {member.name}
+            <span className="mx-1 font-normal text-[#9aa6a1]">·</span>
+            {member.role}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

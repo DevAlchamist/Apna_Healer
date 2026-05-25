@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useBookSessionModal } from "./book-session-modal";
+import { useListenerSupportModal } from "./listener-support-modal";
 
 export function ListenerAvailabilityChip() {
-  const { open } = useBookSessionModal();
+  const { open } = useListenerSupportModal();
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

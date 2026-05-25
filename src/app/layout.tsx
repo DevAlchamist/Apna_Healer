@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
+import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -24,7 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${manrope.variable} ${inter.variable}`}>
-      <body className="bg-background text-text-primary antialiased">{children}</body>
+      <body className="bg-background text-text-primary antialiased">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

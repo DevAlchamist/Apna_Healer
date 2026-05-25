@@ -1,9 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import { signIn, useSession } from "next-auth/react";
 import { LandingFooter } from "@/components/landing/footer";
+import { LandingJoinModal } from "@/components/landing/landing-join-modal";
 import { LandingNavbar } from "@/components/landing/navbar";
+import { useBookSessionModal } from "@/components/dashboard/book-session-modal";
+import { useListenerSupportModal } from "@/components/dashboard/listener-support-modal";
+import { apiFetch } from "@/lib/api-client";
+import { formatCurrency } from "@/lib/display";
+import type { ApiPublicClubSummary, ApiPublicHomeBundle, ApiProvider } from "@/types/api";
 
 const heroSlides = [
   {
@@ -32,7 +50,7 @@ const heroSlides = [
   },
 ] as const;
 
-const listeners = [
+const fallbackListeners = [
   "Elena",
   "Marcus",
   "Sarah",
@@ -43,7 +61,7 @@ const listeners = [
   "Ibrahim",
 ] as const;
 
-const voiceColumns = [
+const fallbackVoiceColumns = [
   [
     "The ability to find a listener at 2 AM when anxiety was peaking saved my week.",
     "The matching algorithm actually works. My therapist understands my cultural background deeply.",
@@ -61,7 +79,7 @@ const voiceColumns = [
   ],
 ] as const;
 
-const faqItems = [
+const fallbackFaqItems = [
   {
     question: "How do I know if I need a therapist or a listener?",
     answer:
@@ -89,14 +107,72 @@ const revealUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
 } as const;
 
-export default function Home() {
+const THERAPIST_GRADIENTS = [
+  "bg-[linear-gradient(120deg,#35a7bc,#2e7ca2)]",
+  "bg-[linear-gradient(120deg,#5ec5b8,#2796c1)]",
+  "bg-[linear-gradient(120deg,#244961,#2f8db5)]",
+  "bg-[linear-gradient(120deg,#6b8f7f,#3d5a4c)]",
+];
+
+function therapistTag(provider: ApiProvider) {
+  const spec = provider.specializations[0];
+  if (spec) return spec;
+  return "Wellness Support";
+}
+
+function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { status, data: session } = useSession();
+  const { open: openBookSession } = useBookSessionModal();
+  const { open: openListenerSupport } = useListenerSupportModal();
+  const pendingBookingRef = useRef<"therapist" | "listener" | null>(null);
+
+  const homeQuery = useQuery({
+    queryKey: ["public-home"],
+    queryFn: () => apiFetch<ApiPublicHomeBundle>("/api/public/home"),
+  });
+
+  const clubsQuery = useQuery({
+    queryKey: ["public-clubs-home"],
+    queryFn: () => apiFetch<ApiPublicClubSummary[]>("/api/public/clubs?take=6"),
+  });
+
+  const home = homeQuery.data;
+  const publicClubs = clubsQuery.data ?? [];
+  const marqueeListeners = useMemo(() => {
+    const fromApi = (home?.listeners ?? [])
+      .map((l) => l.name?.split(" ")[0] ?? "Listener")
+      .filter(Boolean);
+    return fromApi.length ? fromApi : [...fallbackListeners];
+  }, [home?.listeners]);
+
+  const voiceColumns = home?.testimonials?.length ? home.testimonials : fallbackVoiceColumns;
+  const faqItems = home?.faq?.length ? home.faq : fallbackFaqItems;
+  const featuredTherapists = home?.featuredTherapists ?? [];
+  const upcomingEvents = home?.upcomingEvents ?? [];
+  const stats = home?.stats;
+
   const [heroIndex, setHeroIndex] = useState(0);
+  const [proSlide, setProSlide] = useState(0);
+
+  const PROFESSIONALS_VISIBLE = 3;
+  const canSlideProfessionals = featuredTherapists.length > PROFESSIONALS_VISIBLE;
+  const visibleProfessionals = useMemo(() => {
+    if (featuredTherapists.length === 0) return [];
+    const count = Math.min(PROFESSIONALS_VISIBLE, featuredTherapists.length);
+    return Array.from({ length: count }, (_, i) => {
+      const index = (proSlide + i) % featuredTherapists.length;
+      return featuredTherapists[index]!;
+    });
+  }, [featuredTherapists, proSlide]);
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [modalMethod, setModalMethod] = useState<"email" | "phone">("email");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [isOtpStage, setIsOtpStage] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -112,16 +188,82 @@ export default function Home() {
     };
   }, [isJoinModalOpen]);
 
-  const openJoinModal = () => {
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role === "ADMIN") {
+      router.replace("/admin");
+    }
+  }, [status, session, router]);
+
+  useEffect(() => {
+    if (searchParams.get("next") && status === "unauthenticated") {
+      setIsJoinModalOpen(true);
+    }
+  }, [searchParams, status]);
+
+  const openJoinModal = useCallback(() => {
     setModalMethod("email");
     setPhoneNumber("");
     setOtpCode("");
     setIsOtpStage(false);
+    setIsSigningIn(false);
     setIsJoinModalOpen(true);
-  };
+  }, []);
+
+  const requireAuth = useCallback(
+    (action: () => void) => {
+      if (status !== "authenticated") {
+        openJoinModal();
+        return;
+      }
+      action();
+    },
+    [status, openJoinModal],
+  );
+
+  const openTherapistBooking = useCallback(() => {
+    if (status !== "authenticated") {
+      pendingBookingRef.current = "therapist";
+      openJoinModal();
+      return;
+    }
+    openBookSession({ preferredRole: "THERAPIST" });
+  }, [status, openJoinModal, openBookSession]);
+
+  const openListenerBooking = useCallback(() => {
+    if (status !== "authenticated") {
+      pendingBookingRef.current = "listener";
+      openJoinModal();
+      return;
+    }
+    openListenerSupport();
+  }, [status, openJoinModal, openListenerSupport]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const pending = pendingBookingRef.current;
+    if (!pending) return;
+    pendingBookingRef.current = null;
+    if (pending === "therapist") {
+      openBookSession({ preferredRole: "THERAPIST" });
+    } else {
+      openListenerSupport();
+    }
+  }, [status, openBookSession, openListenerSupport]);
 
   const closeJoinModal = () => {
+    if (isSigningIn) return;
     setIsJoinModalOpen(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (isSigningIn) return;
+    setIsSigningIn(true);
+    try {
+      await signIn("google", { callbackUrl: "/" });
+    } catch (error) {
+      console.error("Google sign-in failed", error);
+      setIsSigningIn(false);
+    }
   };
 
   const handlePhoneSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -139,7 +281,8 @@ export default function Home() {
     }
   };
 
-  const marqueeListeners = useMemo(() => [...listeners, ...listeners], []);
+  const featuredClub = publicClubs[0];
+  const secondaryClubs = publicClubs.slice(1, 3);
 
   return (
     <div className="bg-[#f4f4f2] text-[#273331]">
@@ -174,12 +317,19 @@ export default function Home() {
                 {heroSlides[heroIndex].description}
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <button className="rounded-full bg-[#2f745f] px-8 py-4 text-sm font-semibold text-white shadow-md">
+                <button
+                  type="button"
+                  onClick={openListenerBooking}
+                  className="rounded-full bg-[#2f745f] px-8 py-4 text-sm font-semibold text-white shadow-md"
+                >
                   Talk to a Listener
                 </button>
-                <button className="rounded-full bg-[#e7dacd] px-8 py-4 text-sm font-semibold text-[#3e4a48]">
-                  Take a Free Stress Test
-                </button>
+                <Link
+                  href="/therapists"
+                  className="rounded-full bg-[#e7dacd] px-8 py-4 text-sm font-semibold text-[#3e4a48] transition hover:bg-[#ded3c4]"
+                >
+                  Find Your Therapist
+                </Link>
               </div>
               <div className="mt-7 flex gap-2">
                 {heroSlides.map((_, idx) => (
@@ -244,9 +394,22 @@ export default function Home() {
                 <p className="mt-3 max-w-[510px] text-[15px] leading-7 text-[#62706d]">
                   {item.copy}
                 </p>
-                <button className="mt-6 text-sm font-semibold text-[#2f745f]">
-                  {item.action} →
-                </button>
+                {item.title === "Find Your Therapist" ? (
+                  <Link
+                    href="/therapists"
+                    className="mt-6 inline-block text-sm font-semibold text-[#2f745f]"
+                  >
+                    {item.action} →
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openListenerBooking}
+                    className="mt-6 text-sm font-semibold text-[#2f745f]"
+                  >
+                    {item.action} →
+                  </button>
+                )}
               </motion.article>
             ))}
           </div>
@@ -270,24 +433,37 @@ export default function Home() {
                 animate={{ x: ["0%", "-50%"] }}
                 transition={{ duration: 18, ease: "linear", repeat: Infinity }}
               >
-                {marqueeListeners.map((name, idx) => (
-                  <div
-                    key={`${name}-${idx}`}
-                    className="flex min-w-20 flex-col items-center gap-2"
-                  >
-                    <div className="relative h-16 w-16 rounded-full bg-[linear-gradient(150deg,#12171f,#555)] ring-2 ring-[#d9d9d9]">
-                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#32d17a]" />
+                {marqueeListeners.map((name, idx) => {
+                  const listener = home?.listeners[idx % (home?.listeners.length || 1)];
+                  return (
+                    <div
+                      key={`${name}-${idx}`}
+                      className="flex min-w-20 flex-col items-center gap-2"
+                    >
+                      <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[linear-gradient(150deg,#12171f,#555)] ring-2 ring-[#d9d9d9]">
+                        {listener?.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={listener.image}
+                            alt={name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : null}
+                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#32d17a]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[#36403e]">{name}</p>
                     </div>
-                    <p className="text-sm font-semibold text-[#36403e]">
-                      {name}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </motion.div>
               <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-linear-to-r from-[#f4f4f2] via-[#f4f4f2]/80 to-transparent backdrop-blur-[2px] md:w-28" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-linear-to-l from-[#f4f4f2] via-[#f4f4f2]/80 to-transparent backdrop-blur-[2px] md:w-28" />
             </div>
-            <button className="mt-9 rounded-full bg-[#2f745f] px-10 py-4 text-sm font-semibold text-white">
+            <button
+              type="button"
+              onClick={openListenerBooking}
+              className="mt-9 rounded-full bg-[#2f745f] px-10 py-4 text-sm font-semibold text-white"
+            >
               Book Now
             </button>
           </div>
@@ -311,82 +487,118 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   aria-label="Previous professionals"
-                  className="grid h-10 w-10 place-content-center rounded-full border border-[#cfd4d2] text-[#55615e] transition hover:bg-white"
+                  disabled={!canSlideProfessionals}
+                  onClick={() =>
+                    setProSlide(
+                      (prev) =>
+                        (prev - 1 + featuredTherapists.length) % featuredTherapists.length,
+                    )
+                  }
+                  className="grid h-10 w-10 place-content-center rounded-full border border-[#cfd4d2] text-[#55615e] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   ‹
                 </button>
                 <button
+                  type="button"
                   aria-label="Next professionals"
-                  className="grid h-10 w-10 place-content-center rounded-full border border-[#cfd4d2] text-[#55615e] transition hover:bg-white"
+                  disabled={!canSlideProfessionals}
+                  onClick={() =>
+                    setProSlide((prev) => (prev + 1) % featuredTherapists.length)
+                  }
+                  className="grid h-10 w-10 place-content-center rounded-full border border-[#cfd4d2] text-[#55615e] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   ›
                 </button>
               </div>
             </div>
 
-            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {[
-                [
-                  "Dr. Julianne Moore",
-                  "Expert in anxiety management and mindfulness-based stress reduction.",
-                  "$120/session",
-                  "4.9",
-                  "bg-[linear-gradient(120deg,#35a7bc,#2e7ca2)]",
-                ],
-                [
-                  "Dr. Robert Chen",
-                  "Specializing in relationship dynamics and systemic family emotional support.",
-                  "$145/session",
-                  "5.0",
-                  "bg-[linear-gradient(120deg,#5ec5b8,#2796c1)]",
-                ],
-                [
-                  "Dr. Aisha Williams",
-                  "Passionate about healing developmental trauma through somatic experiencing.",
-                  "$130/session",
-                  "4.8",
-                  "bg-[linear-gradient(120deg,#244961,#2f8db5)]",
-                ],
-              ].map(([name, bio, price, rating, color]) => (
-                <motion.article
-                  key={name}
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden rounded-calm border border-[#dfdfdb] bg-white"
-                >
-                  <div className={`h-[138px] ${color} relative`}>
-                    <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#3f4a47]">
-                      {name.toString().includes("Aisha")
-                        ? "Trauma Care"
-                        : name.toString().includes("Robert")
-                          ? "Family Counseling"
-                          : "Cognitive Therapy"}
-                    </span>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-[28px] font-semibold tracking-[-0.02em] text-[#273331]">
-                        {name}
-                      </h3>
-                      <span className="text-sm font-semibold text-[#566260]">
-                        ☆ {rating}
-                      </span>
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#707b79]">
-                      {bio}
-                    </p>
-                    <div className="mt-6 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-[#384441]">
-                        {price}
-                      </p>
-                      <button className="text-sm font-semibold text-[#2f745f] underline underline-offset-2">
-                        Profile
-                      </button>
-                    </div>
-                  </div>
-                </motion.article>
-              ))}
+            <div className="mt-8">
+              {homeQuery.isLoading ? (
+                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-[280px] animate-pulse rounded-calm border border-[#dfdfdb] bg-white"
+                    />
+                  ))}
+                </div>
+              ) : visibleProfessionals.length > 0 ? (
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={proSlide}
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+                  >
+                    {visibleProfessionals.map((provider, index) => (
+                      <motion.article
+                        key={`${provider.id}-${proSlide}-${index}`}
+                        whileHover={{ y: -4 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden rounded-calm border border-[#dfdfdb] bg-white"
+                      >
+                        <div
+                          className={`relative h-[138px] ${THERAPIST_GRADIENTS[index % THERAPIST_GRADIENTS.length]}`}
+                        >
+                          {provider.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={provider.image}
+                              alt=""
+                              className="absolute inset-0 h-full w-full object-cover opacity-90"
+                            />
+                          ) : null}
+                          <span className="absolute left-3 top-3 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#3f4a47]">
+                            {therapistTag(provider)}
+                          </span>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="text-[28px] font-semibold tracking-[-0.02em] text-[#273331]">
+                              {provider.name ?? "Therapist"}
+                            </h3>
+                            {provider.isVerified ? (
+                              <span className="text-sm font-semibold text-[#566260]">
+                                Verified
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#707b79]">
+                            {provider.bio ??
+                              "Professional psychological support tailored to your journey."}
+                          </p>
+                          <div className="mt-6 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-[#384441]">
+                              {provider.hourlyRate
+                                ? `${formatCurrency(provider.hourlyRate)}/session`
+                                : "View pricing"}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                requireAuth(() =>
+                                  router.push(`/dashboard/therapist/${provider.id}`),
+                                )
+                              }
+                              className="text-sm font-semibold text-[#2f745f] underline underline-offset-2"
+                            >
+                              Profile
+                            </button>
+                          </div>
+                        </div>
+                      </motion.article>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <p className="text-sm text-[#687471]">
+                  Verified therapists will appear here as they join the platform.
+                </p>
+              )}
             </div>
           </div>
         </motion.section>
@@ -405,41 +617,113 @@ export default function Home() {
               Join supportive communities based on shared journeys.
             </p>
             <div className="mt-8 grid gap-4 lg:grid-cols-[2fr_1fr_1fr]">
-              <article className="rounded-[26px] bg-[#bcead8] p-8">
-                <h3 className="mt-44 text-4xl font-semibold tracking-[-0.02em] text-[#2f5248]">
-                  Mindful Students Hub
-                </h3>
-                <p className="mt-3 max-w-sm text-[#4c6961]">
-                  A safe space for university students navigating academic
-                  pressure and early adulthood.
-                </p>
-                <button className="mt-6 rounded-full bg-[#2f745f] px-6 py-3 text-sm font-semibold text-white">
-                  Join Group
-                </button>
-              </article>
-              <article className="rounded-[26px] bg-[#e7dacd] p-8">
-                <h3 className="text-3xl font-semibold tracking-[-0.02em] text-[#4d4339]">
-                  Nature Walkers
-                </h3>
-                <p className="mt-4 text-[#74695f]">
-                  Weekly morning therapeutic walks in city parks.
-                </p>
-              </article>
+              {featuredClub ? (
+                <article
+                  className="relative overflow-hidden rounded-[26px] bg-[#bcead8] p-8"
+                  style={
+                    featuredClub.heroImage
+                      ? {
+                          backgroundImage: `linear-gradient(to top, rgba(188,234,216,0.95), rgba(188,234,216,0.7)), url(${featuredClub.heroImage})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#2f5248]/80">
+                    {featuredClub.sphere}
+                  </p>
+                  <h3 className="mt-32 text-4xl font-semibold tracking-[-0.02em] text-[#2f5248] md:mt-44">
+                    {featuredClub.title}
+                  </h3>
+                  <p className="mt-3 max-w-sm text-[#4c6961]">{featuredClub.subtitle}</p>
+                  <p className="mt-2 text-sm text-[#4c6961]/80">
+                    {featuredClub.activeMembers} members · {featuredClub.weeklyEvents}
+                  </p>
+                  <Link
+                    href={`/clubs/${featuredClub.id}`}
+                    className="mt-6 inline-block rounded-full bg-[#2f745f] px-6 py-3 text-sm font-semibold text-white"
+                  >
+                    Explore club
+                  </Link>
+                </article>
+              ) : (
+                <article className="rounded-[26px] bg-[#bcead8] p-8">
+                  <h3 className="mt-44 text-4xl font-semibold tracking-[-0.02em] text-[#2f5248]">
+                    Wellness clubs
+                  </h3>
+                  <p className="mt-3 max-w-sm text-[#4c6961]">
+                    Supportive communities are forming on Apna Healer.
+                  </p>
+                  <Link
+                    href="/clubs"
+                    className="mt-6 inline-block rounded-full bg-[#2f745f] px-6 py-3 text-sm font-semibold text-white"
+                  >
+                    Browse clubs
+                  </Link>
+                </article>
+              )}
+              {secondaryClubs[0] ? (
+                <article
+                  className="rounded-[26px] bg-[#e7dacd] p-8"
+                  style={
+                    secondaryClubs[0].heroImage
+                      ? {
+                          backgroundImage: `url(${secondaryClubs[0].heroImage})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
+                >
+                  <h3 className="text-3xl font-semibold tracking-[-0.02em] text-[#4d4339]">
+                    {secondaryClubs[0].title}
+                  </h3>
+                  <p className="mt-4 text-[#74695f]">{secondaryClubs[0].subtitle}</p>
+                  <Link
+                    href={`/clubs/${secondaryClubs[0].id}`}
+                    className="mt-4 inline-block text-sm font-semibold text-[#2f745f]"
+                  >
+                    View circle →
+                  </Link>
+                </article>
+              ) : (
+                <article className="rounded-[26px] bg-[#e7dacd] p-8">
+                  <h3 className="text-3xl font-semibold tracking-[-0.02em] text-[#4d4339]">
+                    Join a circle
+                  </h3>
+                  <p className="mt-4 text-[#74695f]">
+                    Find peers who share your healing journey.
+                  </p>
+                </article>
+              )}
               <div className="grid gap-4">
                 <article className="grid place-content-center rounded-[26px] bg-[#ececeb] p-8 text-center">
-                  <p className="text-5xl font-bold text-[#2e3332]">12k+</p>
+                  <p className="text-5xl font-bold text-[#2e3332]">
+                    {stats ? (stats.totalMembers >= 1000 ? `${Math.floor(stats.totalMembers / 1000)}k+` : stats.totalMembers) : "—"}
+                  </p>
                   <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#7a7d7b]">
                     Members
                   </p>
                 </article>
                 <article className="grid place-content-center rounded-[26px] bg-[#bcead8] p-8 text-center">
-                  <p className="text-5xl font-bold text-[#2e3332]">45+</p>
+                  <p className="text-5xl font-bold text-[#2e3332]">
+                    {stats ? stats.verifiedTherapists + stats.verifiedListeners : "—"}
+                  </p>
                   <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#61746f]">
-                    Cities
+                    Care providers
                   </p>
                 </article>
               </div>
             </div>
+            {publicClubs.length > 0 ? (
+              <Link
+                href="/clubs"
+                className="mt-6 inline-block text-sm font-semibold text-[#2f745f]"
+              >
+                View all clubs →
+              </Link>
+            ) : null}
           </div>
         </motion.section>
 
@@ -452,57 +736,64 @@ export default function Home() {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="mx-auto grid max-w-[1240px] gap-8 px-6 md:grid-cols-2 md:px-10">
-            <article className="grid overflow-hidden rounded-[32px] bg-white shadow-[0_20px_42px_-35px_rgba(0,0,0,0.45)] md:grid-cols-[1fr_1.2fr]">
-              <div className="min-h-[280px] bg-[radial-gradient(circle_at_20%_50%,#d6bb77,#1d120d_60%)]" />
-              <div className="p-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#798682]">
-                  Next Big Event • Dec 15
-                </p>
-                <h3 className="mt-2 text-[40px] font-semibold tracking-[-0.02em] text-[#1f2827]">
-                  Winter Equinox Mindfulness Retreat
-                </h3>
-                <p className="mt-4 text-[#63706d]">
-                  A 3-hour digital immersion including guided breathwork, sound
-                  healing, and community reflection sessions.
-                </p>
-                <div className="mt-6 flex items-center gap-3">
-                  <button className="rounded-full bg-[#2f745f] px-6 py-3 text-sm font-semibold text-white">
-                    Reserve Spot
-                  </button>
-                  <span className="text-xs font-semibold text-[#9ea5a3]">
-                    Limited Seats
-                  </span>
+            {upcomingEvents[0] ? (
+              <article className="grid overflow-hidden rounded-[32px] bg-white shadow-[0_20px_42px_-35px_rgba(0,0,0,0.45)] md:grid-cols-[1fr_1.2fr]">
+                <div
+                  className="min-h-[280px] bg-cover bg-center"
+                  style={{ backgroundImage: `url(${upcomingEvents[0].image})` }}
+                />
+                <div className="p-8">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#798682]">
+                    {upcomingEvents[0].tag}
+                  </p>
+                  <h3 className="mt-2 text-[40px] font-semibold tracking-[-0.02em] text-[#1f2827]">
+                    {upcomingEvents[0].title}
+                  </h3>
+                  <p className="mt-4 text-[#63706d]">{upcomingEvents[0].description}</p>
+                  <div className="mt-6 flex items-center gap-3">
+                    <Link
+                      href={`/events/${upcomingEvents[0].id}`}
+                      className="rounded-full bg-[#2f745f] px-6 py-3 text-sm font-semibold text-white"
+                    >
+                      Reserve Spot
+                    </Link>
+                    <span className="text-xs font-semibold text-[#9ea5a3]">
+                      Hosted by {upcomingEvents[0].host}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
+            ) : null}
             <article className="rounded-[32px] bg-white p-8 shadow-[0_20px_42px_-35px_rgba(0,0,0,0.45)]">
               <h3 className="text-[46px] font-semibold tracking-[-0.02em] text-[#1f2827]">
                 Calendar
               </h3>
               <div className="mt-6 space-y-4">
-                {[
-                  ["Dec 18", "Anxiety Workshop", "7:00 PM • Online Webinar"],
-                  ["Jan 05", "Grief Support Circle", "6:30 PM • Group Zoom"],
-                ].map(([date, title, meta]) => (
-                  <div
-                    key={title}
-                    className="flex items-center gap-4 rounded-2xl bg-[#f7f7f5] p-4"
-                  >
-                    <div className="rounded-xl bg-[#bcead8] px-3 py-2 text-center">
-                      <p className="text-xs font-semibold uppercase leading-tight text-[#2f745f]">
-                        {date.split(" ")[0]}
-                      </p>
-                      <p className="text-xl font-bold text-[#2f745f]">
-                        {date.split(" ")[1]}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-[#1f2827]">{title}</p>
-                      <p className="text-sm text-[#697572]">{meta}</p>
-                    </div>
-                  </div>
-                ))}
+                {upcomingEvents.slice(1, 4).map((event) => {
+                  const parts = event.tag.split("·").map((p) => p.trim());
+                  return (
+                    <Link
+                      key={event.id}
+                      href={`/events/${event.id}`}
+                      className="flex items-center gap-4 rounded-2xl bg-[#f7f7f5] p-4 transition hover:bg-[#eef2ef]"
+                    >
+                      <div className="rounded-xl bg-[#bcead8] px-3 py-2 text-center">
+                        <p className="text-xs font-semibold uppercase leading-tight text-[#2f745f]">
+                          {parts[0] ?? "Event"}
+                        </p>
+                        <p className="text-xl font-bold text-[#2f745f]">{parts[1] ?? ""}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[#1f2827]">{event.title}</p>
+                        <p className="text-sm text-[#697572]">{event.host}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
+              <Link href="/events" className="mt-4 inline-block text-sm font-semibold text-[#2f745f]">
+                View all events →
+              </Link>
             </article>
           </div>
         </motion.section>
@@ -659,130 +950,38 @@ export default function Home() {
         </motion.section>
       </main>
       <LandingFooter />
-      <AnimatePresence>
-        {isJoinModalOpen ? (
-          <motion.div
-            className="fixed inset-0 z-50 grid place-items-center bg-[#f4f4f2]/45 px-4 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeJoinModal}
-          >
-            <motion.div
-              className="w-full max-w-[540px] rounded-[24px] border border-black/5 bg-white px-8 py-7 shadow-[0_24px_70px_-35px_rgba(0,0,0,0.5)]"
-              initial={{ opacity: 0, y: 18, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.96 }}
-              transition={{ duration: 0.28 }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-center text-[34px] font-semibold text-[#2f745f]">
-                  ApnaHealer
-                </p>
-                <button
-                  type="button"
-                  aria-label="Close join modal"
-                  onClick={closeJoinModal}
-                  className="grid h-8 w-8 place-items-center rounded-full text-xl leading-none text-[#9ca4a2] transition hover:bg-[#f4f4f2]"
-                >
-                  ×
-                </button>
-              </div>
-              <h3 className="text-center text-[50px] font-semibold tracking-[-0.02em] text-[#26302e]">
-                Continue your journey
-              </h3>
-              <p className="mx-auto mt-3 max-w-[390px] text-center text-[17px] leading-7 text-[#75817d]">
-                Take a deep breath. We&apos;ve missed your presence in this
-                space.
-              </p>
-              {modalMethod === "phone" ? (
-                <form onSubmit={handlePhoneSubmit} className="mt-7 space-y-3">
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(event) => setPhoneNumber(event.target.value)}
-                    placeholder="Enter phone number"
-                    className="h-[56px] w-full rounded-full border border-[#e4e6e5] bg-[#f8f8f7] px-5 text-[15px] text-[#2f3332] outline-none transition focus:border-[#2f745f]"
-                  />
-                  {!isOtpStage ? (
-                    <button
-                      type="submit"
-                      className="h-[48px] w-full rounded-full bg-[#2f745f] text-[14px] font-semibold text-white transition hover:bg-[#245d4c]"
-                    >
-                      Submit phone number
-                    </button>
-                  ) : null}
-                </form>
-              ) : (
-                <button
-                  type="button"
-                  className="mt-7 flex h-[56px] w-full items-center justify-center rounded-full bg-[#f3f3f1] text-[16px] font-semibold text-[#2f3332] transition hover:bg-[#ececea]"
-                >
-                  Sign in with Google
-                </button>
-              )}
-              {modalMethod === "phone" && isOtpStage ? (
-                <form onSubmit={handleOtpSubmit} className="mt-3 space-y-3">
-                  <input
-                    type="text"
-                    value={otpCode}
-                    onChange={(event) => setOtpCode(event.target.value)}
-                    placeholder="Enter OTP"
-                    className="h-[52px] w-full rounded-xl border border-[#e4e6e5] bg-white px-4 text-[15px] text-[#2f3332] outline-none transition focus:border-[#2f745f]"
-                  />
-                  <button
-                    type="submit"
-                    className="h-[46px] w-full rounded-full bg-[#2f745f] text-[14px] font-semibold text-white transition hover:bg-[#245d4c]"
-                  >
-                    Submit OTP
-                  </button>
-                </form>
-              ) : null}
-              <p className="mt-7 text-center text-[12px] font-semibold uppercase tracking-widest text-[#b1b6b4]">
-                Other ways to enter
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalMethod("email");
-                    setPhoneNumber("");
-                    setOtpCode("");
-                    setIsOtpStage(false);
-                  }}
-                  className={`h-[52px] rounded-xl border text-[14px] font-semibold transition ${
-                    modalMethod === "email"
-                      ? "border-[#2f745f] bg-[#dff2ea] text-[#2f745f]"
-                      : "border-transparent bg-[#f3f3f1] text-[#5d6664] hover:bg-[#ececea]"
-                  }`}
-                >
-                  Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalMethod("phone");
-                    setOtpCode("");
-                    setIsOtpStage(false);
-                  }}
-                  className={`h-[52px] rounded-xl border text-[14px] font-semibold transition ${
-                    modalMethod === "phone"
-                      ? "border-[#2f745f] bg-[#dff2ea] text-[#2f745f]"
-                      : "border-transparent bg-[#f3f3f1] text-[#5d6664] hover:bg-[#ececea]"
-                  }`}
-                >
-                  Phone
-                </button>
-              </div>
-              <p className="mt-6 text-center text-xs text-[#a1a8a6]">
-                By entering, you agree to our Terms of Service and Privacy
-                Policy.
-              </p>
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      <LandingJoinModal
+        open={isJoinModalOpen}
+        onClose={closeJoinModal}
+        modalMethod={modalMethod}
+        onModalMethodChange={(method) => {
+          setModalMethod(method);
+          setPhoneNumber("");
+          setOtpCode("");
+          setIsOtpStage(false);
+        }}
+        phoneNumber={phoneNumber}
+        onPhoneNumberChange={setPhoneNumber}
+        otpCode={otpCode}
+        onOtpCodeChange={setOtpCode}
+        isOtpStage={isOtpStage}
+        isSigningIn={isSigningIn}
+        onGoogleSignIn={handleGoogleSignIn}
+        onPhoneSubmit={handlePhoneSubmit}
+        onOtpSubmit={handleOtpSubmit}
+      />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f4f4f2]" aria-busy="true" aria-label="Loading" />
+      }
+    >
+      <HomePage />
+    </Suspense>
   );
 }

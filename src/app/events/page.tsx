@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingNavbar } from "@/components/landing/navbar";
+import { apiFetch } from "@/lib/api-client";
+import type { ApiPublicEventSummary } from "@/types/api";
 
 const seasonalSlides = [
   {
@@ -39,12 +43,34 @@ export default function EventsPage() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState("All Paths");
 
+  const eventsQuery = useQuery({
+    queryKey: ["public-events", activeFilter],
+    queryFn: () =>
+      apiFetch<ApiPublicEventSummary[]>(
+        `/api/public/events?filter=${encodeURIComponent(activeFilter)}&take=12`,
+      ),
+  });
+
+  const events = eventsQuery.data ?? [];
+  const heroEvent = events[0];
+
+  const heroSlides = useMemo(() => {
+    if (events.length >= 3) {
+      return events.slice(0, 3).map((event) => ({
+        title: event.title,
+        description: event.description,
+        color: "bg-[radial-gradient(circle_at_50%_30%,#eec862,#c79a2c_44%,#8a7b3f)]",
+      }));
+    }
+    return seasonalSlides;
+  }, [events]);
+
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % seasonalSlides.length);
+      setHeroIndex((prev) => (prev + 1) % heroSlides.length);
     }, 4800);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   const revealUp = {
     hidden: { opacity: 0, y: 26 },
@@ -105,21 +131,26 @@ export default function EventsPage() {
             </div>
           </div>
           <motion.article
-            key={seasonalSlides[heroIndex].title}
+            key={heroSlides[heroIndex].title}
             initial={{ opacity: 0.5, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className={`mt-10 overflow-hidden rounded-[40px] p-8 md:p-12 ${seasonalSlides[heroIndex].color}`}
+            className={`mt-10 overflow-hidden rounded-[40px] p-8 md:p-12 ${heroSlides[heroIndex].color}`}
           >
             <h2 className="text-[52px] font-semibold tracking-[-0.03em] text-white">
-              {seasonalSlides[heroIndex].title}
+              {heroSlides[heroIndex].title}
             </h2>
             <p className="mt-4 max-w-[600px] text-[17px] leading-8 text-white/85">
-              {seasonalSlides[heroIndex].description}
+              {heroSlides[heroIndex].description}
             </p>
-            <button className="mt-7 rounded-full bg-white/90 px-6 py-2.5 text-sm font-semibold text-[#2f745f]">
-              Explore Ritual
-            </button>
+            {heroEvent ? (
+              <Link
+                href={`/events/${heroEvent.id}`}
+                className="mt-7 inline-block rounded-full bg-white/90 px-6 py-2.5 text-sm font-semibold text-[#2f745f]"
+              >
+                Explore Ritual
+              </Link>
+            ) : null}
           </motion.article>
         </motion.section>
 
@@ -159,53 +190,54 @@ export default function EventsPage() {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="mx-auto max-w-[1240px] px-6 md:px-10">
-            <div className="grid gap-8 md:grid-cols-2">
-              <motion.article whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-                <div className="h-[330px] rounded-[30px] bg-[radial-gradient(circle_at_55%_42%,#f7c15b,#35637f_48%,#0f2133)] shadow-[0_20px_40px_-30px_rgba(0,0,0,0.5)]" />
-              </motion.article>
-              <article className="self-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e8a84]">
-                  Aug 14 • London
-                </p>
-                <h3 className="mt-2 text-[58px] font-semibold tracking-[-0.03em] text-[#2a3231]">
-                  The Resonance Lab
-                </h3>
-                <p className="mt-3 max-w-[530px] text-[17px] leading-8 text-[#77817f]">
-                  A somatic sound bath using frequency-based therapy to reset
-                  the nervous system. Limited to 12 participants for intimacy.
-                </p>
-                <button className="mt-6 rounded-full border border-[#2f745f] px-6 py-2 text-sm font-semibold text-[#2f745f]">
-                  Reserve your place →
-                </button>
-              </article>
-
-              <motion.article whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-                <div className="h-[420px] rounded-[30px] bg-[radial-gradient(circle_at_52%_20%,#cadfbe,#6d9264_44%,#2f4731)] shadow-[0_20px_40px_-30px_rgba(0,0,0,0.5)]" />
-              </motion.article>
-              <article className="self-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e8a84]">
-                  Aug 21-23 • Cotswolds
-                </p>
-                <h3 className="mt-2 text-[58px] font-semibold tracking-[-0.03em] text-[#2a3231]">
-                  Unplugged: The Forest Sleep
-                </h3>
-                <p className="mt-3 max-w-[530px] text-[17px] leading-8 text-[#77817f]">
-                  A 48-hour total digital detox. We replace screens with canopy
-                  walks, firelight dialogue, and deep-soil meditation.
-                </p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[#ece8dd] px-3 py-1 text-xs font-semibold text-[#7a766d]">
-                    Overnight
-                  </span>
-                  <span className="rounded-full bg-[#ece8dd] px-3 py-1 text-xs font-semibold text-[#7a766d]">
-                    Fully Catered
-                  </span>
-                </div>
-                <button className="mt-6 rounded-full bg-[#2f745f] px-6 py-2 text-sm font-semibold text-white">
-                  View Itinerary
-                </button>
-              </article>
-            </div>
+            {eventsQuery.isLoading ? (
+              <div className="grid gap-8 md:grid-cols-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="h-[330px] animate-pulse rounded-[30px] bg-[#e8e8e5]" />
+                ))}
+              </div>
+            ) : events.length === 0 ? (
+              <p className="text-center text-[#77817f]">
+                No events match this filter yet. Try another path.
+              </p>
+            ) : (
+              <div className="grid gap-8 md:grid-cols-2">
+                {events.slice(0, 4).map((event, index) => (
+                  <div key={event.id} className="contents">
+                    <motion.article whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+                      <Link href={`/events/${event.id}`}>
+                        <div
+                          className="h-[330px] rounded-[30px] bg-cover bg-center shadow-[0_20px_40px_-30px_rgba(0,0,0,0.5)] md:h-[420px]"
+                          style={{ backgroundImage: `url(${event.image})` }}
+                        />
+                      </Link>
+                    </motion.article>
+                    <article className={`self-center ${index % 2 === 1 ? "md:order-first" : ""}`}>
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e8a84]">
+                        {event.tag} • {event.category}
+                      </p>
+                      <h3 className="mt-2 text-[58px] font-semibold tracking-[-0.03em] text-[#2a3231]">
+                        {event.title}
+                      </h3>
+                      <p className="mt-3 max-w-[530px] text-[17px] leading-8 text-[#77817f]">
+                        {event.description}
+                      </p>
+                      <p className="mt-2 text-sm text-[#6e8a84]">Hosted by {event.host}</p>
+                      <Link
+                        href={`/events/${event.id}`}
+                        className={`mt-6 inline-block rounded-full px-6 py-2 text-sm font-semibold ${
+                          index % 2 === 0
+                            ? "border border-[#2f745f] text-[#2f745f]"
+                            : "bg-[#2f745f] text-white"
+                        }`}
+                      >
+                        {index % 2 === 0 ? "Reserve your place →" : "View Itinerary"}
+                      </Link>
+                    </article>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.section>
 
@@ -252,29 +284,33 @@ export default function EventsPage() {
           whileInView="show"
           viewport={{ once: true, amount: 0.2 }}
         >
-          <div className="mx-auto grid max-w-[1240px] items-center gap-8 px-6 md:grid-cols-2 md:px-10">
-            <article>
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e8a84]">
-                Sept 08 • Virtual Atrium
-              </p>
-              <h3 className="mt-2 text-[58px] font-semibold tracking-[-0.03em] text-[#2a3231]">
-                Breath of Life Workshop
-              </h3>
-              <p className="mt-3 max-w-[550px] text-[17px] leading-8 text-[#77817f]">
-                Join global instructor Elias Yane for a 90-minute masterclass in
-                pranayama techniques designed to alleviate chronic anxiety and
-                brain fog.
-              </p>
-              <button className="mt-6 rounded-full border border-[#2f745f] px-6 py-2 text-sm font-semibold text-[#2f745f]">
-                Join Online
-              </button>
-            </article>
-            <motion.div
-              whileHover={{ y: -4 }}
-              transition={{ duration: 0.2 }}
-              className="h-[410px] rounded-[32px] bg-[radial-gradient(circle_at_48%_84%,#ffe6a5,#f0a66f_45%,#1f5e7a)] shadow-[0_20px_40px_-30px_rgba(0,0,0,0.5)]"
-            />
-          </div>
+          {events[4] ? (
+            <div className="mx-auto grid max-w-[1240px] items-center gap-8 px-6 md:grid-cols-2 md:px-10">
+              <article>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e8a84]">
+                  {events[4].tag} • {events[4].category}
+                </p>
+                <h3 className="mt-2 text-[58px] font-semibold tracking-[-0.03em] text-[#2a3231]">
+                  {events[4].title}
+                </h3>
+                <p className="mt-3 max-w-[550px] text-[17px] leading-8 text-[#77817f]">
+                  {events[4].description}
+                </p>
+                <Link
+                  href={`/events/${events[4].id}`}
+                  className="mt-6 inline-block rounded-full border border-[#2f745f] px-6 py-2 text-sm font-semibold text-[#2f745f]"
+                >
+                  Join Online
+                </Link>
+              </article>
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="h-[410px] rounded-[32px] bg-cover bg-center shadow-[0_20px_40px_-30px_rgba(0,0,0,0.5)]"
+                style={{ backgroundImage: `url(${events[4].image})` }}
+              />
+            </div>
+          ) : null}
         </motion.section>
 
         <motion.section

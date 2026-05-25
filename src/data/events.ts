@@ -32,6 +32,43 @@ export type EventDetail = {
   }>;
 };
 
+export type DashboardSuggestedEvent = {
+  id: string;
+  title: string;
+  image: string;
+  dateBadge: string;
+  /** e.g. "18:00 · Virtual Event" */
+  metaLine: string;
+};
+
+/** Compact cards for the dashboard sidebar (below Recent activity). */
+export const dashboardSuggestedEvents: DashboardSuggestedEvent[] = [
+  {
+    id: "mindful-resilience",
+    title: "Mindful Resilience Workshop",
+    image:
+      "https://images.unsplash.com/photo-1528715471579-d1bcf0ba5e83?w=800&q=80&auto=format&fit=crop",
+    dateBadge: "15 OCT",
+    metaLine: "09:00 · Workshop",
+  },
+  {
+    id: "sunset-sound-immersion",
+    title: "Sunset Sound Immersion",
+    image:
+      "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=800&q=80&auto=format&fit=crop",
+    dateBadge: "24 OCT",
+    metaLine: "18:30 · Healing experience",
+  },
+  {
+    id: "creative-expression-grief",
+    title: "Creative Expression for Grief",
+    image:
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=800&q=80&auto=format&fit=crop",
+    dateBadge: "17 OCT",
+    metaLine: "14:00 · Small group",
+  },
+];
+
 export const featuredEvents: EventSummary[] = [
   {
     id: "somatic-breathwork",
@@ -152,6 +189,37 @@ export const eventDetails: EventDetail[] = [
           "I've never slept better than the night after this session. The crystal bowls created a vibration that I could feel in my very bones.",
         by: "Sarah K.",
         meta: "Attended in August",
+      },
+    ],
+  },
+  {
+    id: "creative-expression-grief",
+    category: "Workshop",
+    dateLabel: "Thursday, Oct 17, 2024",
+    timeLabel: "2:00 PM - 4:00 PM",
+    venue: "Garden Studio",
+    title: "Creative Expression for Grief",
+    heroImage:
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=1600&q=80&auto=format&fit=crop",
+    about: [
+      "A gentle, guided space to explore loss through writing and simple visual exercises. There is no pressure to share more than you wish; the focus is on presence and self-compassion.",
+      "You will be invited to work at your own pace with optional prompts, soft music, and breaks as needed.",
+    ],
+    journeyPoints: ["Opening circle and grounding", "Guided creative prompts", "Closing reflection"],
+    audienceText:
+      "Open to anyone navigating grief or transition. No art experience is required; materials are provided.",
+    price: "$40",
+    seatsLeft: "10 seats left",
+    facilitatorName: "Marcus Roe",
+    facilitatorRole: "Expressive Arts Facilitator",
+    facilitatorImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80&auto=format&fit=crop",
+    facilitatorBio:
+      "Marcus supports people in processing difficult emotions through creative ritual and narrative work.",
+    reflections: [
+      {
+        quote: "I left feeling lighter, like I had finally put a piece of my story down on paper.",
+        by: "Anonymous",
+        meta: "Attended in October",
       },
     ],
   },

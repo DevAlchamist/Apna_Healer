@@ -127,6 +127,7 @@ export default function BlogPage() {
               whileHover={{ y: -4, transition: hoverLiftTransition }}
             >
               <div className="grid gap-5 md:grid-cols-[170px_1fr]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={post.coverImage}
                   alt={post.title}

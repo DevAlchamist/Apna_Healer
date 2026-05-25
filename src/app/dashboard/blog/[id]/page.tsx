@@ -123,6 +123,7 @@ export default function BlogViewPage() {
             </ul>
           </div>
 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={blog.sideImage} alt="Ritual illustration" className="h-64 w-full rounded-gentle object-cover shadow-soft" />
         </div>
 

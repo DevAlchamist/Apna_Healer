@@ -40,7 +40,12 @@ export default async function SafeCircleDetailPage({ params }: SafeCircleDetailP
         </p>
 
         <p className="mt-6 text-base leading-relaxed text-text-primary/75">{post.body}</p>
-        {post.image ? <img src={post.image} alt={post.title} className="mt-6 h-auto w-full rounded-gentle object-cover" /> : null}
+        {post.image ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.image} alt={post.title} className="mt-6 h-auto w-full rounded-gentle object-cover" />
+          </>
+        ) : null}
         <p className="mt-5 text-base leading-relaxed text-text-primary/75">
           Last week, I tried something different. I left the phone in the other room. I sat by the window for just ten
           minutes. No music, no podcast. Just the sound of the world waking up. It felt uncomfortable at first, then

@@ -1,0 +1,878 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+  THERAPIST
+  LISTENER
+}
+
+enum ApplicationType {
+  THERAPIST
+  LISTENER
+}
+
+enum ProfessionalApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  REFUND
+  SESSION_PAYMENT
+  PAYOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum BookingType {
+  THERAPIST
+  LISTENER
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum BookingPaymentMethod {
+  WALLET
+  QR
+  CARD
+}
+
+enum CareSessionStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+/// Status lifecycle for listener-flow booking requests (separate from therapist Bookings).
+enum ListenerRequestStatus {
+  PENDING
+  ASSIGNED
+  APPROVED
+  DECLINED
+  EXPIRED
+}
+
+/// Listener acknowledgement state after admin assigns a request to them.
+enum ListenerConfirmation {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// Lifecycle event recorded on the session_logs ledger.
+enum SessionLogEvent {
+  BOOKED
+  ASSIGNED
+  APPROVED
+  STARTED
+  ENDED
+  CANCELLED
+  REVIEW_SUBMITTED
+}
+
+enum NotificationType {
+  APPLICATION_APPROVED
+  APPLICATION_REJECTED
+  BOOKING_ACCEPTED
+  BOOKING_REJECTED
+  BOOKING_CANCELLED
+  LISTENER_REQUEST_ASSIGNED
+  LISTENER_REQUEST_APPROVED
+  LISTENER_REQUEST_DECLINED
+  SESSION_STARTED
+  SESSION_COMPLETED
+  SESSION_CANCELLED
+  SESSION_MISSED
+  WALLET_CREDIT
+  WALLET_DEBIT
+  ADMIN_USER_UPDATED
+  JOURNAL_REMINDER
+  CLUB_CREATION_APPROVED
+  CLUB_CREATION_REJECTED
+  CLUB_JOIN_REQUEST_RECEIVED
+  CLUB_JOIN_APPROVED
+  CLUB_JOIN_REJECTED
+  CLUB_SUBSCRIPTION_CHARGED
+  CLUB_SUBSCRIPTION_FAILED
+  CLUB_MEMBER_PAYMENT_OVERDUE
+  EVENT_REGISTRATION_CONFIRMED
+  EVENT_REGISTRATION_RECEIVED
+  EVENT_REGISTRATION_CANCELLED
+  EVENT_CANCELLED
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum JournalCardVariant {
+  REFLECTION
+  IMAGE
+  QUOTE
+  LIST
+  DARK
+}
+
+enum AuditAction {
+  USER_UPDATED_BY_ADMIN
+  APPLICATION_REVIEWED
+  BOOKING_STATUS_CHANGED
+  SESSION_STATUS_CHANGED
+  LISTENER_REQUEST_UPDATED
+  WALLET_TRANSACTION
+  CLUB_CREATED
+  CLUB_UPDATED
+  CLUB_CREATION_REVIEWED
+  CLUB_JOIN_REVIEWED
+  CLUB_MEMBERSHIP_BILLING
+  EVENT_CREATED
+  EVENT_UPDATED
+  EVENT_REGISTRATION_CREATED
+}
+
+enum WellnessEventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum WellnessEventMode {
+  VIRTUAL
+  IN_PERSON
+}
+
+enum EventRegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum ClubStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ClubVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ClubRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ClubMembershipRole {
+  OWNER
+  MODERATOR
+  MEMBER
+}
+
+enum ClubMembershipStatus {
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  LEFT
+}
+
+enum ClubBillingAttemptStatus {
+  SUCCESS
+  FAILED
+}
+
+/// Root identity across the platform.
+/// Therapist and listener capabilities extend this model via profiles and applications.
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+  walletId      String?   @unique
+  isVerified    Boolean   @default(false)
+  /// Member-facing profile (all roles).
+  bio           String?   @db.Text
+  phone         String?
+  city          String?
+  timezone      String?   @default("Asia/Kolkata")
+  primaryFocus  String?
+  interestTags  String[]  @default([])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  wallet           Wallet?
+  accounts         Account[]
+  authSessions     Session[]
+  transactions     Transaction[]
+  applications ProfessionalApplication[]
+  therapistProfile TherapistProfile?
+  listenerProfile  ListenerProfile?
+  bookings         Booking[]         @relation("BookingRequester")
+  providedBookings Booking[]         @relation("BookingProvider")
+  careSessions     CareSession[]     @relation("SessionParticipant")
+  providedSessions CareSession[]     @relation("SessionProvider")
+  listenerWeeklySchedule  ListenerAvailability[]
+  therapistWeeklySchedule TherapistAvailability[]
+  listenerRequests        ListenerBookingRequest[] @relation("ListenerRequestRequester")
+  assignedListenerRequests ListenerBookingRequest[] @relation("ListenerRequestAssignee")
+  reviewsGiven    SessionReview[] @relation("SessionReviewReviewer")
+  reviewsReceived SessionReview[] @relation("SessionReviewReviewee")
+  notifications   Notification[]
+  auditLogsActed  AuditLog[]      @relation("AuditLogActor")
+  journalEntries  JournalEntry[]
+  clubsCreated           Club[]                 @relation("ClubCreatedBy")
+  clubsOwned             Club[]                 @relation("ClubOwner")
+  clubMemberships        ClubMembership[]
+  clubJoinRequests       ClubJoinRequest[]
+  clubCreationRequests   ClubCreationRequest[]
+  clubJoinReviews        ClubJoinRequest[]      @relation("ClubJoinReviewedBy")
+  clubCreationReviews    ClubCreationRequest[]  @relation("ClubCreationReviewedBy")
+  eventsCreated          WellnessEvent[]        @relation("EventCreatedBy")
+  eventsOrganized        WellnessEvent[]        @relation("EventOrganizedBy")
+  eventRegistrations     EventRegistration[]
+
+  @@index([role, createdAt(sort: Desc)])
+  @@map("users")
+}
+
+/// Wallet balances are operational views; every balance change must be backed by transactions.
+model Wallet {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  availableBalance Decimal  @default(0) @db.Decimal(12, 2)
+  heldBalance      Decimal  @default(0) @db.Decimal(12, 2)
+  totalSpent       Decimal  @default(0) @db.Decimal(12, 2)
+  totalReceived    Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("wallets")
+}
+
+/// Immutable ledger history.
+model Transaction {
+  id          String            @id @default(cuid())
+  walletId    String
+  userId      String
+  type        TransactionType
+  amount      Decimal           @db.Decimal(12, 2)
+  status      TransactionStatus
+  purpose     String
+  referenceId String?
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([walletId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type, status, createdAt(sort: Desc)])
+  @@index([referenceId])
+  @@map("transactions")
+}
+
+/// Booking is the request phase before a confirmed session exists.
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String
+  providerId    String
+  type          BookingType
+  requestedDate DateTime
+  requestedTime String
+  duration      Int
+  amount        Decimal              @db.Decimal(12, 2)
+  paymentMethod BookingPaymentMethod @default(WALLET)
+  note          String?
+  status        BookingStatus        @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user     User         @relation("BookingRequester", fields: [userId], references: [id], onDelete: Restrict)
+  provider User         @relation("BookingProvider", fields: [providerId], references: [id], onDelete: Restrict)
+  session  CareSession?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([providerId, status, createdAt(sort: Desc)])
+  @@index([status, requestedDate(sort: Desc)])
+  @@map("bookings")
+}
+
+/// Confirmed engagement derived from either an accepted Booking (therapist flow)
+/// or an approved+confirmed ListenerBookingRequest (listener flow).
+model CareSession {
+  id                String            @id @default(cuid())
+  bookingId         String?           @unique
+  listenerRequestId String?           @unique
+  userId            String
+  providerId        String
+  sessionMode       BookingType @map("sessionType")
+  amount            Decimal           @db.Decimal(12, 2)
+  duration          Int
+  startTime         DateTime
+  endTime           DateTime?
+  meetingLink       String?
+  description       String?
+  notes             String?
+  status            CareSessionStatus @default(UPCOMING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  booking         Booking?                @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  listenerRequest ListenerBookingRequest? @relation(fields: [listenerRequestId], references: [id], onDelete: SetNull)
+  user            User                    @relation("SessionParticipant", fields: [userId], references: [id], onDelete: Restrict)
+  provider        User                    @relation("SessionProvider", fields: [providerId], references: [id], onDelete: Restrict)
+  logs            SessionLog[]
+  reviews         SessionReview[]
+
+  @@index([userId, startTime(sort: Desc)])
+  @@index([providerId, startTime(sort: Desc)])
+  @@index([status, startTime(sort: Desc)])
+  @@map("sessions")
+}
+
+/// Structured provider onboarding; reviewed by admins and materialized into profiles on approval.
+model ProfessionalApplication {
+  id               String                        @id @default(cuid())
+  userId           String
+  type             ApplicationType
+  status           ProfessionalApplicationStatus @default(PENDING)
+  applicationData  Json
+  adminNote        String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, type, createdAt(sort: Desc)])
+  @@map("professional_applications")
+}
+
+model TherapistProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  bio              String?
+  specializations  String[]
+  certifications   String[] @default([])
+  experienceYears  Int?
+  hourlyRate       Decimal? @db.Decimal(12, 2)
+  availability     Json?
+  links            Json?
+  rating           Decimal  @default(0) @db.Decimal(3, 2)
+  totalSessions    Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("therapist_profiles")
+}
+
+model ListenerProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  bio                String?
+  languages          String[]
+  emotionalStrengths String[] @default([])
+  availability       Json?
+  rating             Decimal  @default(0) @db.Decimal(3, 2)
+  totalSessions      Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("listener_profiles")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("auth_accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("auth_verification_tokens")
+}
+
+/// Weekly recurring availability window for a listener.
+/// Slots are generated dynamically by the listener-flow services; this table
+/// only stores the windows, never the slots themselves.
+model ListenerAvailability {
+  id         String   @id @default(cuid())
+  listenerId String
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  timezone   String   @default("Asia/Kolkata")
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listener User @relation(fields: [listenerId], references: [id], onDelete: Cascade)
+
+  @@index([listenerId, dayOfWeek, isActive])
+  @@map("listener_availability")
+}
+
+/// Weekly recurring availability window for a therapist.
+/// `slotDuration` and `breakDuration` (minutes) drive dynamic slot generation.
+model TherapistAvailability {
+  id            String   @id @default(cuid())
+  therapistId   String
+  dayOfWeek     Int
+  startTime     String
+  endTime       String
+  slotDuration  Int      @default(60)
+  breakDuration Int      @default(0)
+  timezone      String   @default("Asia/Kolkata")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  therapist User @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([therapistId, dayOfWeek, isActive])
+  @@map("therapist_availability")
+}
+
+/// Queue-based listener booking request. Listener identity stays hidden from the
+/// requester until after the session is completed. Listener-flow sessions are
+/// created from APPROVED requests once the assigned listener confirms.
+model ListenerBookingRequest {
+  id                   String                @id @default(cuid())
+  userId               String
+  preferredDate        DateTime
+  preferredTime        String
+  duration             Int                   @default(30)
+  emotionalTags        String[]
+  preferredTone        String?
+  preferredLanguage    String?
+  note                 String?
+  assignedListenerId   String?
+  status               ListenerRequestStatus @default(PENDING)
+  listenerConfirmation ListenerConfirmation  @default(PENDING)
+  amountHeld           Decimal               @default(0) @db.Decimal(12, 2)
+  holdTransactionId    String?
+  captureTransactionId String?
+  releaseTransactionId String?
+  metadata             Json?
+  reviewedBy           String?
+  reviewedAt           DateTime?
+  expiresAt            DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  user             User         @relation("ListenerRequestRequester", fields: [userId], references: [id], onDelete: Restrict)
+  assignedListener User?        @relation("ListenerRequestAssignee", fields: [assignedListenerId], references: [id], onDelete: SetNull)
+  session          CareSession?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([assignedListenerId, listenerConfirmation, createdAt(sort: Desc)])
+  @@map("listener_booking_requests")
+}
+
+/// Immutable lifecycle log for each session. Used for analytics and timelines.
+model SessionLog {
+  id        String          @id @default(cuid())
+  sessionId String
+  event     SessionLogEvent
+  metadata  Json?
+  createdAt DateTime        @default(now())
+
+  session CareSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt(sort: Desc)])
+  @@index([event, createdAt(sort: Desc)])
+  @@map("session_logs")
+}
+
+/// Post-session review submitted by either side of a completed session.
+model SessionReview {
+  id         String   @id @default(cuid())
+  sessionId  String
+  reviewerId String
+  revieweeId String
+  rating     Int
+  feedback   String?
+  tags       String[]
+  createdAt  DateTime @default(now())
+
+  session  CareSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewer User        @relation("SessionReviewReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  reviewee User        @relation("SessionReviewReviewee", fields: [revieweeId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, reviewerId])
+  @@index([revieweeId, createdAt(sort: Desc)])
+  @@map("session_reviews")
+}
+
+/// In-app notification for a single user.
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  body        String           @db.Text
+  href        String?
+  readAt      DateTime?
+  emailSentAt DateTime?
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+/// Admin accountability trail with sanitized change details only.
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  actorId    String?
+  actorEmail String?
+  targetType String
+  targetId   String
+  summary    String
+  details    Json?
+  createdAt  DateTime    @default(now())
+
+  actor User? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+/// Inbound message from the public contact form.
+model ContactInquiry {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@map("contact_inquiries")
+}
+
+/// One journal entry per user per calendar day (timezone-aware).
+model JournalEntry {
+  id            String             @id @default(cuid())
+  userId        String
+  journalDate   DateTime           @db.Date
+  title         String?
+  contentHtml   String             @db.Text
+  contentPlain  String?            @db.Text
+  mood          String?
+  tags          String[]           @default([])
+  coverImageUrl String?
+  cardVariant   JournalCardVariant @default(REFLECTION)
+  status        JournalEntryStatus @default(DRAFT)
+  completedAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, journalDate])
+  @@index([userId, status, journalDate(sort: Desc)])
+  @@index([userId, journalDate(sort: Desc)])
+  @@map("journal_entries")
+}
+
+/// Inspirational lines rotated deterministically by calendar day (Asia/Kolkata).
+model DailyQuote {
+  id        String   @id @default(cuid())
+  text      String
+  author    String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("daily_quotes")
+}
+
+/// Wellness club / collective space.
+model Club {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  title           String
+  subtitle        String         @db.Text
+  description     String?        @db.Text
+  purpose         String?        @db.Text
+  heroImageUrl    String?
+  galleryUrls     Json           @default("[]")
+  monthlyFee      Decimal        @db.Decimal(12, 2)
+  status          ClubStatus     @default(DRAFT)
+  visibility      ClubVisibility @default(PUBLIC)
+  memberCount     Int            @default(0)
+  createdByUserId String
+  ownerUserId     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  createdBy         User                  @relation("ClubCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  owner             User?                 @relation("ClubOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  onboardingSteps   ClubOnboardingStep[]
+  reviews           ClubReview[]
+  memberships       ClubMembership[]
+  joinRequests      ClubJoinRequest[]
+  creationRequests  ClubCreationRequest[] @relation("ClubFromCreationRequest")
+  events            WellnessEvent[]
+
+  @@index([status, visibility])
+  @@index([ownerUserId])
+  @@map("clubs")
+}
+
+model ClubOnboardingStep {
+  id        String  @id @default(cuid())
+  clubId    String
+  sortOrder Int     @default(0)
+  question  String  @db.Text
+  required  Boolean @default(true)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, sortOrder])
+  @@map("club_onboarding_steps")
+}
+
+/// Admin-curated featured reflections on club detail pages.
+model ClubReview {
+  id          String  @id @default(cuid())
+  clubId      String
+  authorLabel String
+  quote       String  @db.Text
+  rating      Int?
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, sortOrder])
+  @@map("club_reviews")
+}
+
+model ClubCreationRequest {
+  id              String            @id @default(cuid())
+  userId          String
+  status          ClubRequestStatus @default(PENDING)
+  title           String
+  subtitle        String            @db.Text
+  description     String?           @db.Text
+  purpose         String?           @db.Text
+  heroImageUrl    String?
+  galleryUrls     Json              @default("[]")
+  monthlyFee      Decimal           @db.Decimal(12, 2)
+  onboardingSteps Json              @default("[]")
+  adminNote       String?           @db.Text
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdClubId   String?           @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy  User? @relation("ClubCreationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdClub Club? @relation("ClubFromCreationRequest", fields: [createdClubId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("club_creation_requests")
+}
+
+model ClubJoinRequest {
+  id           String            @id @default(cuid())
+  clubId       String
+  userId       String
+  message      String            @db.Text
+  status       ClubRequestStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  club       Club  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("ClubJoinReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([clubId, status])
+  @@index([userId, status])
+  @@map("club_join_requests")
+}
+
+model ClubMembership {
+  id                String               @id @default(cuid())
+  clubId            String
+  userId            String
+  role              ClubMembershipRole   @default(MEMBER)
+  status            ClubMembershipStatus @default(ACTIVE)
+  joinedAt          DateTime             @default(now())
+  nextBillingAt     DateTime?
+  lastPaidAt        DateTime?
+  lastTransactionId String?
+  billingFailCount  Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  club            Club                 @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingAttempts ClubBillingAttempt[]
+
+  @@unique([clubId, userId])
+  @@index([userId, status])
+  @@index([clubId, status])
+  @@index([status, nextBillingAt])
+  @@map("club_memberships")
+}
+
+model ClubBillingAttempt {
+  id            String                   @id @default(cuid())
+  membershipId  String
+  amount        Decimal                  @db.Decimal(12, 2)
+  status        ClubBillingAttemptStatus
+  transactionId String?
+  failureReason String?
+  createdAt     DateTime                 @default(now())
+
+  membership ClubMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId, createdAt(sort: Desc)])
+  @@map("club_billing_attempts")
+}
+
+/// Club-linked or platform wellness gathering.
+model WellnessEvent {
+  id                String              @id @default(cuid())
+  slug              String              @unique
+  clubId            String?
+  createdByUserId   String
+  organizedByUserId String
+  title             String
+  subtitle          String?             @db.Text
+  description       String?             @db.Text
+  category          String?
+  heroImageUrl      String?
+  startsAt          DateTime
+  endsAt            DateTime?
+  venue             String?
+  mode              WellnessEventMode   @default(IN_PERSON)
+  capacity          Int
+  seatsRemaining    Int
+  basePrice         Decimal             @default(0) @db.Decimal(12, 2)
+  memberPrice       Decimal?            @db.Decimal(12, 2)
+  guestPrice        Decimal?            @db.Decimal(12, 2)
+  membersPay        Boolean             @default(true)
+  nonMembersPay     Boolean             @default(true)
+  status            WellnessEventStatus @default(DRAFT)
+  facilitatorName   String?
+  facilitatorRole   String?
+  facilitatorImage  String?
+  facilitatorBio    String?             @db.Text
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  club          Club?               @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  createdBy     User                @relation("EventCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  organizedBy   User                @relation("EventOrganizedBy", fields: [organizedByUserId], references: [id], onDelete: Restrict)
+  registrations EventRegistration[]
+
+  @@index([status, startsAt])
+  @@index([clubId, status])
+  @@map("wellness_events")
+}
+
+model EventRegistration {
+  id                    String                   @id @default(cuid())
+  eventId               String
+  userId                String
+  amountCharged         Decimal                  @default(0) @db.Decimal(12, 2)
+  paymentMethod         BookingPaymentMethod?
+  status                EventRegistrationStatus  @default(PENDING)
+  isClubMemberAtBooking Boolean                  @default(false)
+  transactionId         String?
+  note                  String?                  @db.Text
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  event WellnessEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId, status])
+  @@map("event_registrations")
+}
