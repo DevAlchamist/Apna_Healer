@@ -96,23 +96,23 @@ function clientIdLabel(userId: string) {
 
 function getSessionStatusClasses(status: CareSessionStatusValue) {
   if (status === "UPCOMING" || status === "ONGOING") {
-    return "bg-[#c9f2df] text-[#2f745f]";
+    return "bg-[#c9f2df] text-theme-status-success";
   }
   if (status === "COMPLETED") {
     return "bg-[#d9f0df] text-[#3e805f]";
   }
   if (status === "CANCELLED") {
-    return "bg-[#fde1de] text-[#cf4f45]";
+    return "bg-[#fde1de] text-theme-status-error";
   }
   return "bg-[#ece8e1] text-[#8e8b84]";
 }
 
 function getBookingStatusClasses(status: BookingStatusValue) {
   if (status === "PENDING") return "bg-[#fff3d6] text-[#8a6a1f]";
-  if (status === "ACCEPTED") return "bg-[#c9f2df] text-[#2f745f]";
+  if (status === "ACCEPTED") return "bg-[#c9f2df] text-theme-status-success";
   if (status === "COMPLETED") return "bg-[#d9f0df] text-[#3e805f]";
   if (status === "REJECTED" || status === "CANCELLED") {
-    return "bg-[#fde1de] text-[#cf4f45]";
+    return "bg-[#fde1de] text-theme-status-error";
   }
   return "bg-[#ece8e1] text-[#8e8b84]";
 }
@@ -275,7 +275,7 @@ export function AdminSessionsPage() {
     >
       <motion.div variants={fadeUp} className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <motion.div>
-          <h1 className="font-display text-[40px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[48px]">
+          <h1 className="font-display text-[40px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[48px]">
             Session Management
           </h1>
           <p className="mt-2 max-w-[720px] text-[15px] leading-7 text-text-primary/62">
@@ -289,7 +289,7 @@ export function AdminSessionsPage() {
             <button
               type="button"
               onClick={() => setShowDatePicker((v) => !v)}
-              className="inline-flex items-center gap-2 rounded-full border border-[#e5dfd4] bg-white px-4 py-2.5 text-sm font-medium text-[#243230] shadow-[0_8px_20px_-14px_rgba(47,63,56,0.2)] transition hover:border-[#c9bfb0]"
+              className="inline-flex items-center gap-2 rounded-full border border-[#e5dfd4] bg-white px-4 py-2.5 text-sm font-medium text-theme-heading shadow-[0_8px_20px_-14px_rgba(47,63,56,0.2)] transition hover:border-[#c9bfb0]"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#7d8f88]" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                 <rect x="3.5" y="5" width="17" height="15" rx="2" />
@@ -345,7 +345,7 @@ export function AdminSessionsPage() {
                 setStatusFilter(e.target.value as OperationsStatusFilter);
                 setPage(1);
               }}
-              className="appearance-none rounded-full border border-[#e5dfd4] bg-white py-2.5 pl-4 pr-10 text-sm font-medium text-[#243230] shadow-[0_8px_20px_-14px_rgba(47,63,56,0.2)] outline-none transition hover:border-[#c9bfb0]"
+              className="appearance-none rounded-full border border-[#e5dfd4] bg-white py-2.5 pl-4 pr-10 text-sm font-medium text-theme-heading shadow-[0_8px_20px_-14px_rgba(47,63,56,0.2)] outline-none transition hover:border-[#c9bfb0]"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -381,18 +381,18 @@ export function AdminSessionsPage() {
             <div className="flex items-start justify-between gap-2">
               <p
                 className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${
-                  card.tone === "mint" ? "text-[#2f745f]" : "text-[#b3a99c]"
+                  card.tone === "mint" ? "text-theme-status-success" : "text-[#b3a99c]"
                 }`}
               >
                 {card.label}
               </p>
-              <span className={card.tone === "mint" ? "text-[#2f745f]" : "text-[#7d9a8c]"}>
+              <span className={card.tone === "mint" ? "text-theme-status-success" : "text-[#7d9a8c]"}>
                 <SessionStatIcon icon={card.icon} />
               </span>
             </div>
             <p
               className={`mt-6 font-display text-[38px] font-semibold leading-none tracking-[-0.04em] ${
-                card.tone === "mint" ? "text-[#1f5a47]" : "text-[#243230]"
+                card.tone === "mint" ? "text-[#1f5a47]" : "text-theme-heading"
               }`}
             >
               {dashboardQuery.isLoading && !dashboardQuery.data ? (
@@ -406,13 +406,13 @@ export function AdminSessionsPage() {
       </motion.div>
 
       {dashboardQuery.error ? (
-        <motion.p variants={fadeUp} className="rounded-[22px] bg-white px-5 py-4 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <motion.p variants={fadeUp} className="rounded-[22px] bg-white px-5 py-4 text-sm font-medium text-theme-status-error shadow-soft">
           {dashboardQuery.error.message}
         </motion.p>
       ) : null}
 
       {actionError ? (
-        <motion.p variants={fadeUp} className="rounded-[22px] bg-white px-5 py-4 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <motion.p variants={fadeUp} className="rounded-[22px] bg-white px-5 py-4 text-sm font-medium text-theme-status-error shadow-soft">
           {actionError}
         </motion.p>
       ) : null}
@@ -657,7 +657,7 @@ function OperationsTableRow({
             {displayBookingStatus(booking.status)}
           </span>
         </td>
-        <td className="px-5 py-4 text-sm font-semibold text-[#243230]">
+        <td className="px-5 py-4 text-sm font-semibold text-theme-heading">
           {formatCurrency(booking.amount)}
         </td>
         <td className="px-5 py-4">
@@ -737,7 +737,7 @@ function OperationsTableRow({
           {displaySessionStatus(session.status)}
         </span>
       </td>
-      <td className="px-5 py-4 text-sm font-semibold text-[#243230]">
+      <td className="px-5 py-4 text-sm font-semibold text-theme-heading">
         {formatCurrency(session.amount)}
       </td>
       <td className="px-5 py-4">
@@ -823,7 +823,7 @@ function ParticipantCell({
         {getInitials(name, email)}
       </span>
       <div>
-        <p className="font-semibold text-[#243230]">{name ?? "Member"}</p>
+        <p className="font-semibold text-theme-heading">{name ?? "Member"}</p>
         <p className="text-xs text-text-primary/45">Client ID: {clientIdLabel(userId)}</p>
       </div>
     </motion.div>
@@ -850,7 +850,7 @@ function ProviderCell({
         className="h-9 w-9"
         fallbackClassName="bg-linear-to-br from-[#17313a] to-[#45616b] text-white text-xs"
       />
-      <span className="text-sm font-medium text-[#243230]">{label}</span>
+      <span className="text-sm font-medium text-theme-heading">{label}</span>
     </motion.div>
   );
 }
@@ -858,7 +858,7 @@ function ProviderCell({
 function DateTimeCell({ when }: { when: Date }) {
   return (
     <motion.div>
-      <p className="text-sm font-medium text-[#243230]">{tableDateFormatter.format(when)}</p>
+      <p className="text-sm font-medium text-theme-heading">{tableDateFormatter.format(when)}</p>
       <p className="mt-0.5 text-xs text-text-primary/45">{tableTimeFormatter.format(when)}</p>
     </motion.div>
   );
@@ -883,7 +883,7 @@ function ActionPill({
       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
         tone === "primary"
           ? "bg-[#3e725f] text-white hover:bg-[#356652]"
-          : "border border-[#e5dfd4] bg-white text-[#243230] hover:border-[#c9bfb0]"
+          : "border border-[#e5dfd4] bg-white text-theme-heading hover:border-[#c9bfb0]"
       }`}
     >
       {label}

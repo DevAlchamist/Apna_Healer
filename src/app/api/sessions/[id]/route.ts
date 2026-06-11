@@ -38,6 +38,7 @@ export async function PATCH(
       description: input.description,
       notes: input.notes,
       endedAt: input.endedAt,
+      startTime: input.startTime,
     });
     return ok(session);
   } catch (error) {

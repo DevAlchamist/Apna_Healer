@@ -145,7 +145,7 @@ export function AdminBillingPage() {
         variants={staggerContainer}
       >
         <motion.div variants={fadeBlock}>
-          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[52px]">
+          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[52px]">
             Billing Operations
           </h1>
           <p className="mt-2 max-w-[760px] text-[15px] leading-7 text-text-primary/65 md:text-base">
@@ -155,7 +155,7 @@ export function AdminBillingPage() {
         </motion.div>
 
         {queryError ? (
-          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
+          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
             {queryError}
           </div>
         ) : null}
@@ -172,7 +172,7 @@ export function AdminBillingPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b1a89d]">
                 {stat.label}
               </p>
-              <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#2f6f5b]">
+              <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-status-success">
                 {stat.value}
               </p>
               <p className="mt-3 text-sm text-text-primary/55">{stat.meta}</p>
@@ -191,7 +191,7 @@ export function AdminBillingPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Recent Payouts
           </motion.h2>
@@ -212,10 +212,10 @@ export function AdminBillingPage() {
                       email={payout.user?.email}
                       image={payout.user?.image}
                       className="h-10 w-10 shrink-0"
-                      fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-[#2f745f] text-xs"
+                      fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-theme-status-success text-xs"
                     />
                     <div className="min-w-0">
-                      <p className="text-[18px] font-semibold leading-6 text-[#243230]">
+                      <p className="text-[18px] font-semibold leading-6 text-theme-heading">
                         {formatCurrency(payout.amount)}
                       </p>
                       <p className="mt-1 text-sm leading-5 text-text-primary/45">
@@ -253,7 +253,7 @@ export function AdminBillingPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Wallet Watch
           </motion.h2>
@@ -276,7 +276,7 @@ export function AdminBillingPage() {
                     fallbackClassName="bg-linear-to-br from-[#e8ded1] to-[#d4c0a8] text-[#6e5542] text-xs"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[18px] font-semibold leading-6 text-[#243230]">
+                    <p className="text-[18px] font-semibold leading-6 text-theme-heading">
                       {user.name ?? user.email}
                     </p>
                     <p className="mt-1 text-sm leading-5 text-text-primary/45">{user.email}</p>
@@ -306,7 +306,7 @@ export function AdminBillingPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Revenue Sessions
           </motion.h2>
@@ -327,13 +327,13 @@ export function AdminBillingPage() {
                     sizeClassName="h-10 w-10"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[18px] font-semibold leading-6 text-[#243230]">
+                    <p className="text-[18px] font-semibold leading-6 text-theme-heading">
                       {session.user?.name ?? "Participant"} with {session.provider?.name ?? "Provider"}
                     </p>
                     <p className="mt-1 text-sm leading-5 text-text-primary/45">
                       {toSentenceCase(session.sessionMode)} • {session.duration} mins
                     </p>
-                    <p className="mt-3 text-sm font-semibold text-[#2f6f5b]">
+                    <p className="mt-3 text-sm font-semibold text-theme-status-success">
                       {formatCurrency(session.amount)}
                     </p>
                     <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-primary/28">

@@ -47,7 +47,15 @@ export type NotificationTypeValue =
   | "EVENT_REGISTRATION_CONFIRMED"
   | "EVENT_REGISTRATION_RECEIVED"
   | "EVENT_REGISTRATION_CANCELLED"
-  | "EVENT_CANCELLED";
+  | "EVENT_CANCELLED"
+  | "WELCOME"
+  | "WELCOME_BACK"
+  | "SESSION_REMINDER_24H"
+  | "SESSION_REMINDER_1H"
+  | "SESSION_FEEDBACK_REQUEST"
+  | "BLOG_COMMENT_RECEIVED"
+  | "CLUB_ACTIVITY_DIGEST"
+  | "MONTHLY_RECAP";
 
 export type WellnessEventStatusValue = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
 export type WellnessEventModeValue = "VIRTUAL" | "IN_PERSON";
@@ -97,8 +105,22 @@ export interface ApiEventDetail extends ApiEventSummary {
   facilitatorRole: string | null;
   facilitatorImage: string | null;
   facilitatorBio: string | null;
+  journeyPoints: string[];
+  audienceText: string | null;
+  testimonialQuote: string | null;
+  testimonialAuthor: string | null;
   organizedByUserId: string;
   myRegistration: ApiEventRegistration | null;
+}
+
+export interface ApiEventFacilitatorOption {
+  id: string;
+  type: "apna-healer" | "club-owner";
+  label: string;
+  name: string;
+  role: string;
+  imageUrl: string | null;
+  clubTitles: string[];
 }
 
 export interface ApiEventListResponse {
@@ -126,17 +148,39 @@ export type ClubRequestStatusValue = "PENDING" | "APPROVED" | "REJECTED" | "CANC
 export type ClubMembershipRoleValue = "OWNER" | "MODERATOR" | "MEMBER";
 export type ClubMembershipStatusValue = "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "LEFT";
 
-export interface ApiClubOnboardingStep {
+export interface ApiClubOnboardingQuestion {
   id: string;
   question: string;
   required: boolean;
   sortOrder: number;
+  type: "TEXT" | "CHOICE";
+  options: string[];
+  allowMultiple: boolean;
+}
+
+export interface ApiClubOnboardingStep {
+  id: string;
+  title: string;
+  description: string | null;
+  sortOrder: number;
+  questions: ApiClubOnboardingQuestion[];
+}
+
+export interface ApiClubOnboardingAnswerStep {
+  stepTitle: string;
+  stepDescription?: string | null;
+  questions: Array<{
+    questionId: string;
+    question: string;
+    answer: string | string[];
+  }>;
 }
 
 export interface ApiClubReview {
   id: string;
   authorLabel: string;
   quote: string;
+  memberSince: string | null;
   rating: number | null;
   sortOrder: number;
 }
@@ -170,11 +214,25 @@ export interface ApiClubDetail extends ApiClubSummary {
   description: string | null;
   purpose: string | null;
   galleryUrls: string[];
+  heroTagline: string | null;
+  pulseQuote: string | null;
+  ritualsIntro: string | null;
+  voicesQuote: string | null;
+  finalCtaText: string | null;
+  landingFeatures: Array<{ title: string; description: string; icon?: "wind" | "leaf" }>;
+  landingRituals: Array<{
+    label: string;
+    title: string;
+    description: string;
+    imageUrl?: string | null;
+    cta?: string | null;
+  }>;
   onboardingSteps: ApiClubOnboardingStep[];
   reviews: ApiClubReview[];
   membership: ApiClubMembershipSummary | null;
   isOwner: boolean;
   canManageJoinRequests: boolean;
+  canPublishEvents: boolean;
   /** Populated on admin club list */
   eventCount?: number;
 }
@@ -212,6 +270,28 @@ export interface ApiClubJoinRequest {
   club?: { id: string; title: string; slug: string };
 }
 
+export interface ApiClubCreationRequestOnboardingQuestion {
+  question: string;
+  required: boolean;
+  sortOrder: number;
+  type: "TEXT" | "CHOICE";
+  options: string[];
+  allowMultiple: boolean;
+}
+
+export interface ApiClubCreationRequestOnboardingStep {
+  title: string;
+  description: string | null;
+  sortOrder: number;
+  questions: ApiClubCreationRequestOnboardingQuestion[];
+}
+
+export interface ApiClubCreationRequestReview {
+  authorLabel: string;
+  quote: string;
+  sortOrder: number;
+}
+
 export interface ApiClubCreationRequest {
   id: string;
   userId: string;
@@ -221,8 +301,12 @@ export interface ApiClubCreationRequest {
   description: string | null;
   purpose: string | null;
   heroImageUrl: string | null;
+  galleryUrls: string[];
+  reviews: ApiClubCreationRequestReview[];
   monthlyFee: string;
+  onboardingSteps: ApiClubCreationRequestOnboardingStep[];
   onboardingStepCount: number;
+  onboardingQuestionCount: number;
   createdAt: string;
   createdClubId: string | null;
   adminNote: string | null;
@@ -299,9 +383,32 @@ export type AuditActionValue =
   | "CLUB_MEMBERSHIP_BILLING"
   | "EVENT_CREATED"
   | "EVENT_UPDATED"
-  | "EVENT_REGISTRATION_CREATED";
+  | "EVENT_REGISTRATION_CREATED"
+  | "ROLE_THEME_UPDATED"
+  | "ROLE_THEME_RESET"
+  | "BLOG_CREATED"
+  | "BLOG_UPDATED"
+  | "BLOG_PUBLISHED"
+  | "BLOG_APPROVED"
+  | "BLOG_REJECTED"
+  | "BLOG_UNPUBLISHED"
+  | "BLOG_DELETED"
+  | "BLOG_FEATURED"
+  | "BLOG_COMMENT_MODERATED"
+  | "BLOG_REPORT_REVIEWED";
 
 export type ApiMetadata = Record<string, unknown> | null;
+
+export interface ApiRoleTheme {
+  role: UserRole;
+  tokens: Record<string, string>;
+  version: number;
+  isCustomized: boolean;
+  updatedAt: string;
+  updatedById: string | null;
+}
+
+export type ApiRoleThemeMap = Record<UserRole, ApiRoleTheme>;
 
 export interface ApiNotification {
   id: string;
@@ -333,15 +440,24 @@ export interface ApiAuditLogEntry {
   action: AuditActionValue;
   actorId: string | null;
   actorEmail: string | null;
+  actorName: string | null;
+  actorRole: UserRole | null;
+  actorImage: string | null;
   targetType: string;
   targetId: string;
   summary: string;
+  entityLabel: string;
+  status: "success" | "failed";
+  ipAddress: string;
   details: ApiMetadata;
   createdAt: string;
 }
 
 export interface ApiAuditLogListMeta {
   take: number;
+  page: number;
+  total: number;
+  totalPages: number;
   cursor: string | null;
   nextCursor: string | null;
 }
@@ -449,6 +565,12 @@ export interface ApiTherapistProfile {
   hourlyRate: string | null;
   availability: ApiMetadata;
   links: ApiMetadata;
+  profileDescription: string | null;
+  philosophyQuote: string | null;
+  experienceDescription: string | null;
+  testimonialQuote: string | null;
+  testimonialAuthor: string | null;
+  retentionRate: string | null;
   rating: string;
   totalSessions: number;
   createdAt: string;
@@ -513,6 +635,12 @@ export interface ApiPublicTherapistDetail extends ApiProvider {
   experienceYears: number | null;
   rating: string;
   profileSessionCount: number;
+  profileDescription: string | null;
+  philosophyQuote: string | null;
+  experienceDescription: string | null;
+  testimonialQuote: string | null;
+  testimonialAuthor: string | null;
+  retentionRate: string | null;
 }
 
 export interface ApiBooking {
@@ -728,4 +856,174 @@ export interface AdminControlCenterDashboard {
     detail: string;
   }>;
   generatedAt: string;
+}
+
+export type BlogStatusValue =
+  | "DRAFT"
+  | "PENDING_REVIEW"
+  | "PUBLISHED"
+  | "REJECTED"
+  | "UNPUBLISHED";
+
+export type BlogBlockTypeValue =
+  | "HEADING"
+  | "PARAGRAPH"
+  | "LIST"
+  | "QUOTE"
+  | "CODE"
+  | "DIVIDER"
+  | "HIGHLIGHT"
+  | "IMAGE"
+  | "IMAGE_GALLERY"
+  | "VIDEO_EMBED"
+  | "BANNER";
+
+export type BlogCommentStatusValue = "ACTIVE" | "HIDDEN" | "DELETED";
+
+export type BlogReportStatusValue = "OPEN" | "REVIEWED" | "DISMISSED";
+
+export interface ApiBlogAuthor {
+  id: string;
+  name: string | null;
+  image: string | null;
+  role: UserRole;
+}
+
+export interface ApiBlogCategory {
+  id: string;
+  slug: string;
+  name: string;
+  blogCount?: number;
+}
+
+export interface ApiBlogTag {
+  id: string;
+  slug: string;
+  name: string;
+  blogCount?: number;
+}
+
+export interface ApiBlogBlock {
+  id: string;
+  type: BlogBlockTypeValue;
+  sortOrder: number;
+  data: Record<string, unknown>;
+}
+
+export interface ApiBlogSummary {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  excerpt: string | null;
+  coverImageUrl: string | null;
+  status: BlogStatusValue;
+  isFeatured: boolean;
+  readingTimeMinutes: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  publishedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author: ApiBlogAuthor;
+  categories: ApiBlogCategory[];
+  tags: ApiBlogTag[];
+}
+
+export interface ApiBlogDetail extends ApiBlogSummary {
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoKeywords: string[];
+  blocks: ApiBlogBlock[];
+  likedByMe?: boolean;
+  related?: ApiPublicBlogSummary[];
+}
+
+export interface ApiPublicBlogSummary {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  excerpt: string | null;
+  coverImageUrl: string | null;
+  isFeatured: boolean;
+  readingTimeMinutes: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  publishedAt: string | null;
+  author: ApiBlogAuthor;
+  categories: ApiBlogCategory[];
+  tags: ApiBlogTag[];
+}
+
+export interface ApiBlogListMeta {
+  total: number;
+  take: number;
+  cursor: string | null;
+  nextCursor: string | null;
+}
+
+export interface ApiBlogListResponse {
+  items: ApiBlogSummary[];
+  meta: ApiBlogListMeta;
+}
+
+export interface ApiPublicBlogListResponse {
+  featured: ApiPublicBlogSummary | null;
+  items: ApiPublicBlogSummary[];
+  meta: ApiBlogListMeta;
+}
+
+export interface ApiBlogAuthorStats {
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  publishedCount: number;
+  draftCount: number;
+  pendingCount: number;
+}
+
+export interface ApiBlogComment {
+  id: string;
+  blogId: string;
+  content: string;
+  status: BlogCommentStatusValue;
+  createdAt: string;
+  updatedAt: string;
+  user: ApiBlogAuthor;
+  parentId: string | null;
+  replies?: ApiBlogComment[];
+}
+
+export interface ApiBlogReport {
+  id: string;
+  targetType: "BLOG" | "COMMENT";
+  targetId: string;
+  blogId: string | null;
+  reason: string;
+  status: BlogReportStatusValue;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  reporter: ApiBlogAuthor;
+  blog?: { id: string; slug: string; title: string } | null;
+}
+
+export interface ApiBlogAnalyticsOverview {
+  totalBlogs: number;
+  publishedBlogs: number;
+  pendingReview: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  topPosts: ApiPublicBlogSummary[];
+  viewsTrend: Array<{ date: string; views: number }>;
+}
+
+export interface ApiBlogUploadResponse {
+  url: string;
 }

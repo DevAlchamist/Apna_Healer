@@ -65,6 +65,12 @@ describe("audit-log-sanitizers", () => {
         experienceYears: 3,
         hourlyRate: 2000,
         weeklyAvailability: [],
+        profileDescription: undefined,
+        philosophyQuote: undefined,
+        experienceDescription: undefined,
+        testimonialQuote: undefined,
+        testimonialAuthor: undefined,
+        retentionRate: undefined,
       },
     });
 

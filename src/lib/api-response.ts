@@ -10,6 +10,10 @@ export function created<T>(data: T, init?: ResponseInit) {
   return NextResponse.json({ success: true, data }, { status: 201, ...init });
 }
 
+export function noContent() {
+  return new NextResponse(null, { status: 204 });
+}
+
 export function failure(status: number, message: string, code = "REQUEST_FAILED") {
   return NextResponse.json(
     {

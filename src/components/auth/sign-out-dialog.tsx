@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { easeCalm, hoverLiftTransition, morphTransition } from "@/components/ui/fade-in";
 
 type SignOutDialogProps = {
@@ -10,6 +11,8 @@ type SignOutDialogProps = {
   onClose: () => void;
   userLabel?: string | null;
   callbackUrl?: string;
+  /** Landing pages use a lighter overlay to match public modals */
+  variant?: "default" | "landing";
 };
 
 export function SignOutDialog({
@@ -17,9 +20,15 @@ export function SignOutDialog({
   onClose,
   userLabel,
   callbackUrl = "/",
+  variant = "default",
 }: SignOutDialogProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -59,11 +68,31 @@ export function SignOutDialog({
     }
   };
 
-  return (
+  const backdropClass =
+    variant === "landing"
+      ? "absolute inset-0 bg-[#f4f4f2]/55 backdrop-blur-sm"
+      : "absolute inset-0 bg-black/45 backdrop-blur-[2px]";
+
+  const panelClass =
+    variant === "landing"
+      ? "relative z-10 w-full max-w-sm overflow-hidden rounded-[24px] border border-black/5 bg-white p-6 shadow-[0_24px_70px_-35px_rgba(0,0,0,0.5)] md:p-7"
+      : "relative z-10 w-full max-w-sm overflow-hidden rounded-calm bg-white p-6 shadow-[0_24px_80px_-24px_rgb(43_43_43/35%)] md:p-7";
+
+  const titleClass =
+    variant === "landing"
+      ? "font-display text-xl font-semibold text-[#26302e]"
+      : "font-display text-xl font-semibold text-text-primary";
+
+  const bodyClass =
+    variant === "landing"
+      ? "mt-1 text-sm text-[#75817d]"
+      : "mt-1 text-sm text-text-primary/65";
+
+  const content = (
     <AnimatePresence>
       {open ? (
         <div
-          className="fixed inset-0 z-100 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sign-out-title"
@@ -71,7 +100,7 @@ export function SignOutDialog({
           <motion.button
             type="button"
             aria-label="Cancel sign out"
-            className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+            className={backdropClass}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -82,11 +111,12 @@ export function SignOutDialog({
           />
 
           <motion.div
-            className="relative z-1 w-full max-w-sm overflow-hidden rounded-calm bg-white p-6 shadow-[0_24px_80px_-24px_rgb(43_43_43/35%)] md:p-7"
+            className={panelClass}
             initial={{ opacity: 0, y: 18, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={morphTransition}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
               <span
@@ -108,13 +138,10 @@ export function SignOutDialog({
                 </svg>
               </span>
               <div className="min-w-0">
-                <h2
-                  id="sign-out-title"
-                  className="font-display text-xl font-semibold text-text-primary"
-                >
+                <h2 id="sign-out-title" className={titleClass}>
                   Sign out of Apna Healer?
                 </h2>
-                <p className="mt-1 text-sm text-text-primary/65">
+                <p className={bodyClass}>
                   {userLabel
                     ? `You're currently signed in as ${userLabel}.`
                     : "We'll end your current session and take you back to the home page."}
@@ -133,7 +160,11 @@ export function SignOutDialog({
                 type="button"
                 onClick={onClose}
                 disabled={submitting}
-                className="rounded-full border border-accent/90 px-5 py-2.5 text-sm font-semibold text-text-primary/75 transition-colors hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
+                className={
+                  variant === "landing"
+                    ? "rounded-full border border-[#e4e6e5] px-5 py-2.5 text-sm font-semibold text-[#5f6b69] transition hover:bg-[#f8f8f7] disabled:cursor-not-allowed disabled:opacity-60"
+                    : "rounded-full border border-accent/90 px-5 py-2.5 text-sm font-semibold text-text-primary/75 transition-colors hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
+                }
               >
                 Stay signed in
               </button>
@@ -154,4 +185,8 @@ export function SignOutDialog({
       ) : null}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+
+  return createPortal(content, document.body);
 }

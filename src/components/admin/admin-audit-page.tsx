@@ -2,284 +2,400 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api-client";
-import { ActivityFeedSkeleton, StatCardsSkeleton } from "@/components/skeletons";
-import { formatDateTime, toSentenceCase } from "@/lib/display";
+import { UserAvatarCircle } from "@/components/dashboard/user-avatar-circle";
+import { formatAuditTimestamp } from "@/lib/display";
 import type { ApiAuditLogEntry, ApiAuditLogListResponse, AuditActionValue } from "@/types/api";
-import { auditActionCategory, type AuditCategory } from "@/lib/audit-display";
+import {
+  AUDIT_ACTION_OPTIONS,
+  AUDIT_DATE_RANGE_OPTIONS,
+  AUDIT_ROLE_OPTIONS,
+  auditActorDisplayName,
+  auditActorInitials,
+  auditActorRoleLabel,
+  auditEntityTone,
+} from "@/lib/audit-display";
+import { TableSkeleton } from "@/components/skeletons";
 
-const viewport = { once: true, amount: 0.2 } as const;
-const easeOut = [0.22, 1, 0.36, 1] as const;
+const PAGE_SIZE = 10;
 
-const fadeBlock = {
-  hidden: { opacity: 0, y: 22 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: easeOut },
-  },
-};
+function EntityBadge({ targetType, label }: { targetType: string; label: string }) {
+  const tone = auditEntityTone(targetType);
+  const classes =
+    tone === "user"
+      ? "bg-[#f3efe9] text-[#7a6a58]"
+      : tone === "session"
+        ? "bg-[#e3f0eb] text-theme-status-success"
+        : tone === "setting"
+          ? "bg-[#eef0f0] text-[#5c6664]"
+          : "bg-[#f3efe9] text-[#7a6a58]";
 
-const staggerContainer = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.04 },
-  },
-};
-
-function actionToCategory(action: AuditActionValue): AuditCategory {
-  return auditActionCategory(action);
-}
-
-function categoryAvatarFallback(category: AuditCategory): string {
-  switch (category) {
-    case "users":
-      return "bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-[#2f745f] text-xs";
-    case "applications":
-      return "bg-linear-to-br from-[#e8ded1] to-[#d4c0a8] text-[#6e5542] text-xs";
-    case "bookings":
-      return "bg-linear-to-br from-[#edf4ff] to-[#cfdcf0] text-[#4a6282] text-xs";
-    case "sessions":
-      return "bg-linear-to-br from-[#17313a] to-[#45616b] text-white text-xs";
-    case "payouts":
-      return "bg-linear-to-br from-[#f3efe9] to-[#e0d8cc] text-[#7a6a58] text-xs";
-    default:
-      return "bg-text-secondary text-xs text-white";
-  }
-}
-
-function AuditTimelineFallbackIcon({ category }: { category: AuditCategory }) {
   return (
-    <div
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${categoryAvatarFallback(category)}`}
-      aria-hidden
-    >
-      <svg viewBox="0 0 24 24" className="h-5 w-5 opacity-80" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M8 2v4M16 2v4M4 9h16v11H4z" strokeLinecap="round" />
-        <path d="M4 13h16" strokeLinecap="round" />
-      </svg>
-    </div>
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${classes}`}>
+      {label}
+    </span>
   );
 }
 
-function formatDetails(details: ApiAuditLogEntry["details"]): string {
-  if (!details || Object.keys(details).length === 0) {
-    return "No additional details recorded.";
-  }
-  return JSON.stringify(details, null, 2);
+function StatusBadge({ status }: { status: "success" | "failed" }) {
+  const isSuccess = status === "success";
+  return (
+    <span
+      className={`inline-flex items-center gap-2 text-sm font-semibold ${
+        isSuccess ? "text-theme-status-success" : "text-theme-status-error"
+      }`}
+    >
+      <span
+        className={`h-2 w-2 rounded-full ${isSuccess ? "bg-theme-button-primary" : "bg-[#cf4f45]"}`}
+        aria-hidden
+      />
+      {isSuccess ? "Success" : "Failed"}
+    </span>
+  );
+}
+
+function exportAuditCsv(items: ApiAuditLogEntry[]) {
+  const header = ["Timestamp", "Actor", "Role", "Action", "Entity", "IP Address", "Status"];
+  const rows = items.map((row) => [
+    formatAuditTimestamp(row.createdAt),
+    auditActorDisplayName(row),
+    auditActorRoleLabel(row),
+    row.summary,
+    row.entityLabel,
+    row.ipAddress,
+    row.status === "success" ? "Success" : "Failed",
+  ]);
+  const csv = [header, ...rows]
+    .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `apna-healer-audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 export function AdminAuditPage() {
-  const [categoryFilter, setCategoryFilter] = useState<"all" | AuditCategory>("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [actionFilter, setActionFilter] = useState<AuditActionValue | "">("");
+  const [roleFilter, setRoleFilter] = useState<(typeof AUDIT_ROLE_OPTIONS)[number]["value"]>("");
+  const [daysFilter, setDaysFilter] = useState("30");
+  const [page, setPage] = useState(1);
 
   const auditQuery = useQuery({
-    queryKey: ["admin-audit", categoryFilter],
+    queryKey: ["admin-audit", actionFilter, roleFilter, daysFilter, page],
     queryFn: () => {
-      const params = new URLSearchParams({ take: "80" });
-      if (categoryFilter !== "all") {
-        params.set("category", categoryFilter);
-      }
+      const params = new URLSearchParams({
+        take: String(PAGE_SIZE),
+        page: String(page),
+      });
+      if (actionFilter) params.set("action", actionFilter);
+      if (roleFilter) params.set("role", roleFilter);
+      if (daysFilter) params.set("days", daysFilter);
       return apiFetch<ApiAuditLogListResponse>(`/api/admin/audit?${params.toString()}`);
     },
   });
 
-  const entries = useMemo(() => auditQuery.data?.items ?? [], [auditQuery.data?.items]);
+  const entries = auditQuery.data?.items ?? [];
+  const meta = auditQuery.data?.meta;
+  const total = meta?.total ?? 0;
+  const totalPages = meta?.totalPages ?? 1;
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
-  const stats = useMemo(() => {
-    const byCategory = (cat: AuditCategory) =>
-      entries.filter((e) => actionToCategory(e.action) === cat).length;
+  const pageNumbers = useMemo(() => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, start + maxVisible - 1);
+    start = Math.max(1, end - maxVisible + 1);
+    for (let i = start; i <= end; i += 1) pages.push(i);
+    return pages;
+  }, [page, totalPages]);
 
-    return [
-      {
-        label: "Tracked Events",
-        value: String(entries.length),
-        meta: categoryFilter === "all" ? "All categories" : `Filtered: ${categoryFilter}`,
-      },
-      {
-        label: "Admin Actions",
-        value: String(byCategory("users")),
-        meta: "Profile & role updates",
-      },
-      {
-        label: "Application Reviews",
-        value: String(byCategory("applications")),
-        meta: "Approve / reject decisions",
-      },
-      {
-        label: "Financial Events",
-        value: String(byCategory("payouts")),
-        meta: "Wallet & ledger activity",
-      },
-    ];
-  }, [categoryFilter, entries]);
+  function resetFilters() {
+    setActionFilter("");
+    setRoleFilter("");
+    setDaysFilter("30");
+    setPage(1);
+  }
 
-  if (auditQuery.isLoading) {
-    return (
-      <div className="space-y-9 pb-6">
-        <StatCardsSkeleton count={4} />
-        <ActivityFeedSkeleton />
-      </div>
-    );
+  async function handleExport() {
+    if (entries.length === 0) return;
+
+    const params = new URLSearchParams({ take: "500", page: "1" });
+    if (actionFilter) params.set("action", actionFilter);
+    if (roleFilter) params.set("role", roleFilter);
+    if (daysFilter) params.set("days", daysFilter);
+
+    try {
+      const data = await apiFetch<ApiAuditLogListResponse>(`/api/admin/audit?${params.toString()}`);
+      exportAuditCsv(data.items);
+    } catch {
+      exportAuditCsv(entries);
+    }
   }
 
   return (
-    <div className="space-y-9 pb-6">
-      <motion.section
-        initial="hidden"
-        whileInView="show"
-        viewport={viewport}
-        variants={staggerContainer}
-      >
-        <motion.div variants={fadeBlock}>
-          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[52px]">
-            Audit Log
+    <div className="space-y-8 pb-10">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[40px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[48px]">
+            Platform Audit Logs
           </h1>
-          <p className="mt-2 max-w-[760px] text-[15px] leading-7 text-text-primary/65 md:text-base">
-            Persistent accountability trail with actor, action, and sanitized change details only.
+          <p className="mt-2 max-w-[720px] text-[15px] leading-7 text-text-primary/60">
+            A comprehensive ledger of system events, maintaining absolute transparency and
+            accountability across the ApnaHealer ecosystem.
           </p>
-        </motion.div>
-
-        {auditQuery.error ? (
-          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
-            {auditQuery.error.message}
-          </div>
-        ) : null}
-
-        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <motion.article
-              key={stat.label}
-              variants={fadeBlock}
-              whileHover={{ y: -4 }}
-              transition={{ duration: 0.3, ease: easeOut }}
-              className="rounded-[30px] border border-[#f0eeea] bg-white px-6 py-7 shadow-[0_18px_50px_-34px_rgba(47,63,56,0.18)]"
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b1a89d]">
-                {stat.label}
-              </p>
-              <p className="mt-3 font-display text-[52px] font-semibold leading-none tracking-[-0.04em] text-[#2f6f5b]">
-                {stat.value}
-              </p>
-              <p className="mt-3 text-sm text-text-primary/55">{stat.meta}</p>
-            </motion.article>
-          ))}
         </div>
-      </motion.section>
 
-      <motion.section
-        initial="hidden"
-        whileInView="show"
-        viewport={viewport}
-        variants={staggerContainer}
-        className="rounded-[30px] bg-white p-6 shadow-[0_18px_50px_-34px_rgba(47,63,56,0.18)] md:p-7"
-      >
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <motion.h2
-              variants={fadeBlock}
-              className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={entries.length === 0}
+          className="inline-flex items-center gap-2 rounded-full bg-theme-button-primary px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_28px_-14px_rgba(47,111,91,0.55)] transition-colors hover:bg-[#285f4e] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M12 3v12M7 10l5 5 5-5M5 19h14" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Export CSV
+        </button>
+      </header>
+
+      {auditQuery.error ? (
+        <div className="rounded-[20px] border border-[#f0d8d5] bg-[#fff8f7] px-5 py-4 text-sm font-medium text-theme-status-error">
+          {auditQuery.error.message}
+        </div>
+      ) : null}
+
+      <section className="rounded-[24px] border border-theme-muted bg-[#fbfaf7] p-4 md:p-5">
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="min-w-[160px] flex-1">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9d9287]">
+              Action Type
+            </span>
+            <select
+              value={actionFilter}
+              onChange={(e) => {
+                setActionFilter(e.target.value as AuditActionValue | "");
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-[#e5dfd6] bg-white px-3 py-2.5 text-sm font-medium text-theme-heading outline-none focus:border-[#2f6f5b]"
             >
-              Platform Timeline
-            </motion.h2>
-            <p className="mt-1 text-sm text-text-primary/55">
-              Sorted by most recent recorded actions
-            </p>
+              {AUDIT_ACTION_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="min-w-[140px] flex-1">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9d9287]">
+              Role
+            </span>
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value as (typeof AUDIT_ROLE_OPTIONS)[number]["value"]);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-[#e5dfd6] bg-white px-3 py-2.5 text-sm font-medium text-theme-heading outline-none focus:border-[#2f6f5b]"
+            >
+              {AUDIT_ROLE_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="min-w-[160px] flex-1">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9d9287]">
+              Date Range
+            </span>
+            <div className="relative">
+              <select
+                value={daysFilter}
+                onChange={(e) => {
+                  setDaysFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full appearance-none rounded-xl border border-[#e5dfd6] bg-white py-2.5 pl-3 pr-9 text-sm font-medium text-theme-heading outline-none focus:border-[#2f6f5b]"
+              >
+                {AUDIT_DATE_RANGE_OPTIONS.map((opt) => (
+                  <option key={opt.label} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <svg
+                viewBox="0 0 24 24"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9d9287]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </div>
+          </label>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="inline-flex items-center gap-2 rounded-xl border border-[#e5dfd6] bg-white px-4 py-2.5 text-sm font-semibold text-[#5c6664] transition-colors hover:bg-[#f3efe9]"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M4 4v6h6M20 20v-6h-6" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 19A9 9 0 0 0 19 5" strokeLinecap="round" />
+            </svg>
+            Reset Filters
+          </button>
+        </div>
+      </section>
+
+      {auditQuery.isLoading ? (
+        <TableSkeleton columns={6} rows={PAGE_SIZE} hasAvatarColumn />
+      ) : (
+        <section className="overflow-hidden rounded-[24px] border border-theme-muted bg-white shadow-[0_18px_50px_-34px_rgba(47,63,56,0.14)]">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+              <thead>
+                <tr className="border-b border-theme-muted bg-[#fbfaf7]">
+                  {["Timestamp", "Actor", "Action", "Entity", "IP Address", "Status"].map((col) => (
+                    <th
+                      key={col}
+                      className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9d9287]"
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {entries.length > 0 ? (
+                  entries.map((entry) => (
+                    <tr
+                      key={entry.id}
+                      className="border-b border-[#f4f0ea] transition-colors last:border-0 hover:bg-[#fbfaf7]/60"
+                    >
+                      <td className="whitespace-nowrap px-5 py-4 text-sm text-[#5c6664]">
+                        {formatAuditTimestamp(entry.createdAt)}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          {entry.actorId ? (
+                            <UserAvatarCircle
+                              name={entry.actorName}
+                              email={entry.actorEmail}
+                              image={entry.actorImage}
+                              className="h-9 w-9 shrink-0"
+                              fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-theme-status-success text-xs font-semibold"
+                            />
+                          ) : (
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef0f0] text-xs font-semibold text-[#5c6664]">
+                              {auditActorInitials(entry)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-theme-heading">
+                              {auditActorDisplayName(entry)}
+                            </p>
+                            <p className="text-xs font-medium uppercase tracking-[0.08em] text-[#9d9287]">
+                              {auditActorRoleLabel(entry)}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="max-w-[240px] px-5 py-4 text-sm font-medium text-theme-heading">
+                        {entry.summary}
+                      </td>
+                      <td className="px-5 py-4">
+                        <EntityBadge targetType={entry.targetType} label={entry.entityLabel} />
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm text-[#5c6664]">
+                        {entry.ipAddress}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={entry.status} />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-text-primary/55">
+                      No audit events matched your filters. Platform actions will appear here as they
+                      occur.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ["all", "All"],
-                ["users", "Users"],
-                ["applications", "Applications"],
-                ["bookings", "Bookings"],
-                ["sessions", "Sessions"],
-                ["payouts", "Payouts"],
-              ] as const
-            ).map(([value, label]) => {
-              const active = categoryFilter === value;
-              return (
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-theme-muted px-5 py-4">
+            <p className="text-sm text-[#5c6664]">
+              {total > 0
+                ? `Showing ${rangeStart}-${rangeEnd} of ${total.toLocaleString()} entries`
+                : "No entries to display"}
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-lg px-2 py-1 text-sm font-semibold text-[#5c6664] transition-colors hover:bg-[#f3efe9] disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Previous page"
+              >
+                ‹
+              </button>
+
+              {pageNumbers.map((num) => (
                 <button
-                  key={value}
+                  key={num}
                   type="button"
-                  onClick={() => setCategoryFilter(value)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                    active
-                      ? "bg-[#2f6f5b] text-white"
-                      : "bg-[#f3efe9] text-text-primary/70 hover:bg-[#e9e3da]"
+                  onClick={() => setPage(num)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    num === page
+                      ? "bg-theme-button-primary text-white"
+                      : "text-[#5c6664] hover:bg-[#f3efe9]"
                   }`}
                 >
-                  {label}
+                  {num}
                 </button>
-              );
-            })}
-          </div>
-        </div>
+              ))}
 
-        <div className="mt-6 space-y-4">
-          {entries.length > 0 ? (
-            entries.map((entry) => {
-              const category = actionToCategory(entry.action);
-              const expanded = expandedId === entry.id;
-
-              return (
-                <motion.article
-                  key={entry.id}
-                  variants={fadeBlock}
-                  whileHover={{ x: 4, y: -2 }}
-                  transition={{ duration: 0.25, ease: easeOut }}
-                  className="rounded-[22px] bg-[#fbfaf7] px-5 py-5 shadow-[0_14px_40px_-34px_rgba(47,63,56,0.22)]"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <AuditTimelineFallbackIcon category={category} />
-                      <div className="min-w-0">
-                        <p className="text-[20px] font-semibold leading-6 text-[#243230]">
-                          {entry.summary}
-                        </p>
-                        <p className="mt-2 text-sm text-text-primary/58">
-                          {entry.actorEmail
-                            ? `By ${entry.actorEmail}`
-                            : "System action"}{" "}
-                          · {toSentenceCase(entry.targetType)} {entry.targetId.slice(0, 8)}…
-                        </p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-[#f3efe9] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9d896f]">
-                      {toSentenceCase(entry.action.replaceAll("_", " "))}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-text-primary/30">
-                    <span>{toSentenceCase(category)}</span>
-                    <span>{formatDateTime(entry.createdAt)}</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(expanded ? null : entry.id)}
-                    className="mt-3 text-xs font-semibold text-[#2f6f5b] hover:underline"
-                  >
-                    {expanded ? "Hide details" : "View sanitized details"}
-                  </button>
-
-                  {expanded ? (
-                    <pre className="mt-3 max-h-48 overflow-auto rounded-xl bg-[#f3efe9] p-3 text-left text-[11px] leading-relaxed text-[#4a4a4a]">
-                      {formatDetails(entry.details)}
-                    </pre>
-                  ) : null}
-                </motion.article>
-              );
-            })
-          ) : (
-            <div className="rounded-[22px] bg-[#fbfaf7] px-5 py-5 text-sm text-text-primary/55 shadow-[0_14px_40px_-34px_rgba(47,63,56,0.22)]">
-              No audit events matched the selected category. New admin and platform actions will appear here.
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="rounded-lg px-2 py-1 text-sm font-semibold text-[#5c6664] transition-colors hover:bg-[#f3efe9] disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Next page"
+              >
+                ›
+              </button>
             </div>
-          )}
+          </div>
+        </section>
+      )}
+
+      <footer className="flex flex-col items-center px-4 py-10 text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#e3f0eb] text-theme-status-success">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M12 3 4 7v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V7l-8-4Z" strokeLinejoin="round" />
+          </svg>
         </div>
-      </motion.section>
+        <h2 className="font-display text-xl font-semibold text-theme-heading">Compliance &amp; Data Integrity</h2>
+        <p className="mt-2 max-w-[520px] text-sm leading-6 text-text-primary/55">
+          Logs are stored in an immutable, cryptographically sealed ledger. Any attempt to modify
+          these records will trigger an immediate high-priority system alert.
+        </p>
+      </footer>
     </div>
   );
 }

@@ -7,6 +7,9 @@ CREATE TYPE "WellnessEventMode" AS ENUM ('VIRTUAL', 'IN_PERSON');
 -- CreateEnum
 CREATE TYPE "EventRegistrationStatus" AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'REFUNDED');
 
+-- CreateEnum
+CREATE TYPE "BookingPaymentMethod" AS ENUM ('WALLET', 'QR', 'CARD');
+
 -- AlterEnum
 ALTER TYPE "NotificationType" ADD VALUE 'EVENT_REGISTRATION_CONFIRMED';
 ALTER TYPE "NotificationType" ADD VALUE 'EVENT_REGISTRATION_RECEIVED';
@@ -101,3 +104,6 @@ ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_eventId_fk
 
 -- AddForeignKey
 ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AlterTable
+ALTER TABLE "bookings" ADD COLUMN "paymentMethod" "BookingPaymentMethod" NOT NULL DEFAULT 'WALLET';

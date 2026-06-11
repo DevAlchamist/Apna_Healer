@@ -103,7 +103,7 @@ export default function PackagesPage() {
         </p>
 
         {queryError ? (
-          <p className="text-sm font-medium text-[#cf4f45]">{queryError}</p>
+          <p className="text-sm font-medium text-theme-status-error">{queryError}</p>
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-3">

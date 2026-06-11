@@ -265,7 +265,7 @@ export function AdminExportsPage() {
         variants={staggerContainer}
       >
         <motion.div variants={fadeBlock}>
-          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[52px]">
+          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[52px]">
             Export Center
           </h1>
           <p className="mt-2 max-w-[780px] text-[15px] leading-7 text-text-primary/65 md:text-base">
@@ -275,7 +275,7 @@ export function AdminExportsPage() {
         </motion.div>
 
         {queryError ? (
-          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
+          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
             {queryError}
           </div>
         ) : null}
@@ -292,7 +292,7 @@ export function AdminExportsPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b1a89d]">
                 {stat.label}
               </p>
-              <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#2f6f5b]">
+              <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-status-success">
                 {stat.value}
               </p>
               <p className="mt-3 text-sm text-text-primary/55">{stat.meta}</p>
@@ -321,11 +321,11 @@ export function AdminExportsPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b1a89d]">
                   Dataset
                 </p>
-                <h2 className="mt-2 font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]">
+                <h2 className="mt-2 font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading">
                   {dataset.label}
                 </h2>
               </div>
-              <div className="rounded-full bg-[#f3efe9] px-4 py-2 text-sm font-semibold text-[#2f6f5b]">
+              <div className="rounded-full bg-[#f3efe9] px-4 py-2 text-sm font-semibold text-theme-status-success">
                 {dataset.recordCount} rows
               </div>
             </div>
@@ -342,7 +342,7 @@ export function AdminExportsPage() {
                     "application/json;charset=utf-8",
                   )
                 }
-                className="rounded-full bg-[#2f6f5b] px-5 py-3 text-sm font-semibold text-white"
+                className="rounded-full bg-theme-button-primary px-5 py-3 text-sm font-semibold text-white"
               >
                 Download JSON
               </button>

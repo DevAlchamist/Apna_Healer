@@ -18,11 +18,7 @@ import type { ApiCareSession, ApiUser } from "@/types/api";
 import { useSessionDetailsModal } from "@/components/dashboard/session-details-modal";
 import { UserAvatarCircle } from "@/components/dashboard/user-avatar-circle";
 import { SessionCardSkeleton, SessionRowSkeleton } from "@/components/skeletons";
-
-const FOREST = "#2D5A4C";
-const MINT = "#B8E6D3";
-const PEACH = "#E9D5C8";
-const BEIGE = "#E9E0D3";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type InboxRequest = {
   id: string;
@@ -163,6 +159,7 @@ function featuredSessionIndex(
 }
 
 export default function ListenerInboxPage() {
+  const { forest: FOREST, mint: MINT, peach: PEACH, beige: BEIGE } = useThemePalette();
   const queryClient = useQueryClient();
   const { open: openSessionDetails } = useSessionDetailsModal();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -292,7 +289,7 @@ export default function ListenerInboxPage() {
   return (
     <FadeIn className="space-y-8 md:space-y-10">
       {pageError ? (
-        <div className="rounded-calm border border-[#cf4f45]/25 bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <div className="rounded-calm border border-[#cf4f45]/25 bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-soft">
           {pageError}
         </div>
       ) : null}
@@ -479,7 +476,7 @@ export default function ListenerInboxPage() {
                     })}
                   </AnimatePresence>
                   {respondMutation.isError ? (
-                    <p className="text-xs font-semibold text-[#cf4f45]">
+                    <p className="text-xs font-semibold text-theme-status-error">
                       {respondMutation.error.message}
                     </p>
                   ) : null}

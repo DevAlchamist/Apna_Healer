@@ -8,6 +8,7 @@ import {
   getViewerClubState,
 } from "@/server/services/club-service";
 import { createMembershipForUser } from "@/server/services/club-billing-service";
+import { formatJoinMessageFromAnswers } from "@/server/services/club-utils";
 import {
   emitClubJoinApproved,
   emitClubJoinRejected,
@@ -19,7 +20,19 @@ type JoinInput = z.infer<typeof clubJoinRequestSchema>;
 type ReviewInput = z.infer<typeof reviewJoinRequestSchema>;
 
 export async function submitClubJoinRequest(userId: string, input: JoinInput) {
-  const club = await getClubById(input.clubId);
+  const club = await prisma.club.findUnique({
+    where: { id: input.clubId },
+    include: {
+      onboardingSteps: {
+        orderBy: { sortOrder: "asc" },
+        include: { questions: { orderBy: { sortOrder: "asc" } } },
+      },
+    },
+  });
+
+  if (!club) {
+    throw new ApiError(404, "Club was not found.", "CLUB_NOT_FOUND");
+  }
   if (club.status !== "ACTIVE") {
     throw new ApiError(400, "This club is not accepting members.", "CLUB_NOT_ACTIVE");
   }
@@ -32,11 +45,98 @@ export async function submitClubJoinRequest(userId: string, input: JoinInput) {
     throw new ApiError(409, "You already have a pending request.", "PENDING_EXISTS");
   }
 
+  const hasOnboarding = club.onboardingSteps.length > 0;
+  let message = input.message?.trim() ?? "";
+  let onboardingAnswers = input.onboardingAnswers ?? null;
+
+  if (hasOnboarding) {
+    if (!onboardingAnswers?.length) {
+      throw new ApiError(
+        400,
+        "Complete all onboarding steps before submitting.",
+        "ONBOARDING_INCOMPLETE",
+      );
+    }
+
+    if (onboardingAnswers.length !== club.onboardingSteps.length) {
+      throw new ApiError(
+        400,
+        "Onboarding answers do not match the club steps.",
+        "ONBOARDING_MISMATCH",
+      );
+    }
+
+    for (const [index, step] of club.onboardingSteps.entries()) {
+      const answerStep = onboardingAnswers[index];
+      if (!answerStep || answerStep.stepTitle !== step.title) {
+        throw new ApiError(400, "Onboarding step mismatch.", "ONBOARDING_MISMATCH");
+      }
+      if (answerStep.questions.length !== step.questions.length) {
+        throw new ApiError(400, "Answer every required question.", "ONBOARDING_INCOMPLETE");
+      }
+      for (const [qi, question] of step.questions.entries()) {
+        const answer = answerStep.questions[qi];
+        if (!answer || answer.questionId !== question.id || answer.question !== question.question) {
+          throw new ApiError(400, "Onboarding question mismatch.", "ONBOARDING_MISMATCH");
+        }
+
+        const raw = answer.answer;
+        const hasValue =
+          Array.isArray(raw) ? raw.filter(Boolean).length > 0 : String(raw ?? "").trim().length > 0;
+        if (question.required && !hasValue) {
+          throw new ApiError(400, "Answer every required question.", "ONBOARDING_INCOMPLETE");
+        }
+
+        if (question.type === "CHOICE") {
+          const options = Array.isArray(question.options)
+            ? (question.options as string[])
+            : [];
+          if (options.length < 2) {
+            throw new ApiError(400, "Invalid club onboarding configuration.", "ONBOARDING_MISMATCH");
+          }
+
+          if (question.allowMultiple) {
+            if (!Array.isArray(raw)) {
+              throw new ApiError(400, "Invalid answer format.", "ONBOARDING_MISMATCH");
+            }
+            const selected = raw.map((v) => String(v)).filter(Boolean);
+            if (question.required && selected.length === 0) {
+              throw new ApiError(400, "Answer every required question.", "ONBOARDING_INCOMPLETE");
+            }
+            if (!selected.every((v) => options.includes(v))) {
+              throw new ApiError(400, "Invalid option selected.", "ONBOARDING_MISMATCH");
+            }
+          } else {
+            if (Array.isArray(raw)) {
+              throw new ApiError(400, "Invalid answer format.", "ONBOARDING_MISMATCH");
+            }
+            const selected = String(raw ?? "").trim();
+            if (question.required && !selected) {
+              throw new ApiError(400, "Answer every required question.", "ONBOARDING_INCOMPLETE");
+            }
+            if (selected && !options.includes(selected)) {
+              throw new ApiError(400, "Invalid option selected.", "ONBOARDING_MISMATCH");
+            }
+          }
+        }
+      }
+    }
+
+    message = formatJoinMessageFromAnswers(onboardingAnswers);
+  } else if (message.length < 10) {
+    throw new ApiError(
+      400,
+      "Please share why you want to join (at least 10 characters).",
+      "VALIDATION_ERROR",
+    );
+  }
+
   const row = await prisma.clubJoinRequest.create({
     data: {
       clubId: input.clubId,
       userId,
-      message: input.message,
+      message,
+      onboardingAnswers: onboardingAnswers ?? undefined,
       status: ClubRequestStatus.PENDING,
     },
     include: {

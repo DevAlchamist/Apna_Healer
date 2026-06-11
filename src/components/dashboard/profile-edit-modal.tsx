@@ -68,6 +68,12 @@ export function ProfileEditModal({ open, onClose, user }: ProfileEditModalProps)
   const [experienceYears, setExperienceYears] = useState("3");
   const [hourlyRate, setHourlyRate] = useState("1500");
   const [therapistWeekly, setTherapistWeekly] = useState(defaultWeeklyAvailability);
+  const [profileDescription, setProfileDescription] = useState("");
+  const [philosophyQuote, setPhilosophyQuote] = useState("");
+  const [experienceDescription, setExperienceDescription] = useState("");
+  const [testimonialQuote, setTestimonialQuote] = useState("");
+  const [testimonialAuthor, setTestimonialAuthor] = useState("");
+  const [retentionRate, setRetentionRate] = useState("");
 
   const [listenerBio, setListenerBio] = useState("");
   const [languagesRaw, setLanguagesRaw] = useState("");
@@ -119,6 +125,12 @@ export function ProfileEditModal({ open, onClose, user }: ProfileEditModalProps)
       setExperienceYears(t.experienceYears);
       setHourlyRate(t.hourlyRate);
       setTherapistWeekly(t.weekly);
+      setProfileDescription(t.profileDescription);
+      setPhilosophyQuote(t.philosophyQuote);
+      setExperienceDescription(t.experienceDescription);
+      setTestimonialQuote(t.testimonialQuote);
+      setTestimonialAuthor(t.testimonialAuthor);
+      setRetentionRate(t.retentionRate);
     }
 
     if (user.role === "LISTENER") {
@@ -189,6 +201,12 @@ export function ProfileEditModal({ open, onClose, user }: ProfileEditModalProps)
           experienceYears,
           hourlyRate,
           weekly: therapistWeekly,
+          profileDescription,
+          philosophyQuote,
+          experienceDescription,
+          testimonialQuote,
+          testimonialAuthor,
+          retentionRate,
         });
         if (!built.ok) {
           setProviderErrors(built.errors);
@@ -363,6 +381,18 @@ export function ProfileEditModal({ open, onClose, user }: ProfileEditModalProps)
                   onHourlyRate={setHourlyRate}
                   weekly={therapistWeekly}
                   onWeekly={setTherapistWeekly}
+                  profileDescription={profileDescription}
+                  onProfileDescription={setProfileDescription}
+                  philosophyQuote={philosophyQuote}
+                  onPhilosophyQuote={setPhilosophyQuote}
+                  experienceDescription={experienceDescription}
+                  onExperienceDescription={setExperienceDescription}
+                  testimonialQuote={testimonialQuote}
+                  onTestimonialQuote={setTestimonialQuote}
+                  testimonialAuthor={testimonialAuthor}
+                  onTestimonialAuthor={setTestimonialAuthor}
+                  retentionRate={retentionRate}
+                  onRetentionRate={setRetentionRate}
                   errors={providerErrors}
                 />
               ) : null}

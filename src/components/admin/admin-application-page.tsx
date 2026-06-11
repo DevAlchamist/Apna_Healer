@@ -50,10 +50,10 @@ function ApplicationIcon({ type }: { type: ApiApplication["type"] }) {
 
 function getStatusBadgeClass(status: ProfessionalApplicationStatusValue) {
   if (status === "APPROVED") {
-    return "bg-[#dff4e7] text-[#2f745f]";
+    return "bg-[#dff4e7] text-theme-status-success";
   }
   if (status === "REJECTED") {
-    return "bg-[#fde2df] text-[#cf4f45]";
+    return "bg-[#fde2df] text-theme-status-error";
   }
   return "bg-[#f3efe9] text-[#9d896f]";
 }
@@ -164,7 +164,7 @@ export function AdminApplicationPage() {
         className="space-y-7"
       >
         <motion.div variants={fadeUp}>
-          <h1 className="font-display text-[40px] font-semibold tracking-[-0.04em] text-[#243230] md:text-[52px]">
+          <h1 className="font-display text-[40px] font-semibold tracking-[-0.04em] text-theme-heading md:text-[52px]">
             Application <span className="font-medium italic text-[#3b7763]">Pipeline</span>
           </h1>
           <p className="mt-2 max-w-[780px] text-[15px] leading-7 text-text-primary/60 md:text-base">
@@ -174,7 +174,7 @@ export function AdminApplicationPage() {
         </motion.div>
 
         {applicationsQuery.error ? (
-          <div className="rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_38px_-30px_rgba(47,63,56,0.2)]">
+          <div className="rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_16px_38px_-30px_rgba(47,63,56,0.2)]">
             {applicationsQuery.error.message}
           </div>
         ) : null}
@@ -202,8 +202,8 @@ export function AdminApplicationPage() {
         <div className="grid gap-6 xl:grid-cols-[280px_1fr] xl:items-start">
           <motion.div variants={fadeUp} className="space-y-4">
             <div className="flex items-center justify-between gap-3 px-1">
-              <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#243230]">Queue</h2>
-              <span className="rounded-full bg-[#dff4e7] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#2f745f]">
+              <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-theme-heading">Queue</h2>
+              <span className="rounded-full bg-[#dff4e7] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-theme-status-success">
                 {filtered.length} in tab
               </span>
             </div>
@@ -252,7 +252,7 @@ export function AdminApplicationPage() {
                     </div>
 
                     <div className="mt-6">
-                      <p className="text-[26px] font-semibold leading-7 tracking-[-0.03em] text-[#243230]">
+                      <p className="text-[26px] font-semibold leading-7 tracking-[-0.03em] text-theme-heading">
                         {application.user?.name ?? "Unnamed applicant"}
                       </p>
                       <p className="mt-2 line-clamp-2 text-sm text-text-primary/55">
@@ -303,7 +303,7 @@ export function AdminApplicationPage() {
                         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7d8f88]">
                           {toSentenceCase(selectedApplication.type)} application
                         </p>
-                        <h2 className="mt-2 font-display text-[44px] font-semibold tracking-[-0.04em] text-[#243230]">
+                        <h2 className="mt-2 font-display text-[44px] font-semibold tracking-[-0.04em] text-theme-heading">
                           {selectedApplication.user?.name ?? "Unnamed applicant"}
                         </h2>
                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-text-primary/55">
@@ -362,7 +362,7 @@ export function AdminApplicationPage() {
                         value={adminNoteDraft}
                         onChange={(e) => setAdminNoteDraft(e.target.value)}
                         rows={5}
-                        className="mt-3 w-full rounded-[18px] border border-[#ebe5dd] bg-[#f8f6f2] px-4 py-3 text-sm text-text-primary/80"
+                        className="mt-3 w-full rounded-[18px] border border-[#ebe5dd] bg-theme-surface-muted px-4 py-3 text-sm text-text-primary/80"
                         placeholder="Internal context for the decision log…"
                       />
                     </div>
@@ -377,7 +377,7 @@ export function AdminApplicationPage() {
                     ) : (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         {dataEntries.map(([key, value]) => (
-                          <div key={key} className="rounded-[18px] border border-[#ebe5dd] bg-[#f8f6f2] px-4 py-3">
+                          <div key={key} className="rounded-[18px] border border-[#ebe5dd] bg-theme-surface-muted px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8e8477]">
                               {toSentenceCase(key)}
                             </p>
@@ -421,7 +421,7 @@ export function AdminApplicationPage() {
                             adminNote: adminNoteDraft.trim() || undefined,
                           })
                         }
-                        className="rounded-full bg-[#fde2df] px-8 py-4 text-sm font-semibold text-[#cf4f45] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-full bg-[#fde2df] px-8 py-4 text-sm font-semibold text-theme-status-error disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Reject
                       </motion.button>
@@ -445,7 +445,7 @@ export function AdminApplicationPage() {
                   </div>
 
                   {reviewMutation.error ? (
-                    <p className="mt-4 text-sm font-medium text-[#cf4f45]">{reviewMutation.error.message}</p>
+                    <p className="mt-4 text-sm font-medium text-theme-status-error">{reviewMutation.error.message}</p>
                   ) : null}
                 </motion.article>
               </AnimatePresence>
@@ -474,7 +474,7 @@ export function AdminApplicationPage() {
             className="rounded-[28px] bg-white px-7 py-6 shadow-[0_16px_42px_-30px_rgba(47,63,56,0.18)]"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a48f7a]">{stat.label}</p>
-            <p className="mt-3 font-display text-[48px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+            <p className="mt-3 font-display text-[48px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
               {stat.value}
             </p>
             <p className="mt-3 text-sm text-text-primary/55">{stat.meta}</p>

@@ -152,29 +152,25 @@ export function ClubDetailLandingPage() {
   }, [club]);
 
   const features = useMemo(() => {
-    if (!club?.onboardingSteps?.length) return DEFAULT_FEATURES;
-    return club.onboardingSteps.slice(0, 2).map((step, i) => ({
-      title: step.question,
-      description:
-        club.purpose?.slice(0, 120) ??
-        DEFAULT_FEATURES[i]?.description ??
-        "A guided path into collective stillness.",
-      icon: i === 0 ? "wind" : "leaf",
-    }));
-  }, [club]);
+    if (club?.landingFeatures?.length) {
+      return club.landingFeatures.slice(0, 2).map((f) => ({
+        title: f.title,
+        description: f.description,
+        icon: f.icon === "leaf" ? "leaf" : "wind",
+      }));
+    }
+    return DEFAULT_FEATURES;
+  }, [club?.landingFeatures]);
 
   const rituals = useMemo(() => {
     if (!club) return DEFAULT_RITUALS;
-    if (club.onboardingSteps.length >= 2) {
-      return club.onboardingSteps.slice(0, 2).map((step, i) => ({
-        label: club.sphere.toUpperCase(),
-        title: step.question,
-        description:
-          club.description?.slice(0, 200) ??
-          DEFAULT_RITUALS[i]?.description ??
-          "A sequence of collective movements designed to align spirit with rhythm.",
-        image: gallery[i + 1] ?? DEFAULT_RITUALS[i]?.image ?? CIRCLE_IMAGE,
-        cta: i === 0 ? "Explore session details" : "Join the circle",
+    if (club.landingRituals?.length) {
+      return club.landingRituals.slice(0, 2).map((ritual, i) => ({
+        label: ritual.label,
+        title: ritual.title,
+        description: ritual.description,
+        image: ritual.imageUrl ?? gallery[i + 1] ?? DEFAULT_RITUALS[i]?.image ?? CIRCLE_IMAGE,
+        cta: ritual.cta ?? (i === 0 ? "Explore session details" : "Join the circle"),
       }));
     }
     return DEFAULT_RITUALS.map((r, i) => ({
@@ -189,9 +185,25 @@ export function ClubDetailLandingPage() {
     return club.reviews.slice(0, 2).map((r) => ({
       quote: r.quote,
       author: r.authorLabel,
-      since: "Member",
+      since: r.memberSince?.trim() || "Member",
     }));
   }, [club?.reviews]);
+
+  const heroTagline = club?.heroTagline?.trim() || "breath is the bridge";
+  const pulseQuote =
+    club?.pulseQuote?.trim() ||
+    "Every inhale is a new beginning, every exhale a release of what no longer serves.";
+  const ritualsIntro =
+    club?.ritualsIntro?.trim() ||
+    "A sequence of collective movements, designed to align the spirit with the celestial and circadian rhythms.";
+  const voicesQuote =
+    club?.voicesQuote?.trim() ||
+    "The collective isn't just a club; it's a home for the soul's primary function—the breath.";
+  const finalCtaText =
+    club?.finalCtaText?.trim() ||
+    (club
+      ? `Will you step inside? Join a global movement of conscious breathers and rediscover your own internal rhythm with ${club.title}.`
+      : "Will you step inside? Join a global movement of conscious breathers and rediscover your own internal rhythm.");
 
   const openJoinModal = useCallback(() => {
     setModalMethod("email");
@@ -290,7 +302,7 @@ export function ClubDetailLandingPage() {
               variants={reveal}
             >
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5a8f78]">
-                {club.sphere} · breath is the bridge
+                {club.sphere} · {heroTagline}
               </p>
               <h1 className="mt-6 text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-6xl lg:text-7xl">
                 {heroTitle.lead}
@@ -357,10 +369,7 @@ export function ClubDetailLandingPage() {
                   style={{ backgroundImage: `url(${pulseImage})` }}
                 />
                 <div className="absolute -bottom-4 left-4 max-w-[280px] rounded-[20px] bg-white p-5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.25)] md:left-6">
-                  <p className="text-sm italic leading-7 text-[#2f745f]">
-                    &ldquo;Every inhale is a new beginning, every exhale a release of what no longer
-                    serves.&rdquo;
-                  </p>
+                  <p className="text-sm italic leading-7 text-[#2f745f]">&ldquo;{pulseQuote}&rdquo;</p>
                 </div>
               </div>
             </div>
@@ -378,10 +387,7 @@ export function ClubDetailLandingPage() {
                 <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-5xl">
                   Our Rituals
                 </h2>
-                <p className="mt-4 max-w-xl text-base leading-7 text-[#5f6b69]">
-                  A sequence of collective movements, designed to align the spirit with the celestial
-                  and circadian rhythms.
-                </p>
+                <p className="mt-4 max-w-xl text-base leading-7 text-[#5f6b69]">{ritualsIntro}</p>
               </motion.div>
 
               <div className="mt-14 space-y-20 md:space-y-28">
@@ -508,8 +514,7 @@ export function ClubDetailLandingPage() {
                   Voices from the Atrium
                 </h2>
                 <p className="max-w-md text-sm italic leading-7 text-white/75 md:text-right md:text-base">
-                  &ldquo;The collective isn&apos;t just a club; it&apos;s a home for the soul&apos;s
-                  primary function—the breath.&rdquo;
+                  &ldquo;{voicesQuote}&rdquo;
                 </p>
               </div>
               <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -550,10 +555,7 @@ export function ClubDetailLandingPage() {
               <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-5xl">
                 Your sanctuary awaits.
               </h2>
-              <p className="mx-auto mt-5 max-w-lg text-base leading-8 text-[#5f6b69]">
-                Will you step inside? Join a global movement of conscious breathers and rediscover
-                your own internal rhythm with {club.title}.
-              </p>
+              <p className="mx-auto mt-5 max-w-lg text-base leading-8 text-[#5f6b69]">{finalCtaText}</p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                 <button
                   type="button"

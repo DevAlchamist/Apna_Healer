@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ClubEditModal } from "@/components/clubs/club-edit-modal";
 import { ClubJoinModal } from "@/components/clubs/club-join-modal";
+import { ClubProfileSections } from "@/components/clubs/club-profile-sections";
 import { EventCreateForm } from "@/components/events/event-create-form";
+import { EventEditModal } from "@/components/events/event-edit-modal";
 import { apiFetch, apiMutation } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/display";
-import type { ApiClubDetail, ApiClubJoinRequest, ApiEventSummary } from "@/types/api";
+import type { ApiClubDetail, ApiClubJoinRequest, ApiEventDetail, ApiEventSummary } from "@/types/api";
 
 type ClubDetailPageProps = {
   slug: string;
@@ -17,6 +20,8 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
   const queryClient = useQueryClient();
   const [joinOpen, setJoinOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [clubEditOpen, setClubEditOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState<ApiEventDetail | null>(null);
 
   const clubQuery = useQuery({
     queryKey: ["club", slug],
@@ -47,6 +52,12 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
   });
 
   const club = clubQuery.data;
+
+  const canManageClub =
+    club != null &&
+    (club.isOwner ||
+      club.membership?.role === "OWNER" ||
+      club.membership?.role === "MODERATOR");
 
   if (clubQuery.isLoading) {
     return <div className="h-96 animate-pulse rounded-calm bg-accent/30" />;
@@ -84,9 +95,14 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
         )}
         <div className="absolute inset-0 bg-linear-to-r from-black/65 via-black/35 to-black/25" />
         <div className="absolute inset-0 flex flex-col justify-end p-5 md:p-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">{club.sphere}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">
+            {club.sphere}
+            {club.heroTagline?.trim() ? ` · ${club.heroTagline.trim()}` : ""}
+          </p>
           <h1 className="mt-2 font-display text-4xl font-semibold text-white md:text-6xl">{club.title}</h1>
-          <p className="mt-3 max-w-2xl text-sm text-white/85 md:text-base">{club.subtitle}</p>
+          <p className="mt-3 max-w-2xl text-sm text-white/85 md:text-base">
+            {club.subtitle}
+          </p>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
             <div className="flex gap-10">
               <div>
@@ -99,6 +115,15 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
               </div>
             </div>
             <div className="flex gap-3">
+              {canManageClub ? (
+                <button
+                  type="button"
+                  onClick={() => setClubEditOpen(true)}
+                  className="rounded-full border border-white/40 bg-white/10 px-6 py-2 text-sm font-semibold text-white"
+                >
+                  Edit club
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => void copyInvite()}
@@ -128,16 +153,18 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
         </div>
       </section>
 
-      {club.purpose ? (
-        <section className="rounded-calm bg-white p-6 shadow-soft">
-          <h2 className="font-display text-2xl font-semibold text-text-secondary">Purpose</h2>
-          <p className="mt-3 text-text-primary/70 leading-relaxed">{club.purpose}</p>
-        </section>
-      ) : null}
+      <ClubProfileSections club={club} />
 
       <section className="rounded-calm bg-white p-6 shadow-soft">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="font-display text-2xl font-semibold text-text-secondary">Club events</h2>
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-text-secondary">
+              Upcoming gatherings
+            </h2>
+            <p className="mt-1 text-sm text-text-primary/55">
+              Events hosted by this circle
+            </p>
+          </div>
           <Link
             href="/dashboard/events"
             className="text-sm font-semibold text-text-secondary hover:underline"
@@ -145,30 +172,58 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
             All events
           </Link>
         </div>
-        {club.isOwner || club.canManageJoinRequests ? (
+        {club.canPublishEvents ? (
           <div className="mt-4">
+            <p className="mb-3 text-xs text-text-primary/55">
+              As the club creator, you can publish gatherings that appear on your public club page.
+            </p>
             <EventCreateForm
               apiPath={`/api/clubs/${slug}/events`}
+              defaultOwnerUserId={club.ownerUserId}
               onCreated={() => {
                 void queryClient.invalidateQueries({ queryKey: ["club-events", slug] });
               }}
             />
           </div>
         ) : null}
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {clubEventsQuery.data?.length ? (
             clubEventsQuery.data.map((ev) => (
-              <Link
+              <div
                 key={ev.id}
-                href={`/dashboard/events/${ev.slug}`}
-                className="rounded-gentle border border-accent/60 p-4 transition hover:border-text-secondary/40"
+                className="flex flex-col rounded-gentle border border-accent/60 p-4 transition hover:border-text-secondary/40"
               >
-                <p className="font-semibold text-text-primary">{ev.title}</p>
-                <p className="mt-1 text-xs text-text-primary/55">
-                  {ev.dateLabel} · {ev.seatsRemaining} seats ·{" "}
-                  {ev.priceForMe === 0 ? "Free" : formatCurrency(ev.priceForMe)}
-                </p>
-              </Link>
+                <Link href={`/dashboard/events/${ev.slug}`} className="block flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="rounded-full bg-accent/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+                      {ev.mode === "VIRTUAL" ? "Live session" : "In person"}
+                    </span>
+                    <span className="text-right text-[11px] font-medium text-text-primary/55">
+                      {ev.dateLabel} · {ev.timeLabel}
+                    </span>
+                  </div>
+                  <p className="mt-4 font-semibold text-text-primary">{ev.title}</p>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-text-primary/65">
+                    {ev.excerpt || ev.subtitle || `Hosted by ${ev.host}.`}
+                  </p>
+                  <p className="mt-3 text-xs text-text-primary/55">
+                    {ev.host} · {ev.seatsRemaining} seats ·{" "}
+                    {ev.priceForMe === 0 ? "Free" : formatCurrency(ev.priceForMe)}
+                  </p>
+                </Link>
+                {club.canPublishEvents ? (
+                  <button
+                    type="button"
+                    className="mt-3 text-xs font-semibold text-text-secondary hover:underline"
+                    onClick={async () => {
+                      const detail = await apiFetch<ApiEventDetail>(`/api/events/${ev.slug}`);
+                      setEditEvent(detail);
+                    }}
+                  >
+                    Edit event
+                  </button>
+                ) : null}
+              </div>
             ))
           ) : (
             <p className="text-sm text-text-primary/55">No events scheduled yet.</p>
@@ -210,21 +265,27 @@ export function ClubDetailPage({ slug }: ClubDetailPageProps) {
         </section>
       ) : null}
 
-      {club.reviews.length > 0 ? (
-        <section className="rounded-calm bg-white p-6 shadow-soft">
-          <h2 className="font-display text-2xl font-semibold text-text-secondary">Reflections</h2>
-          <div className="mt-4 space-y-4">
-            {club.reviews.map((r) => (
-              <blockquote key={r.id} className="border-l-2 border-primary/40 pl-4">
-                <p className="text-sm italic text-text-primary/75">&ldquo;{r.quote}&rdquo;</p>
-                <footer className="mt-2 text-xs font-semibold text-text-primary/45">— {r.authorLabel}</footer>
-              </blockquote>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       <ClubJoinModal club={club} open={joinOpen} onClose={() => setJoinOpen(false)} />
+      <ClubEditModal
+        open={clubEditOpen}
+        club={club}
+        onClose={() => setClubEditOpen(false)}
+        apiPath={`/api/clubs/${slug}`}
+        title="Edit club"
+        subtitle="Club profile"
+        queryKeys={[["club", slug]]}
+      />
+      <EventEditModal
+        open={editEvent !== null}
+        event={editEvent}
+        onClose={() => setEditEvent(null)}
+        apiPath={
+          editEvent ? `/api/clubs/${slug}/events/${editEvent.id}` : ""
+        }
+        title="Edit event"
+        subtitle="Club event"
+        queryKeys={[["club-events", slug]]}
+      />
     </div>
   );
 }

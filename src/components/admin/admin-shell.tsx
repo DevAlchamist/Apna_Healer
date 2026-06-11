@@ -18,6 +18,7 @@ import { SignOutDialog } from "@/components/auth/sign-out-dialog";
 import { SessionDetailsModalProvider } from "@/components/dashboard/session-details-modal";
 import { UserAvatarCircle } from "@/components/dashboard/user-avatar-circle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { RoleThemeProvider } from "@/components/providers/role-theme-provider";
 
 type AdminShellProps = {
   children: ReactNode;
@@ -78,9 +79,10 @@ export function AdminShell({ children }: AdminShellProps) {
   );
 
   return (
+    <RoleThemeProvider>
     <SessionDetailsModalProvider>
     <div className="min-h-screen bg-background">
-      <div className="bg-[#1e3d36] px-4 py-1.5 text-center text-xs font-semibold tracking-wide text-white/95 md:px-8">
+      <div className="bg-theme-banner px-4 py-1.5 text-center text-xs font-semibold tracking-wide text-white/95 md:px-8">
         ADMIN CONSOLE · SANCTUARY OPERATIONS
       </div>
 
@@ -236,5 +238,6 @@ export function AdminShell({ children }: AdminShellProps) {
       />
     </div>
     </SessionDetailsModalProvider>
+    </RoleThemeProvider>
   );
 }

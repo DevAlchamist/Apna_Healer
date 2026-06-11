@@ -17,7 +17,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "bg-primary text-white shadow-soft hover:-translate-y-0.5 hover:shadow-soft-hover",
   secondary:
-    "bg-accent text-text-primary border border-[#d8c9ba] hover:-translate-y-0.5 hover:shadow-soft",
+    "bg-accent text-text-primary border border-theme hover:-translate-y-0.5 hover:shadow-soft",
 };
 
 export function Button({

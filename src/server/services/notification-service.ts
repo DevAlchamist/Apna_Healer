@@ -2,11 +2,8 @@ import type { NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
 import type { ApiNotification, ApiNotificationsListResponse } from "@/types/api";
-import {
-  buildNotificationEmailHtml,
-  isEmailEligibleType,
-  sendNotificationEmail,
-} from "@/server/services/email-service";
+import { renderNotificationEmail } from "@/server/emails/render-notification-email";
+import { isEmailEligibleType, sendEmail } from "@/server/services/email-service";
 
 export type CreateNotificationInput = {
   userId: string;
@@ -45,17 +42,35 @@ function toApiNotification(row: {
 }
 
 async function maybeSendEmail(
-  notification: { id: string; type: NotificationType; title: string; body: string; href: string | null },
-  userEmail: string,
+  notification: {
+    id: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    href: string | null;
+    metadata: Prisma.JsonValue | null;
+    userId: string;
+  },
+  user: { email: string; name: string | null },
 ) {
   if (!isEmailEligibleType(notification.type)) {
     return;
   }
 
-  const sent = await sendNotificationEmail({
-    to: userEmail,
-    subject: notification.title,
-    html: buildNotificationEmailHtml(notification.title, notification.body, notification.href),
+  const rendered = await renderNotificationEmail(notification.type, {
+    userName: user.name,
+    userEmail: user.email,
+    title: notification.title,
+    body: notification.body,
+    href: notification.href,
+    metadata: (notification.metadata as Record<string, unknown> | null) ?? null,
+  });
+
+  const sent = await sendEmail({
+    to: user.email,
+    subject: rendered.subject,
+    html: rendered.html,
+    attachments: rendered.attachments,
   });
 
   if (sent) {
@@ -81,11 +96,11 @@ export async function createNotification(input: CreateNotificationInput): Promis
   if (!input.skipEmail) {
     const user = await prisma.user.findUnique({
       where: { id: input.userId },
-      select: { email: true },
+      select: { email: true, name: true },
     });
     if (user?.email) {
       try {
-        await maybeSendEmail(row, user.email);
+        await maybeSendEmail(row, user);
       } catch (error) {
         console.error("[notification-service] Email delivery failed:", error);
       }

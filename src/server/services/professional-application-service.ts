@@ -14,6 +14,7 @@ import {
 import { replaceListenerWeeklySchedule } from "@/server/services/listener-availability-service";
 import { replaceTherapistWeeklySchedule } from "@/server/services/therapist-availability-service";
 import { emitApplicationReviewed } from "@/server/services/platform-events";
+import { landingFieldsToDb } from "@/lib/provider-profile-form";
 import type { z } from "zod";
 
 type CreateInput = z.infer<typeof createProfessionalApplicationSchema>;
@@ -243,6 +244,7 @@ export async function reviewProfessionalApplication(input: {
       if (application.type === ApplicationType.THERAPIST) {
         const data = parseTherapistApplicationData(application.applicationData);
         const specs = specializationToArray(data.specialization);
+        const landing = landingFieldsToDb(data);
         await tx.therapistProfile.upsert({
           where: { userId: application.userId },
           create: {
@@ -256,6 +258,7 @@ export async function reviewProfessionalApplication(input: {
             links: (data.optionalLinks ?? []) as unknown as Prisma.InputJsonValue,
             rating: 0,
             totalSessions: 0,
+            ...landing,
           },
           update: {
             bio: data.bio,
@@ -265,6 +268,7 @@ export async function reviewProfessionalApplication(input: {
             hourlyRate: data.pricing,
             availability: data.weeklyAvailability as unknown as Prisma.InputJsonValue,
             links: (data.optionalLinks ?? []) as unknown as Prisma.InputJsonValue,
+            ...landing,
           },
         });
       }

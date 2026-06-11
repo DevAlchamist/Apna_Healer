@@ -1,4 +1,5 @@
 import {
+  ClubMembershipRole,
   ClubMembershipStatus,
   ClubStatus,
   ClubVisibility,
@@ -9,6 +10,12 @@ import {
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
 import type { createClubSchema, updateClubSchema } from "@/lib/validators/club";
+import type { ownerUpdateClubSchema } from "@/lib/validators/club";
+import {
+  landingFieldsToDb,
+  parseLandingFeatures,
+  parseLandingRituals,
+} from "@/lib/club-form";
 import {
   decimalToString,
   formatMemberCount,
@@ -32,9 +39,15 @@ import type { z } from "zod";
 
 type CreateClubInput = z.infer<typeof createClubSchema>;
 type UpdateClubInput = z.infer<typeof updateClubSchema>;
+type OwnerUpdateClubInput = z.infer<typeof ownerUpdateClubSchema>;
 
 const clubInclude = {
-  onboardingSteps: { orderBy: { sortOrder: "asc" as const } },
+  onboardingSteps: {
+    orderBy: { sortOrder: "asc" as const },
+    include: {
+      questions: { orderBy: { sortOrder: "asc" as const } },
+    },
+  },
   reviews: { orderBy: { sortOrder: "asc" as const } },
 } satisfies Prisma.ClubInclude;
 
@@ -89,41 +102,69 @@ function mapDetail(
     description: club.description,
     purpose: club.purpose,
     galleryUrls: gallery,
+    heroTagline: club.heroTagline,
+    pulseQuote: club.pulseQuote,
+    ritualsIntro: club.ritualsIntro,
+    voicesQuote: club.voicesQuote,
+    finalCtaText: club.finalCtaText,
+    landingFeatures: parseLandingFeatures(club.landingFeatures),
+    landingRituals: parseLandingRituals(club.landingRituals),
     onboardingSteps: club.onboardingSteps.map((s) => ({
       id: s.id,
-      question: s.question,
-      required: s.required,
+      title: s.title,
+      description: s.description,
       sortOrder: s.sortOrder,
+      questions: s.questions.map((q) => ({
+        id: q.id,
+        question: q.question,
+        required: q.required,
+        sortOrder: q.sortOrder,
+        type: q.type,
+        options: Array.isArray(q.options) ? (q.options as string[]) : [],
+        allowMultiple: q.allowMultiple,
+      })),
     })),
     reviews: club.reviews.map((r) => ({
       id: r.id,
       authorLabel: r.authorLabel,
       quote: r.quote,
+      memberSince: r.memberSince,
       rating: r.rating,
       sortOrder: r.sortOrder,
     })),
     membership: viewer?.membership ?? null,
-    isOwner: club.ownerUserId === viewer?.userId,
+    isOwner: viewer?.userId != null && club.ownerUserId === viewer.userId,
     canManageJoinRequests:
-      viewer?.userId != null &&
-      (club.ownerUserId === viewer.userId),
+      viewer?.userId != null && club.ownerUserId === viewer.userId,
+    canPublishEvents:
+      viewer?.userId != null && club.ownerUserId === viewer.userId,
   };
 }
 
-async function syncOnboardingSteps(
-  clubId: string,
-  steps: OnboardingStepInput[],
-) {
+async function syncOnboardingSteps(clubId: string, steps: OnboardingStepInput[]) {
   await prisma.clubOnboardingStep.deleteMany({ where: { clubId } });
   if (steps.length === 0) return;
-  await prisma.clubOnboardingStep.createMany({
-    data: steps.map((s, i) => ({
-      clubId,
-      question: s.question,
-      required: s.required !== false,
-      sortOrder: s.sortOrder ?? i,
-    })),
-  });
+
+  for (const [i, step] of steps.entries()) {
+    await prisma.clubOnboardingStep.create({
+      data: {
+        clubId,
+        title: step.title,
+        description: step.description ?? null,
+        sortOrder: step.sortOrder ?? i,
+        questions: {
+          create: step.questions.map((q, qi) => ({
+            question: q.question,
+            required: q.required !== false,
+            type: q.type ?? "TEXT",
+            options: (q.options ?? []) as Prisma.InputJsonValue,
+            allowMultiple: q.allowMultiple === true,
+            sortOrder: q.sortOrder ?? qi,
+          })),
+        },
+      },
+    });
+  }
 }
 
 async function syncReviews(
@@ -137,6 +178,7 @@ async function syncReviews(
       clubId,
       authorLabel: r.authorLabel,
       quote: r.quote,
+      memberSince: r.memberSince ?? null,
       rating: r.rating ?? null,
       sortOrder: r.sortOrder ?? i,
     })),
@@ -212,6 +254,9 @@ export async function getPublicClubDetailBySlug(
 
   return {
     ...base,
+    isOwner: false,
+    canManageJoinRequests: false,
+    canPublishEvents: false,
     weeklyEventsLabel: weeklyCount > 0 ? `${weeklyCount} this week` : "Circles forming soon",
     events: events.map((e) => ({
       slug: e.slug,
@@ -376,18 +421,31 @@ export async function createClub(
         visibility: input.visibility ?? ClubVisibility.PUBLIC,
         createdByUserId: actorId,
         ownerUserId: input.ownerUserId ?? (options?.asAdmin ? null : actorId),
+        ...landingFieldsToDb(input),
       },
     });
 
     if (input.onboardingSteps?.length) {
-      await tx.clubOnboardingStep.createMany({
-        data: input.onboardingSteps.map((s, i) => ({
-          clubId: created.id,
-          question: s.question,
-          required: s.required !== false,
-          sortOrder: s.sortOrder ?? i,
-        })),
-      });
+      for (const [i, step] of input.onboardingSteps.entries()) {
+        await tx.clubOnboardingStep.create({
+          data: {
+            clubId: created.id,
+            title: step.title,
+            description: step.description ?? null,
+            sortOrder: step.sortOrder ?? i,
+            questions: {
+              create: step.questions.map((q, qi) => ({
+                question: q.question,
+                required: q.required !== false,
+                type: q.type ?? "TEXT",
+                options: (q.options ?? []) as Prisma.InputJsonValue,
+                allowMultiple: q.allowMultiple === true,
+                sortOrder: q.sortOrder ?? qi,
+              })),
+            },
+          },
+        });
+      }
     }
 
     if (input.reviews?.length) {
@@ -435,6 +493,27 @@ export async function updateClub(clubId: string, input: UpdateClubInput) {
       ...(input.status != null ? { status: input.status } : {}),
       ...(input.slug != null ? { slug: input.slug } : {}),
       ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
+      ...(input.heroTagline !== undefined ? { heroTagline: input.heroTagline ?? null } : {}),
+      ...(input.pulseQuote !== undefined ? { pulseQuote: input.pulseQuote ?? null } : {}),
+      ...(input.ritualsIntro !== undefined ? { ritualsIntro: input.ritualsIntro ?? null } : {}),
+      ...(input.voicesQuote !== undefined ? { voicesQuote: input.voicesQuote ?? null } : {}),
+      ...(input.finalCtaText !== undefined ? { finalCtaText: input.finalCtaText ?? null } : {}),
+      ...(input.landingFeatures !== undefined
+        ? {
+            landingFeatures:
+              input.landingFeatures.length > 0
+                ? (input.landingFeatures as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
+          }
+        : {}),
+      ...(input.landingRituals !== undefined
+        ? {
+            landingRituals:
+              input.landingRituals.length > 0
+                ? (input.landingRituals as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
+          }
+        : {}),
     },
   });
 
@@ -448,6 +527,20 @@ export async function updateClub(clubId: string, input: UpdateClubInput) {
   return getClubById(clubId);
 }
 
+export async function updateClubBySlug(
+  slug: string,
+  actorId: string,
+  actorRole: Role,
+  input: OwnerUpdateClubInput,
+) {
+  const club = await prisma.club.findUnique({ where: { slug } });
+  if (!club) {
+    throw new ApiError(404, "Club was not found.", "CLUB_NOT_FOUND");
+  }
+  await assertCanManageClub(club.id, actorId, actorRole);
+  return updateClub(club.id, input);
+}
+
 export async function assertCanManageClub(
   clubId: string,
   actorId: string,
@@ -455,7 +548,16 @@ export async function assertCanManageClub(
 ) {
   if (actorRole === Role.ADMIN) return getClubById(clubId);
   const club = await getClubById(clubId);
-  if (club.ownerUserId !== actorId) {
+  if (club.ownerUserId === actorId) return club;
+  const mod = await prisma.clubMembership.findFirst({
+    where: {
+      clubId,
+      userId: actorId,
+      role: { in: [ClubMembershipRole.OWNER, ClubMembershipRole.MODERATOR] },
+      status: ClubMembershipStatus.ACTIVE,
+    },
+  });
+  if (!mod) {
     throw new ApiError(403, "You cannot manage this club.", "FORBIDDEN");
   }
   return club;

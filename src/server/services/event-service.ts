@@ -1,12 +1,14 @@
 import {
   ClubMembershipRole,
   ClubMembershipStatus,
+  ClubStatus,
   Prisma,
   Role,
   WellnessEventStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
+import { APNA_HEALER_FACILITATOR } from "@/lib/event-facilitator";
 import type { createEventSchema, updateEventSchema } from "@/lib/validators/event";
 import {
   decimalToNumber,
@@ -17,6 +19,7 @@ import {
 } from "@/server/services/event-utils";
 import type {
   ApiEventDetail,
+  ApiEventFacilitatorOption,
   ApiEventRegistration,
   ApiEventSummary,
   ApiPublicEventSummary,
@@ -125,6 +128,10 @@ function mapDetail(
     facilitatorRole: event.facilitatorRole,
     facilitatorImage: event.facilitatorImage,
     facilitatorBio: event.facilitatorBio,
+    journeyPoints: event.journeyPoints ?? [],
+    audienceText: event.audienceText,
+    testimonialQuote: event.testimonialQuote,
+    testimonialAuthor: event.testimonialAuthor,
     organizedByUserId: event.organizedByUserId,
     myRegistration: viewer?.myRegistration ?? null,
   };
@@ -352,6 +359,10 @@ export async function createEvent(
       facilitatorRole: input.facilitatorRole ?? null,
       facilitatorImage: input.facilitatorImage ?? null,
       facilitatorBio: input.facilitatorBio ?? null,
+      journeyPoints: input.journeyPoints ?? [],
+      audienceText: input.audienceText ?? null,
+      testimonialQuote: input.testimonialQuote ?? null,
+      testimonialAuthor: input.testimonialAuthor ?? null,
     },
     include: eventInclude,
   });
@@ -405,6 +416,10 @@ export async function updateEvent(
       ...(input.facilitatorRole !== undefined ? { facilitatorRole: input.facilitatorRole } : {}),
       ...(input.facilitatorImage !== undefined ? { facilitatorImage: input.facilitatorImage } : {}),
       ...(input.facilitatorBio !== undefined ? { facilitatorBio: input.facilitatorBio } : {}),
+      ...(input.journeyPoints !== undefined ? { journeyPoints: input.journeyPoints } : {}),
+      ...(input.audienceText !== undefined ? { audienceText: input.audienceText } : {}),
+      ...(input.testimonialQuote !== undefined ? { testimonialQuote: input.testimonialQuote } : {}),
+      ...(input.testimonialAuthor !== undefined ? { testimonialAuthor: input.testimonialAuthor } : {}),
     },
   });
 
@@ -416,6 +431,73 @@ export async function updateEvent(
       canManage: true,
     }),
   );
+}
+
+export async function listEventFacilitatorOptions(): Promise<ApiEventFacilitatorOption[]> {
+  const clubs = await prisma.club.findMany({
+    where: {
+      ownerUserId: { not: null },
+      status: { in: [ClubStatus.ACTIVE, ClubStatus.DRAFT] },
+    },
+    select: {
+      title: true,
+      ownerUserId: true,
+      owner: { select: { id: true, name: true, email: true, image: true } },
+    },
+    orderBy: { title: "asc" },
+  });
+
+  const byOwner = new Map<
+    string,
+    { name: string; role: string; imageUrl: string | null; clubTitles: string[] }
+  >();
+
+  for (const club of clubs) {
+    if (!club.ownerUserId || !club.owner) continue;
+    const displayName = club.owner.name?.trim() || club.owner.email;
+    const existing = byOwner.get(club.ownerUserId);
+    if (existing) {
+      existing.clubTitles.push(club.title);
+      continue;
+    }
+    byOwner.set(club.ownerUserId, {
+      name: displayName,
+      role: "Club owner",
+      imageUrl: club.owner.image,
+      clubTitles: [club.title],
+    });
+  }
+
+  const ownerOptions: ApiEventFacilitatorOption[] = Array.from(byOwner.entries())
+    .map(([userId, row]) => {
+      const clubsLabel =
+        row.clubTitles.length === 1
+          ? row.clubTitles[0]
+          : `${row.clubTitles.slice(0, 2).join(", ")}${row.clubTitles.length > 2 ? "…" : ""}`;
+      return {
+        id: `owner:${userId}`,
+        type: "club-owner" as const,
+        label: `${row.name} (${clubsLabel})`,
+        name: row.name,
+        role: row.role,
+        imageUrl: row.imageUrl,
+        clubTitles: row.clubTitles,
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return [
+    {
+      id: APNA_HEALER_FACILITATOR.id,
+      type: "apna-healer",
+      label: APNA_HEALER_FACILITATOR.name,
+      name: APNA_HEALER_FACILITATOR.name,
+      role: APNA_HEALER_FACILITATOR.role,
+      imageUrl: APNA_HEALER_FACILITATOR.imageUrl,
+      clubTitles: [],
+    },
+    ...ownerOptions,
+  ];
 }
 
 export { mapDetail, mapSummary, resolveRegistrationPrice };

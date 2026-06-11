@@ -118,3 +118,25 @@ export function defaultSessionScope(role: Role): SessionScope {
   if (isProviderRole(role)) return "both";
   return "participant";
 }
+
+export function assertBlogAuthorOrAdmin(
+  actor: { actorId: string; actorRole: Role },
+  authorId: string,
+  message = "You can only manage your own blogs.",
+): void {
+  if (isAdminRole(actor.actorRole)) return;
+  if (actor.actorId !== authorId) {
+    throw new ApiError(403, message, "FORBIDDEN");
+  }
+}
+
+export function assertCommentAuthorOrAdmin(
+  actor: { actorId: string; actorRole: Role },
+  commentUserId: string,
+  message = "You can only manage your own comments.",
+): void {
+  if (isAdminRole(actor.actorRole)) return;
+  if (actor.actorId !== commentUserId) {
+    throw new ApiError(403, message, "FORBIDDEN");
+  }
+}

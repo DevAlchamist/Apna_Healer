@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ApnaHealer Community Notification</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#fbf9f6",
+                        "on-surface": "#1b1c1a",
+                        "tertiary-container": "#9da7a3",
+                        "on-primary-container": "#124332",
+                        "surface-variant": "#e4e2df",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#396755",
+                        "surface-dim": "#dbdad7",
+                        "on-primary-fixed-variant": "#204f3e",
+                        "inverse-primary": "#a0d1bb",
+                        "primary-container": "#7faf9a",
+                        "tertiary": "#57605d",
+                        "surface-container-highest": "#e4e2df",
+                        "on-secondary-fixed": "#072018",
+                        "secondary-fixed": "#cde9dc",
+                        "primary-fixed-dim": "#a0d1bb",
+                        "background": "#fbf9f6",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#30312f",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#414944",
+                        "primary-fixed": "#bbedd6",
+                        "on-error-container": "#93000a",
+                        "secondary": "#4b645a",
+                        "outline-variant": "#c0c8c3",
+                        "surface-container-high": "#eae8e5",
+                        "on-tertiary-container": "#333d39",
+                        "surface": "#fbf9f6",
+                        "on-secondary-fixed-variant": "#334c42",
+                        "tertiary-fixed": "#dbe5e0",
+                        "surface-container-low": "#f5f3f0",
+                        "on-tertiary-fixed-variant": "#3f4945",
+                        "on-tertiary-fixed": "#141d1b",
+                        "on-primary-fixed": "#002116",
+                        "surface-container": "#efeeeb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#1b1c1a",
+                        "inverse-on-surface": "#f2f0ed",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#cde9dc",
+                        "primary": "#396755",
+                        "outline": "#717974",
+                        "on-secondary-container": "#516a5f",
+                        "tertiary-fixed-dim": "#bfc9c4",
+                        "secondary-fixed-dim": "#b1cdc0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-xl": "48px",
+                        "stack-lg": "32px",
+                        "container-max": "600px",
+                        "inline-md": "16px",
+                        "edge-margin": "24px",
+                        "stack-md": "24px"
+                    },
+                    "fontFamily": {
+                        "footer-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Manrope"],
+                        "label-caps": ["Inter"],
+                        "headline-lg": ["Manrope"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "footer-sm": ["12px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "22px", "fontWeight": "400"}],
+                        "headline-md": ["22px", {"lineHeight": "30px", "fontWeight": "600"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "26px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface-bright text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<div class="max-w-[600px] mx-auto bg-surface min-h-screen flex flex-col">
+<!-- TopAppBar Navigation Shell -->
+<header class="flex justify-center items-center h-12 w-full max-w-[600px] mx-auto pt-stack-lg bg-surface dark:bg-surface-dim">
+<h1 class="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed tracking-tight">Digital Atrium</h1>
+</header>
+<!-- Main Narrative Body -->
+<main class="flex-grow px-edge-margin py-stack-lg">
+<!-- Greeting & Hero Message -->
+<section class="mb-stack-lg text-center">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary-container text-on-secondary-container mb-stack-md">
+<span class="material-symbols-outlined !text-[32px]">celebration</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">New activity in your circle</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[480px] mx-auto">
+                    Someone felt moved by your story. Your vulnerability is creating ripples of healing in the Sanctuary.
+                </p>
+</section>
+<!-- Community Activity Bubble -->
+<section class="mb-stack-lg">
+<div class="bg-surface-container-low rounded-xl p-inline-md border border-outline-variant/30 flex flex-col gap-4 relative overflow-hidden">
+<!-- Subtle Leaf Accent Decor -->
+<div class="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined !text-[120px]">spa</span>
+</div>
+<div class="flex gap-inline-md items-start">
+<div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-primary-container/20">
+<img alt="Sarah M. Avatar" class="w-full h-full object-cover" data-alt="A close-up photographic portrait of a serene woman with a warm, empathetic expression. The lighting is soft and natural, coming from a side window, highlighting her face against a blurred, sage-colored background. The overall aesthetic is clean, professional, and calming, aligning with a high-end wellness brand's visual identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlBVL3LreGP9TXcZaRiEIAiFighHR47gGRyGoQz8IeUwodDRoh5j2gJHZJRZz8OmwtnmSkZqfzLNcZj1SxsYKpIbPlC5hZZAMDFIRrfkhAF-v45eQ64wZVw83PWgVM593M_yXNdLADR8nh_rqQYM2BvVZi9sL_fjfrmXjbUvDwtaDo1sZUexiFrHuhHB3_LrA1Eay1Oht2Mk36uGgMi1p4wZMp-oEbZlsl44-s9mQmes-wXgq74Tn4z3VAjPTIKb1NubcVyX450cM"/>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-center mb-1">
+<h3 class="font-headline-md text-[16px] text-on-surface leading-tight">Sarah M. commented on "Finding Stillness"</h3>
+<span class="font-label-caps text-label-caps text-outline">JUST NOW</span>
+</div>
+<!-- Comment Bubble -->
+<div class="bg-white/60 dark:bg-surface-dim rounded-2xl rounded-tl-none p-stack-md mt-2 shadow-sm border border-secondary-container/50">
+<p class="font-body-lg text-body-lg text-on-surface italic leading-relaxed">
+                                    "This resonates so deeply with my own journey. Thank you for putting words to the feeling of the 'quiet in-between.' You've reminded me that healing isn't a race."
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Club Activity Teaser (Bento Style) -->
+<section class="mb-stack-lg">
+<p class="font-label-caps text-label-caps text-primary mb-4 text-center">ALSO NEW IN YOUR CLUBS</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Club Card 1 -->
+<div class="bg-secondary-container/30 rounded-xl p-inline-md flex items-center gap-3 hover:bg-secondary-container/50 transition-colors cursor-pointer group">
+<div class="bg-primary-container text-white w-10 h-10 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface font-semibold group-hover:text-primary transition-colors">Mindful Mornings</p>
+<p class="font-footer-sm text-on-surface-variant">4 new reflections shared</p>
+</div>
+</div>
+<!-- Club Card 2 -->
+<div class="bg-secondary-container/30 rounded-xl p-inline-md flex items-center gap-3 hover:bg-secondary-container/50 transition-colors cursor-pointer group">
+<div class="bg-primary-container text-white w-10 h-10 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">auto_stories</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface font-semibold group-hover:text-primary transition-colors">Grief &amp; Grace</p>
+<p class="font-footer-sm text-on-surface-variant">New weekly prompt live</p>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="mt-stack-xl flex flex-col items-center">
+<button class="bg-primary-container text-white px-8 py-4 rounded-full font-headline-md text-[18px] w-full md:w-auto min-w-[240px] shadow-lg shadow-primary/10 hover:bg-primary transition-all active:scale-95">
+                    View in Sanctuary
+                </button>
+<p class="mt-stack-md font-body-md text-on-surface-variant text-center">
+                    Connecting with others is a vital part of the healing process.
+                </p>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full max-w-[600px] mx-auto px-edge-margin py-stack-lg flex flex-col gap-inline-md bg-surface-container-low dark:bg-inverse-surface rounded-t-xl mt-auto">
+<div class="flex flex-col items-center gap-2 mb-4">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface">Digital Atrium</span>
+<div class="h-px w-12 bg-outline-variant"></div>
+</div>
+<div class="text-center space-y-4">
+<p class="font-footer-sm text-footer-sm text-secondary dark:text-secondary-fixed-dim">
+<strong class="text-primary">Crisis Resources:</strong> If you are in immediate distress, please call or text <span class="font-bold">988</span> anytime in the US and Canada.
+                </p>
+<div class="flex flex-wrap justify-center gap-4">
+<a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Unsubscribe</a>
+<a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Preferences</a>
+<a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+<p class="font-footer-sm text-footer-sm text-on-surface-variant/70">
+                    © 2024 Digital Atrium. All rights reserved.<br/>
+                    123 Healing Way, Sanctuary Suite 400, CA 94103
+                </p>
+</div>
+</footer>
+</div>
+<!-- Micro-interaction for the CTA button -->
+<script>
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mouseover', () => {
+                button.style.transform = 'translateY(-2px)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body></html>

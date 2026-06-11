@@ -1,7 +1,10 @@
 import { z } from "zod";
+import { therapistLandingFieldsSchema } from "@/lib/validators/therapist-landing-fields";
 import { weeklyAvailabilitySchema } from "@/lib/validators/professional-application";
 
-export const therapistProfilePatchSchema = z.object({
+export { therapistLandingFieldsSchema, type TherapistLandingFieldsInput } from "@/lib/validators/therapist-landing-fields";
+
+export const therapistProfilePatchSchema = therapistLandingFieldsSchema.extend({
   bio: z.string().trim().min(20, "Bio should be at least 20 characters.").max(8000),
   specialization: z.string().trim().min(2, "Specialization is required.").max(2000),
   certifications: z.array(z.string().trim().min(1)).min(1, "Add at least one education or credential."),

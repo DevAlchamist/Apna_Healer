@@ -121,6 +121,14 @@ enum NotificationType {
   EVENT_REGISTRATION_RECEIVED
   EVENT_REGISTRATION_CANCELLED
   EVENT_CANCELLED
+  WELCOME
+  WELCOME_BACK
+  SESSION_REMINDER_24H
+  SESSION_REMINDER_1H
+  SESSION_FEEDBACK_REQUEST
+  BLOG_COMMENT_RECEIVED
+  CLUB_ACTIVITY_DIGEST
+  MONTHLY_RECAP
 }
 
 enum JournalEntryStatus {
@@ -151,6 +159,18 @@ enum AuditAction {
   EVENT_CREATED
   EVENT_UPDATED
   EVENT_REGISTRATION_CREATED
+  ROLE_THEME_UPDATED
+  ROLE_THEME_RESET
+  BLOG_CREATED
+  BLOG_UPDATED
+  BLOG_PUBLISHED
+  BLOG_APPROVED
+  BLOG_REJECTED
+  BLOG_UNPUBLISHED
+  BLOG_DELETED
+  BLOG_FEATURED
+  BLOG_COMMENT_MODERATED
+  BLOG_REPORT_REVIEWED
 }
 
 enum WellnessEventStatus {
@@ -163,6 +183,56 @@ enum WellnessEventStatus {
 enum WellnessEventMode {
   VIRTUAL
   IN_PERSON
+}
+
+enum BlogStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  UNPUBLISHED
+}
+
+enum BlogBlockType {
+  HEADING
+  PARAGRAPH
+  LIST
+  QUOTE
+  CODE
+  DIVIDER
+  HIGHLIGHT
+  IMAGE
+  IMAGE_GALLERY
+  VIDEO_EMBED
+  BANNER
+}
+
+enum BlogCommentStatus {
+  ACTIVE
+  HIDDEN
+  DELETED
+}
+
+enum BlogModerationActionType {
+  APPROVE
+  REJECT
+  UNPUBLISH
+  DELETE
+  FEATURE
+  UNFEATURE
+  COMMENT_HIDE
+  COMMENT_DELETE
+}
+
+enum BlogReportTargetType {
+  BLOG
+  COMMENT
+}
+
+enum BlogReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
 }
 
 enum EventRegistrationStatus {
@@ -208,6 +278,11 @@ enum ClubBillingAttemptStatus {
   FAILED
 }
 
+enum ClubOnboardingQuestionType {
+  TEXT
+  CHOICE
+}
+
 /// Root identity across the platform.
 /// Therapist and listener capabilities extend this model via profiles and applications.
 model User {
@@ -226,10 +301,12 @@ model User {
   timezone      String?   @default("Asia/Kolkata")
   primaryFocus  String?
   interestTags  String[]  @default([])
+  lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   wallet           Wallet?
+  emailDeliveryLogs EmailDeliveryLog[]
   accounts         Account[]
   authSessions     Session[]
   transactions     Transaction[]
@@ -259,6 +336,15 @@ model User {
   eventsCreated          WellnessEvent[]        @relation("EventCreatedBy")
   eventsOrganized        WellnessEvent[]        @relation("EventOrganizedBy")
   eventRegistrations     EventRegistration[]
+  roleThemesUpdated      RoleTheme[]           @relation("RoleThemeUpdatedBy")
+  blogsAuthored          Blog[]                @relation("BlogAuthor")
+  blogsModerated         Blog[]                @relation("BlogModerator")
+  blogComments           BlogComment[]
+  blogLikes              BlogLike[]
+  blogViews              BlogView[]
+  blogReports            BlogReport[]          @relation("BlogReportReporter")
+  blogReportsReviewed    BlogReport[]          @relation("BlogReportReviewer")
+  blogModerationActions  BlogModerationAction[]
 
   @@index([role, createdAt(sort: Desc)])
   @@map("users")
@@ -384,19 +470,25 @@ model ProfessionalApplication {
 }
 
 model TherapistProfile {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  bio              String?
-  specializations  String[]
-  certifications   String[] @default([])
-  experienceYears  Int?
-  hourlyRate       Decimal? @db.Decimal(12, 2)
-  availability     Json?
-  links            Json?
-  rating           Decimal  @default(0) @db.Decimal(3, 2)
-  totalSessions    Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  bio                   String?
+  specializations       String[]
+  certifications        String[] @default([])
+  experienceYears       Int?
+  hourlyRate            Decimal? @db.Decimal(12, 2)
+  availability          Json?
+  links                 Json?
+  profileDescription    String?
+  philosophyQuote       String?
+  experienceDescription String?
+  testimonialQuote      String?
+  testimonialAuthor     String?
+  retentionRate         String?
+  rating                Decimal  @default(0) @db.Decimal(3, 2)
+  totalSessions         Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -593,6 +685,21 @@ model Notification {
   @@map("notifications")
 }
 
+/// Idempotent log for scheduled / deduplicated email sends.
+model EmailDeliveryLog {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String
+  dedupeKey String
+  sentAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([kind, dedupeKey])
+  @@index([userId, sentAt(sort: Desc)])
+  @@map("email_delivery_logs")
+}
+
 /// Admin accountability trail with sanitized change details only.
 model AuditLog {
   id         String      @id @default(cuid())
@@ -611,6 +718,22 @@ model AuditLog {
   @@index([action, createdAt(sort: Desc)])
   @@index([targetType, targetId, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+/// Per-role UI theme tokens (admin-configurable; factory defaults in theme-defaults.ts).
+model RoleTheme {
+  id           String   @id @default(cuid())
+  role         Role     @unique
+  tokens       Json
+  version      Int      @default(1)
+  isCustomized Boolean  @default(false)
+  updatedById  String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  updatedBy User? @relation("RoleThemeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("role_themes")
 }
 
 /// Inbound message from the public contact form.
@@ -678,6 +801,13 @@ model Club {
   status          ClubStatus     @default(DRAFT)
   visibility      ClubVisibility @default(PUBLIC)
   memberCount     Int            @default(0)
+  heroTagline     String?
+  pulseQuote      String?        @db.Text
+  ritualsIntro    String?        @db.Text
+  voicesQuote     String?        @db.Text
+  finalCtaText    String?        @db.Text
+  landingFeatures Json?
+  landingRituals  Json?
   createdByUserId String
   ownerUserId     String?
   createdAt       DateTime       @default(now())
@@ -698,16 +828,33 @@ model Club {
 }
 
 model ClubOnboardingStep {
-  id        String  @id @default(cuid())
-  clubId    String
-  sortOrder Int     @default(0)
-  question  String  @db.Text
-  required  Boolean @default(true)
+  id          String  @id @default(cuid())
+  clubId      String
+  sortOrder   Int     @default(0)
+  title       String
+  description String? @db.Text
 
-  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  club      Club                     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  questions ClubOnboardingQuestion[]
 
   @@index([clubId, sortOrder])
   @@map("club_onboarding_steps")
+}
+
+model ClubOnboardingQuestion {
+  id        String  @id @default(cuid())
+  stepId    String
+  sortOrder Int     @default(0)
+  question  String  @db.Text
+  required  Boolean @default(true)
+  type      ClubOnboardingQuestionType @default(TEXT)
+  options   Json     @default("[]")
+  allowMultiple Boolean @default(false)
+
+  step ClubOnboardingStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId, sortOrder])
+  @@map("club_onboarding_questions")
 }
 
 /// Admin-curated featured reflections on club detail pages.
@@ -716,6 +863,7 @@ model ClubReview {
   clubId      String
   authorLabel String
   quote       String  @db.Text
+  memberSince String?
   rating      Int?
   sortOrder   Int     @default(0)
   createdAt   DateTime @default(now())
@@ -738,6 +886,8 @@ model ClubCreationRequest {
   galleryUrls     Json              @default("[]")
   monthlyFee      Decimal           @db.Decimal(12, 2)
   onboardingSteps Json              @default("[]")
+  reviews         Json              @default("[]")
+  landingPageData Json?
   adminNote       String?           @db.Text
   reviewedById    String?
   reviewedAt      DateTime?
@@ -755,11 +905,12 @@ model ClubCreationRequest {
 }
 
 model ClubJoinRequest {
-  id           String            @id @default(cuid())
-  clubId       String
-  userId       String
-  message      String            @db.Text
-  status       ClubRequestStatus @default(PENDING)
+  id                String            @id @default(cuid())
+  clubId            String
+  userId            String
+  message           String            @db.Text
+  onboardingAnswers Json?
+  status            ClubRequestStatus @default(PENDING)
   reviewedById String?
   reviewedAt   DateTime?
   createdAt    DateTime          @default(now())
@@ -842,6 +993,10 @@ model WellnessEvent {
   facilitatorRole   String?
   facilitatorImage  String?
   facilitatorBio    String?             @db.Text
+  journeyPoints     String[]            @default([])
+  audienceText      String?             @db.Text
+  testimonialQuote  String?             @db.Text
+  testimonialAuthor String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
@@ -875,4 +1030,215 @@ model EventRegistration {
   @@index([eventId, status])
   @@index([userId, status])
   @@map("event_registrations")
+}
+
+model Blog {
+  id                 String     @id @default(cuid())
+  slug               String     @unique
+  authorId           String
+  title              String
+  subtitle           String?    @db.Text
+  coverImageUrl      String?
+  excerpt            String?    @db.Text
+  status             BlogStatus @default(DRAFT)
+  isFeatured         Boolean    @default(false)
+  seoTitle           String?
+  seoDescription     String?    @db.Text
+  seoKeywords        String[]   @default([])
+  readingTimeMinutes Int        @default(0)
+  viewCount          Int        @default(0)
+  likeCount          Int        @default(0)
+  commentCount       Int        @default(0)
+  publishedAt        DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?    @db.Text
+  moderatedById      String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  author      User                   @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  moderatedBy User?                  @relation("BlogModerator", fields: [moderatedById], references: [id], onDelete: SetNull)
+  blocks      BlogBlock[]
+  categories  BlogCategoryOnBlog[]
+  tags        BlogTagOnBlog[]
+  comments    BlogComment[]
+  likes       BlogLike[]
+  views       BlogView[]
+  reports     BlogReport[]
+  moderationActions BlogModerationAction[]
+  analyticsDaily    BlogAnalyticsDaily[]
+
+  @@index([authorId, status, updatedAt(sort: Desc)])
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([isFeatured, status])
+  @@map("blogs")
+}
+
+model BlogBlock {
+  id        String        @id @default(cuid())
+  blogId    String
+  type      BlogBlockType
+  sortOrder Int
+  data      Json
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, sortOrder])
+  @@index([blogId, sortOrder])
+  @@map("blog_blocks")
+}
+
+model BlogCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blogs BlogCategoryOnBlog[]
+
+  @@map("blog_categories")
+}
+
+model BlogCategoryOnBlog {
+  blogId     String
+  categoryId String
+
+  blog     Blog         @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  category BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, categoryId])
+  @@map("blog_category_on_blog")
+}
+
+model BlogTag {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blogs BlogTagOnBlog[]
+
+  @@map("blog_tags")
+}
+
+model BlogTagOnBlog {
+  blogId String
+  tagId  String
+
+  blog Blog    @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  tag  BlogTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, tagId])
+  @@map("blog_tag_on_blog")
+}
+
+model BlogComment {
+  id        String            @id @default(cuid())
+  blogId    String
+  userId    String
+  parentId  String?
+  content   String            @db.Text
+  status    BlogCommentStatus @default(ACTIVE)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  blog    Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  BlogComment?  @relation("BlogCommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies BlogComment[] @relation("BlogCommentReplies")
+
+  @@index([blogId, status, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("blog_comments")
+}
+
+model BlogLike {
+  id        String   @id @default(cuid())
+  blogId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, userId])
+  @@index([blogId])
+  @@map("blog_likes")
+}
+
+model BlogView {
+  id          String   @id @default(cuid())
+  blogId      String
+  viewerId    String?
+  sessionHash String
+  createdAt   DateTime @default(now())
+
+  blog   Blog  @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  viewer User? @relation(fields: [viewerId], references: [id], onDelete: SetNull)
+
+  @@index([blogId, sessionHash, createdAt(sort: Desc)])
+  @@index([blogId, createdAt(sort: Desc)])
+  @@map("blog_views")
+}
+
+model BlogReport {
+  id           String             @id @default(cuid())
+  targetType   BlogReportTargetType
+  targetId     String
+  blogId       String?
+  reporterId   String
+  reason       String             @db.Text
+  status       BlogReportStatus   @default(OPEN)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?            @db.Text
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  blog       Blog? @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  reporter   User  @relation("BlogReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("BlogReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([targetType, targetId])
+  @@map("blog_reports")
+}
+
+model BlogModerationAction {
+  id        String                   @id @default(cuid())
+  blogId    String?
+  commentId String?
+  adminId   String
+  action    BlogModerationActionType
+  reason    String?                  @db.Text
+  metadata  Json?
+  createdAt DateTime                 @default(now())
+
+  blog  Blog? @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  admin User  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([blogId, createdAt(sort: Desc)])
+  @@index([adminId, createdAt(sort: Desc)])
+  @@map("blog_moderation_actions")
+}
+
+model BlogAnalyticsDaily {
+  id        String   @id @default(cuid())
+  blogId    String
+  date      DateTime @db.Date
+  views     Int      @default(0)
+  likes     Int      @default(0)
+  comments  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, date])
+  @@index([date])
+  @@map("blog_analytics_daily")
 }

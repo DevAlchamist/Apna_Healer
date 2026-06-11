@@ -1,28 +1,19 @@
 import type { NotificationType } from "@prisma/client";
+import type { EmailAttachment } from "@/server/emails/types";
+import { shouldSendEmailForType } from "@/server/emails/render-notification-email";
 
-const EMAIL_ELIGIBLE_TYPES = new Set<NotificationType>([
-  "APPLICATION_APPROVED",
-  "APPLICATION_REJECTED",
-  "BOOKING_ACCEPTED",
-  "BOOKING_REJECTED",
-  "BOOKING_CANCELLED",
-  "LISTENER_REQUEST_ASSIGNED",
-  "LISTENER_REQUEST_APPROVED",
-  "LISTENER_REQUEST_DECLINED",
-  "SESSION_CANCELLED",
-  "SESSION_MISSED",
-  "ADMIN_USER_UPDATED",
-]);
-
-export function isEmailEligibleType(type: NotificationType): boolean {
-  return EMAIL_ELIGIBLE_TYPES.has(type);
-}
-
-export async function sendNotificationEmail(input: {
+export type SendEmailInput = {
   to: string;
   subject: string;
   html: string;
-}): Promise<boolean> {
+  attachments?: EmailAttachment[];
+};
+
+export function isEmailEligibleType(type: NotificationType): boolean {
+  return shouldSendEmailForType(type);
+}
+
+export async function sendEmail(input: SendEmailInput): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.EMAIL_FROM?.trim();
 
@@ -45,6 +36,15 @@ export async function sendNotificationEmail(input: {
         to: [input.to],
         subject: input.subject,
         html: input.html,
+        ...(input.attachments?.length
+          ? {
+              attachments: input.attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content,
+                content_type: a.contentType,
+              })),
+            }
+          : {}),
       }),
     });
 
@@ -59,6 +59,11 @@ export async function sendNotificationEmail(input: {
     console.error("[email-service] Failed to send email:", error);
     return false;
   }
+}
+
+/** Backward-compatible alias */
+export async function sendNotificationEmail(input: SendEmailInput): Promise<boolean> {
+  return sendEmail(input);
 }
 
 export function buildNotificationEmailHtml(title: string, body: string, href?: string | null): string {

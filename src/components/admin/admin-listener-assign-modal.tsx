@@ -139,10 +139,10 @@ export function AdminListenerAssignModal({
           transition={morphTransition}
           onClick={(e) => e.stopPropagation()}
         >
-          <motion.div className="flex items-start justify-between gap-3 border-b border-[#ebe6de] px-6 py-5">
+          <motion.div className="flex items-start justify-between gap-3 border-b border-theme-muted px-6 py-5">
             <h2
               id="assign-listener-title"
-              className="font-display text-[20px] font-semibold tracking-tight text-[#243230] sm:text-[22px]"
+              className="font-display text-[20px] font-semibold tracking-tight text-theme-heading sm:text-[22px]"
             >
               Assign listener for {request.user.name ?? "member"}
             </h2>
@@ -159,19 +159,19 @@ export function AdminListenerAssignModal({
           </motion.div>
 
           <motion.div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            <div className="rounded-2xl border border-[#ebe6de] bg-[#f5f3ef] p-4">
+            <div className="rounded-2xl border border-theme-muted bg-[#f5f3ef] p-4">
               <div className="flex items-start gap-3">
                 <UserAvatarCircle
                   name={request.user.name}
                   email={request.user.email}
                   image={request.user.image}
                   className="h-12 w-12 shrink-0"
-                  fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#9bc4ae] text-[#2f745f] text-sm"
+                  fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#9bc4ae] text-theme-status-success text-sm"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-[#243230]">
+                      <p className="font-semibold text-theme-heading">
                         {request.user.name ?? request.user.email}
                       </p>
                       <p className="text-xs text-[#8a8278]">Client ID: #{clientId}</p>
@@ -189,7 +189,7 @@ export function AdminListenerAssignModal({
                     Method
                   </p>
                   <p className="mt-1 flex items-center gap-2 text-sm font-medium text-[#3d3832]">
-                    <svg viewBox="0 0 20 20" className="h-4 w-4 text-[#2f6f5b]" aria-hidden>
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 text-theme-status-success" aria-hidden>
                       <path
                         fill="currentColor"
                         d="M4 4h8v8H4V4zm10 2h2v10h-2V6zm-4 10h6v2H10v-2z"
@@ -235,7 +235,7 @@ export function AdminListenerAssignModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, specialty, or expertise…"
-                className="w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] py-2.5 pl-10 pr-3 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                className="w-full rounded-xl border border-theme-muted bg-theme-surface-muted py-2.5 pl-10 pr-3 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
               />
             </div>
 
@@ -245,7 +245,7 @@ export function AdminListenerAssignModal({
                 onClick={() => setFilter("match")}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                   filter === "match"
-                    ? "bg-[#2f6f5b] text-white"
+                    ? "bg-theme-button-primary text-white"
                     : "bg-[#f0ebe3] text-[#5c574f] hover:bg-[#e4ddd3]"
                 }`}
               >
@@ -261,7 +261,7 @@ export function AdminListenerAssignModal({
                 onClick={() => setFilter("all")}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                   filter === "all"
-                    ? "bg-[#2f6f5b] text-white"
+                    ? "bg-theme-button-primary text-white"
                     : "bg-[#f0ebe3] text-[#5c574f] hover:bg-[#e4ddd3]"
                 }`}
               >
@@ -284,7 +284,7 @@ export function AdminListenerAssignModal({
                       className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
                         selected
                           ? "border-[#2f6f5b] bg-[#f0faf4]"
-                          : "border-[#ebe6de] bg-white hover:border-[#c9c2b6]"
+                          : "border-theme-muted bg-white hover:border-[#c9c2b6]"
                       }`}
                     >
                       <div className="relative shrink-0">
@@ -295,11 +295,11 @@ export function AdminListenerAssignModal({
                           className="h-10 w-10"
                           fallbackClassName="bg-linear-to-br from-[#17313a] to-[#45616b] text-white text-xs"
                         />
-                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#2f6f5b]" />
+                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-theme-button-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-[#243230]">
+                          <span className="font-semibold text-theme-heading">
                             {listener.name ?? listener.email}
                           </span>
                           <span className="rounded-full bg-[#e8f4ee] px-2 py-0.5 text-[10px] font-bold text-[#1f5c4a]">
@@ -320,7 +320,7 @@ export function AdminListenerAssignModal({
                       <span
                         className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold ${
                           selected
-                            ? "bg-[#2f6f5b] text-white"
+                            ? "bg-theme-button-primary text-white"
                             : "bg-[#f0ebe3] text-[#5c574f]"
                         }`}
                       >
@@ -333,12 +333,12 @@ export function AdminListenerAssignModal({
             </ul>
           </motion.div>
 
-          <div className="flex items-center justify-between gap-4 border-t border-[#ebe6de] bg-[#faf8f5] px-6 py-4">
+          <div className="flex items-center justify-between gap-4 border-t border-theme-muted bg-[#faf8f5] px-6 py-4">
             <button
               type="button"
               onClick={onClose}
               disabled={isPending}
-              className="text-sm font-semibold text-[#5c574f] hover:text-[#243230] disabled:opacity-50"
+              className="text-sm font-semibold text-[#5c574f] hover:text-theme-heading disabled:opacity-50"
             >
               Cancel
             </button>
@@ -346,7 +346,7 @@ export function AdminListenerAssignModal({
               type="button"
               disabled={!selectedId || isPending}
               onClick={() => selectedId && onConfirm(selectedId)}
-              className="rounded-xl bg-[#6aab8e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2f6f5b] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-[#6aab8e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-theme-button-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? "Assigning…" : "Confirm assignment"}
             </button>

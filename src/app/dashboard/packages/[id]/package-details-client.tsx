@@ -160,7 +160,7 @@ export function PackageDetailsClient({ detail }: { detail: WellnessPackageDetail
             </div>
 
             {queryError ? (
-              <p className="mt-5 text-sm font-medium text-[#cf4f45]">{queryError}</p>
+              <p className="mt-5 text-sm font-medium text-theme-status-error">{queryError}</p>
             ) : null}
           </div>
 

@@ -32,7 +32,7 @@ const staggerContainer = {
 };
 
 const imgLeaf =
-  "https://images.unsplash.com/photo-1518531933037-91b2f5c22950?w=700&h=700&fit=crop&q=80";
+  "/images/hauzkhas1.jpeg";
 const imgInterior =
   "/images/cp1.jpeg";
 const imgSeed =

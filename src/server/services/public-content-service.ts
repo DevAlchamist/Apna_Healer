@@ -7,6 +7,7 @@ import {
   listPublicEvents,
 } from "@/server/services/event-service";
 import type { ApiEventDetail, ApiPublicEventSummary } from "@/types/api";
+import { eventLandingDisplay } from "@/lib/event-landing-display";
 import { clubDetails, type ClubDetail } from "@/data/clubs";
 import { landingFaq, landingTestimonials } from "@/data/landing-content";
 import { listProviders } from "@/server/services/provider-service";
@@ -122,9 +123,7 @@ function apiPublicToLegacySummary(e: ApiPublicEventSummary): EventSummary & { ca
 }
 
 function apiDetailToLegacy(event: ApiEventDetail): EventDetail {
-  const paragraphs = event.description
-    ? event.description.split(/\n\n+/).filter(Boolean)
-    : [event.subtitle ?? event.excerpt].filter(Boolean);
+  const landing = eventLandingDisplay(event);
   return {
     id: event.slug,
     category: event.category,
@@ -133,20 +132,17 @@ function apiDetailToLegacy(event: ApiEventDetail): EventDetail {
     venue: event.venue ?? "TBA",
     title: event.title,
     heroImage: event.heroImageUrl ?? "",
-    about: paragraphs.length > 0 ? paragraphs : ["Join us for a guided wellness gathering."],
-    journeyPoints: ["Opening and grounding", "Guided practice", "Closing reflection"],
-    audienceText:
-      event.subtitle ??
-      "Open to all members and guests. No prior experience required.",
+    about: landing.about,
+    journeyPoints: landing.journeyPoints,
+    audienceText: landing.audienceText,
     price: event.basePrice === "0" ? "Free" : `₹${event.basePrice}`,
     seatsLeft: `${event.seatsRemaining} seats left`,
-    facilitatorName: event.facilitatorName ?? event.host,
-    facilitatorRole: event.facilitatorRole ?? "Facilitator",
-    facilitatorImage:
-      event.facilitatorImage ??
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80&auto=format&fit=crop",
-    facilitatorBio:
-      event.facilitatorBio ?? "Experienced wellness facilitator guiding this gathering.",
+    facilitatorName: landing.facilitatorName,
+    facilitatorRole: landing.facilitatorRole,
+    facilitatorImage: landing.facilitatorImage,
+    facilitatorBio: landing.facilitatorBio,
+    testimonialQuote: landing.testimonialQuote,
+    testimonialAuthor: landing.testimonialAuthor,
     reflections: [],
   };
 }

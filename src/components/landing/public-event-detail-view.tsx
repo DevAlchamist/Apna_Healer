@@ -63,6 +63,18 @@ export function PublicEventDetailView({ event }: { event: PublicEventView }) {
                 <p className="mt-2 text-sm leading-relaxed text-[#5f6b69]">{event.facilitatorBio}</p>
               </div>
             </div>
+            {event.testimonialQuote ? (
+              <blockquote className="mt-6 rounded-xl bg-[#f4f4f2] p-5">
+                <p className="text-sm italic leading-relaxed text-[#5f6b69]">
+                  &ldquo;{event.testimonialQuote}&rdquo;
+                </p>
+                {event.testimonialAuthor ? (
+                  <footer className="mt-3 text-xs font-semibold text-[#2f745f]">
+                    — {event.testimonialAuthor}
+                  </footer>
+                ) : null}
+              </blockquote>
+            ) : null}
           </article>
         </div>
 

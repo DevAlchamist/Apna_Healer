@@ -135,7 +135,7 @@ export default function WalletPage() {
           )}
 
           {walletQuery.error ? (
-            <p className="mt-4 text-sm font-medium text-[#cf4f45]">
+            <p className="mt-4 text-sm font-medium text-theme-status-error">
               {walletQuery.error.message}
             </p>
           ) : null}
@@ -201,7 +201,7 @@ export default function WalletPage() {
             </div>
 
             {mutationError ? (
-              <p className="mt-3 text-sm font-medium text-[#cf4f45]">{mutationError}</p>
+              <p className="mt-3 text-sm font-medium text-theme-status-error">{mutationError}</p>
             ) : (
               <p className="mt-3 text-sm text-text-primary/58">
                 Manual wallet actions are enabled for the current internal flow.
@@ -231,7 +231,7 @@ export default function WalletPage() {
         ) : null}
 
         {transactionsQuery.error ? (
-          <div className="rounded-calm bg-white px-6 py-8 text-sm text-[#cf4f45] shadow-soft">
+          <div className="rounded-calm bg-white px-6 py-8 text-sm text-theme-status-error shadow-soft">
             {transactionsQuery.error.message}
           </div>
         ) : null}

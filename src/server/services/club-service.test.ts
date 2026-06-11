@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatMemberCount, slugifyTitle, parseOnboardingStepsJson } from "./club-utils";
+import {
+  countOnboardingQuestions,
+  formatMemberCount,
+  parseOnboardingStepsJson,
+  slugifyTitle,
+} from "./club-utils";
 
 describe("club-utils", () => {
   it("slugifyTitle normalizes strings", () => {
@@ -11,11 +16,26 @@ describe("club-utils", () => {
     expect(formatMemberCount(42)).toBe("42");
   });
 
-  it("parseOnboardingStepsJson reads array", () => {
+  it("parseOnboardingStepsJson reads legacy single-question steps", () => {
+    const steps = parseOnboardingStepsJson([{ question: "Why join?", required: true }]);
+    expect(steps).toHaveLength(1);
+    expect(steps[0]?.title).toBe("Step 1");
+    expect(steps[0]?.questions[0]?.question).toBe("Why join?");
+  });
+
+  it("parseOnboardingStepsJson reads nested steps with multiple questions", () => {
     const steps = parseOnboardingStepsJson([
-      { question: "Why join?", required: true },
+      {
+        title: "About you",
+        description: "Intro",
+        questions: [
+          { question: "Why join?", required: true },
+          { question: "What do you need?", required: false },
+        ],
+      },
     ]);
     expect(steps).toHaveLength(1);
-    expect(steps[0]?.question).toBe("Why join?");
+    expect(steps[0]?.questions).toHaveLength(2);
+    expect(countOnboardingQuestions(steps)).toBe(2);
   });
 });

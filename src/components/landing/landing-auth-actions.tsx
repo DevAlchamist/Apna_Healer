@@ -32,7 +32,7 @@ export function LandingAuthActions({ onJoinClick }: LandingAuthActionsProps) {
   const accountLabel = displayAccountLabel(user?.name, user?.email);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen || signOutOpen) return;
     const onPointerDown = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
@@ -40,7 +40,7 @@ export function LandingAuthActions({ onJoinClick }: LandingAuthActionsProps) {
     };
     window.addEventListener("mousedown", onPointerDown);
     return () => window.removeEventListener("mousedown", onPointerDown);
-  }, [menuOpen]);
+  }, [menuOpen, signOutOpen]);
 
   if (status === "loading") {
     return (
@@ -102,10 +102,10 @@ export function LandingAuthActions({ onJoinClick }: LandingAuthActionsProps) {
               {accountLabel}
             </span> */}
           </button>
-          {menuOpen ? (
+          {menuOpen && !signOutOpen ? (
             <div
               role="menu"
-              className="absolute right-0 top-full z-30 mt-2 w-52 overflow-hidden rounded-2xl border border-[#e6e2da] bg-white py-1 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.25)]"
+              className="absolute right-0 top-full z-40 mt-2 w-52 overflow-hidden rounded-2xl border border-[#e6e2da] bg-white py-1 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.25)]"
             >
               <Link
                 href="/dashboard"
@@ -151,6 +151,7 @@ export function LandingAuthActions({ onJoinClick }: LandingAuthActionsProps) {
         onClose={() => setSignOutOpen(false)}
         userLabel={accountLabel}
         callbackUrl="/"
+        variant="landing"
       />
     </>
   );

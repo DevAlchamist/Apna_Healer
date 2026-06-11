@@ -11,6 +11,7 @@ import {
   applicationInputClass,
   applicationLabelClass,
 } from "@/components/dashboard/professional-apply/application-form-modal";
+import { TherapistLandingFields } from "@/components/dashboard/provider-profile-fields";
 import {
   WeeklyAvailabilityFields,
   defaultWeeklyAvailability,
@@ -63,6 +64,12 @@ export function TherapistApplicationModal({ open, onClose }: Props) {
   const [documents, setDocuments] = useState<string[]>([""]);
   const [optionalLinksRaw, setOptionalLinksRaw] = useState("");
   const [weekly, setWeekly] = useState<WeeklyWindow[]>(defaultWeeklyAvailability);
+  const [profileDescription, setProfileDescription] = useState("");
+  const [philosophyQuote, setPhilosophyQuote] = useState("");
+  const [experienceDescription, setExperienceDescription] = useState("");
+  const [testimonialQuote, setTestimonialQuote] = useState("");
+  const [testimonialAuthor, setTestimonialAuthor] = useState("");
+  const [retentionRate, setRetentionRate] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const reset = () => {
@@ -75,6 +82,12 @@ export function TherapistApplicationModal({ open, onClose }: Props) {
     setDocuments([""]);
     setOptionalLinksRaw("");
     setWeekly(defaultWeeklyAvailability);
+    setProfileDescription("");
+    setPhilosophyQuote("");
+    setExperienceDescription("");
+    setTestimonialQuote("");
+    setTestimonialAuthor("");
+    setRetentionRate("");
     setFieldErrors({});
   };
 
@@ -91,8 +104,30 @@ export function TherapistApplicationModal({ open, onClose }: Props) {
       documents: docUrls,
       whyJoin,
       ...(optionalLinks.length ? { optionalLinks } : {}),
+      ...(profileDescription.trim() ? { profileDescription: profileDescription.trim() } : {}),
+      ...(philosophyQuote.trim() ? { philosophyQuote: philosophyQuote.trim() } : {}),
+      ...(experienceDescription.trim() ? { experienceDescription: experienceDescription.trim() } : {}),
+      ...(testimonialQuote.trim() ? { testimonialQuote: testimonialQuote.trim() } : {}),
+      ...(testimonialAuthor.trim() ? { testimonialAuthor: testimonialAuthor.trim() } : {}),
+      ...(retentionRate.trim() ? { retentionRate: retentionRate.trim() } : {}),
     };
-  }, [bio, certificationsRaw, documents, optionalLinksRaw, pricing, specialization, weekly, whyJoin, years]);
+  }, [
+    bio,
+    certificationsRaw,
+    documents,
+    experienceDescription,
+    optionalLinksRaw,
+    philosophyQuote,
+    pricing,
+    profileDescription,
+    retentionRate,
+    specialization,
+    testimonialAuthor,
+    testimonialQuote,
+    weekly,
+    whyJoin,
+    years,
+  ]);
 
   const payload = useMemo(
     () => ({
@@ -315,6 +350,27 @@ export function TherapistApplicationModal({ open, onClose }: Props) {
               <span className="text-[11px] font-medium text-text-primary/42">Must be greater than zero.</span>
             </label>
           </div>
+        </ApplicationFormSection>
+
+        <ApplicationFormSection title="Public landing page">
+          <TherapistLandingFields
+            profileDescription={profileDescription}
+            onProfileDescription={setProfileDescription}
+            philosophyQuote={philosophyQuote}
+            onPhilosophyQuote={setPhilosophyQuote}
+            experienceDescription={experienceDescription}
+            onExperienceDescription={setExperienceDescription}
+            testimonialQuote={testimonialQuote}
+            onTestimonialQuote={setTestimonialQuote}
+            testimonialAuthor={testimonialAuthor}
+            onTestimonialAuthor={setTestimonialAuthor}
+            retentionRate={retentionRate}
+            onRetentionRate={setRetentionRate}
+            errors={fieldErrors}
+            labelClassName={applicationLabelClass}
+            inputClassName={applicationInputClass}
+            wrapSection={false}
+          />
         </ApplicationFormSection>
 
         <ApplicationFormSection title="Session timings & documents">

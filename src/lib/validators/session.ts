@@ -16,6 +16,8 @@ export const updateSessionSchema = z
     notes: z.union([z.string().trim().max(2000), z.literal("")]).optional(),
     /** When completing a listener-flow session, actual end time (ISO-8601). Defaults to now. */
     endedAt: z.string().datetime().optional(),
+    /** Reschedule an upcoming session to a new start time (ISO-8601). */
+    startTime: z.string().datetime().optional(),
   })
   .refine(
     (body) =>
@@ -23,7 +25,8 @@ export const updateSessionSchema = z
       body.meetingLink !== undefined ||
       body.description !== undefined ||
       body.notes !== undefined ||
-      body.endedAt !== undefined,
+      body.endedAt !== undefined ||
+      body.startTime !== undefined,
     { message: "Provide at least one field to update.", path: ["status"] },
   )
   .refine(
@@ -34,5 +37,15 @@ export const updateSessionSchema = z
     {
       message: "endedAt is only allowed when completing the session.",
       path: ["endedAt"],
+    },
+  )
+  .refine(
+    (body) =>
+      !body.startTime ||
+      body.status === undefined ||
+      body.status === "UPCOMING",
+    {
+      message: "startTime can only be sent on its own or while keeping status upcoming.",
+      path: ["startTime"],
     },
   );

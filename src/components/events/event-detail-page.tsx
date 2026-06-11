@@ -8,6 +8,7 @@ import { EventRegisterModal } from "@/components/events/event-register-modal";
 import { EventRegistrationsTable } from "@/components/events/event-registrations-table";
 import { apiFetch, apiMutation } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/display";
+import { eventLandingDisplay } from "@/lib/event-landing-display";
 import type {
   ApiEventDetail,
   ApiEventRegistrationRow,
@@ -75,9 +76,7 @@ export function EventDetailPage({
     );
   }
 
-  const paragraphs = event.description
-    ? event.description.split(/\n\n+/).filter(Boolean)
-    : [event.subtitle ?? event.excerpt].filter(Boolean);
+  const landing = eventLandingDisplay(event);
 
   return (
     <FadeIn className="space-y-8 pb-6">
@@ -117,39 +116,67 @@ export function EventDetailPage({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_280px]">
-        <article className="rounded-calm bg-white p-6 shadow-soft md:p-7">
-          <h2 className="font-display text-3xl font-semibold text-text-primary">About</h2>
-          <div className="mt-4 space-y-4 text-[1.02rem] leading-relaxed text-text-primary/74">
-            {paragraphs.map((p) => (
-              <p key={p.slice(0, 40)}>{p}</p>
-            ))}
-          </div>
-          {event.facilitatorName ? (
-            <div className="mt-8 flex gap-4 border-t border-accent/60 pt-6">
-              {event.facilitatorImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={event.facilitatorImage}
-                  alt={event.facilitatorName}
-                  className="h-24 w-24 rounded-gentle object-cover"
-                />
-              ) : null}
-              <div>
-                <h3 className="text-xl font-semibold text-text-secondary">
-                  {event.facilitatorName}
-                </h3>
-                {event.facilitatorRole ? (
-                  <p className="text-sm text-text-primary/65">{event.facilitatorRole}</p>
-                ) : null}
-                {event.facilitatorBio ? (
-                  <p className="mt-2 text-sm leading-relaxed text-text-primary/72">
-                    {event.facilitatorBio}
-                  </p>
-                ) : null}
+        <div className="space-y-6">
+          <article className="rounded-calm bg-white p-6 shadow-soft md:p-7">
+            <h2 className="font-display text-3xl font-semibold text-text-primary">What to Expect</h2>
+            <div className="mt-4 space-y-4 text-[1.02rem] leading-relaxed text-text-primary/74">
+              {landing.about.map((p) => (
+                <p key={p.slice(0, 40)}>{p}</p>
+              ))}
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-gentle bg-accent/25 p-5">
+                <h3 className="font-semibold text-text-primary">The Journey</h3>
+                <ul className="mt-3 space-y-2 text-sm text-text-primary/70">
+                  {landing.journeyPoints.map((point) => (
+                    <li key={point}>○ {point}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-gentle bg-accent/25 p-5">
+                <h3 className="font-semibold text-text-primary">Who it&apos;s For</h3>
+                <p className="mt-3 text-sm leading-relaxed text-text-primary/70">
+                  {landing.audienceText}
+                </p>
               </div>
             </div>
-          ) : null}
-        </article>
+          </article>
+
+          <article className="rounded-calm bg-white p-6 shadow-soft md:p-7">
+            <h2 className="font-display text-2xl font-semibold text-text-primary">
+              About the Facilitator
+            </h2>
+            <div className="mt-4 flex flex-col gap-4 md:flex-row">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={landing.facilitatorImage}
+                alt={landing.facilitatorName}
+                className="h-28 w-28 rounded-gentle object-cover"
+              />
+              <div>
+                <h3 className="text-xl font-semibold text-text-secondary">
+                  {landing.facilitatorName}
+                </h3>
+                <p className="text-sm text-text-primary/65">{landing.facilitatorRole}</p>
+                <p className="mt-2 text-sm leading-relaxed text-text-primary/72">
+                  {landing.facilitatorBio}
+                </p>
+              </div>
+            </div>
+            {landing.testimonialQuote ? (
+              <blockquote className="mt-6 rounded-gentle bg-accent/25 p-5">
+                <p className="text-sm italic leading-relaxed text-text-primary/72">
+                  &ldquo;{landing.testimonialQuote}&rdquo;
+                </p>
+                {landing.testimonialAuthor ? (
+                  <footer className="mt-3 text-xs font-semibold text-text-secondary">
+                    — {landing.testimonialAuthor}
+                  </footer>
+                ) : null}
+              </blockquote>
+            ) : null}
+          </article>
+        </div>
 
         <aside className="h-fit rounded-calm bg-white p-5 shadow-soft md:p-6">
           <p className="text-sm text-text-primary/65">Your price</p>
@@ -183,7 +210,7 @@ export function EventDetailPage({
               Register
             </button>
           ) : (
-            <p className="mt-4 text-sm font-semibold text-[#cf4f45]">Event is full</p>
+            <p className="mt-4 text-sm font-semibold text-theme-status-error">Event is full</p>
           )}
 
           {event.canManage ? (

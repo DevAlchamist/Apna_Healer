@@ -123,7 +123,7 @@ export default function DashboardPage() {
       />
 
       {queryError ? (
-        <p className="rounded-calm bg-white px-4 py-3 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <p className="rounded-calm bg-white px-4 py-3 text-sm font-medium text-theme-status-error shadow-soft">
           {queryError}
         </p>
       ) : null}
@@ -340,7 +340,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2f745f]/75">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-theme-status-success/75">
                 Daily reflection
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-[#0d2f2a] md:text-3xl">
@@ -348,7 +348,7 @@ export default function DashboardPage() {
               </h2>
             </div>
             <span
-              className="shrink-0 rounded-full bg-white/80 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-[#2f745f]/80 ring-1 ring-[#b8d4c4]/80"
+              className="shrink-0 rounded-full bg-white/80 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-theme-status-success/80 ring-1 ring-[#b8d4c4]/80"
               title="Calendar day (Asia/Kolkata) used to pick this quote"
             >
               {quoteQuery.data?.dateKey ? `IST ${quoteQuery.data.dateKey}` : "—"}
@@ -370,7 +370,7 @@ export default function DashboardPage() {
                   {quoteQuery.data.text}
                 </p>
                 {quoteQuery.data.author ? (
-                  <footer className="mt-4 text-sm font-semibold text-[#2f745f]">
+                  <footer className="mt-4 text-sm font-semibold text-theme-status-success">
                     — {quoteQuery.data.author}
                   </footer>
                 ) : (

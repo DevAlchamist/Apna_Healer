@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Manrope:wght@600;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#fbf9f6",
+                        "on-surface": "#1b1c1a",
+                        "tertiary-container": "#9da7a3",
+                        "on-primary-container": "#124332",
+                        "surface-variant": "#e4e2df",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#396755",
+                        "surface-dim": "#dbdad7",
+                        "on-primary-fixed-variant": "#204f3e",
+                        "inverse-primary": "#a0d1bb",
+                        "primary-container": "#7faf9a",
+                        "tertiary": "#57605d",
+                        "surface-container-highest": "#e4e2df",
+                        "on-secondary-fixed": "#072018",
+                        "secondary-fixed": "#cde9dc",
+                        "primary-fixed-dim": "#a0d1bb",
+                        "background": "#fbf9f6",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#30312f",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#414944",
+                        "primary-fixed": "#bbedd6",
+                        "on-error-container": "#93000a",
+                        "secondary": "#4b645a",
+                        "outline-variant": "#c0c8c3",
+                        "surface-container-high": "#eae8e5",
+                        "on-tertiary-container": "#333d39",
+                        "surface": "#fbf9f6",
+                        "on-secondary-fixed-variant": "#334c42",
+                        "tertiary-fixed": "#dbe5e0",
+                        "surface-container-low": "#f5f3f0",
+                        "on-tertiary-fixed-variant": "#3f4945",
+                        "on-tertiary-fixed": "#141d1b",
+                        "on-primary-fixed": "#002116",
+                        "surface-container": "#efeeeb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#1b1c1a",
+                        "inverse-on-surface": "#f2f0ed",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#cde9dc",
+                        "primary": "#396755",
+                        "outline": "#717974",
+                        "on-secondary-container": "#516a5f",
+                        "tertiary-fixed-dim": "#bfc9c4",
+                        "secondary-fixed-dim": "#b1cdc0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-xl": "48px",
+                        "stack-lg": "32px",
+                        "container-max": "600px",
+                        "inline-md": "16px",
+                        "edge-margin": "24px",
+                        "stack-md": "24px"
+                    },
+                    "fontFamily": {
+                        "footer-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Manrope"],
+                        "label-caps": ["Inter"],
+                        "headline-lg": ["Manrope"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "footer-sm": ["12px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "22px", "fontWeight": "400"}],
+                        "headline-md": ["22px", {"lineHeight": "30px", "fontWeight": "600"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "26px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .soft-gradient {
+            background: linear-gradient(180deg, rgba(251, 249, 246, 0) 0%, rgba(220, 230, 225, 0.4) 100%);
+        }
+        .progress-circle {
+            transition: stroke-dashoffset 1s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-surface-bright text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim docked full-width top-0 flex justify-center items-center h-12 w-full max-w-[600px] mx-auto pt-stack-lg">
+<div class="flex items-center justify-between w-full px-edge-margin">
+<h1 class="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed">Digital Atrium</h1>
+<nav class="flex gap-inline-md">
+<span class="material-symbols-outlined text-primary cursor-pointer transition-colors hover:text-primary-container" data-icon="settings">settings</span>
+</nav>
+</div>
+</header>
+<main class="w-full max-w-[600px] mx-auto bg-surface-bright pb-stack-xl">
+<!-- Hero Narrative -->
+<section class="px-edge-margin pt-stack-xl pb-stack-lg text-center">
+<span class="font-label-caps text-label-caps text-secondary uppercase tracking-widest mb-2 block">Monthly Wellness Recap</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-4">Your Path to Healing</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[480px] mx-auto">
+                Take a deep breath, Sarah. This month, you dedicated intentional time to your emotional sanctuary. Here is the beautiful progress you've nurtured.
+            </p>
+</section>
+<!-- Stats Bento Grid -->
+<section class="px-edge-margin grid grid-cols-1 md:grid-cols-2 gap-inline-md">
+<!-- Large Stat: Minutes of Stillness -->
+<div class="md:col-span-2 bg-secondary-container p-6 rounded-xl flex items-center justify-between overflow-hidden relative group">
+<div class="z-10">
+<h3 class="font-label-caps text-label-caps text-on-secondary-container uppercase mb-1">Minutes of Stillness</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-[42px] leading-none text-on-primary-container">342</span>
+<span class="font-body-md text-on-secondary-container">min</span>
+</div>
+<p class="font-body-md text-on-secondary-container mt-2 opacity-80">+12% from last month</p>
+</div>
+<div class="relative w-24 h-24 z-10">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="stroke-on-secondary-container/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"></path>
+<path class="stroke-primary progress-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="spa">spa</span>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-[120px]" data-icon="eco">eco</span>
+</div>
+</div>
+<!-- Stat: Journal Entries -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/30">
+<span class="material-symbols-outlined text-tertiary mb-3" data-icon="edit_note">edit_note</span>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Journal Entries</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface">14</span>
+<span class="font-body-md text-on-surface-variant">written</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[70%]"></div>
+</div>
+</div>
+<!-- Stat: Sessions Completed -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/30">
+<span class="material-symbols-outlined text-tertiary mb-3" data-icon="calendar_check" style="font-variation-settings: 'FILL' 1;">calendar_check</span>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Sessions</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface">4</span>
+<span class="font-body-md text-on-surface-variant">completed</span>
+</div>
+<div class="mt-4 flex gap-1">
+<div class="h-2 w-full bg-primary rounded-full"></div>
+<div class="h-2 w-full bg-primary rounded-full"></div>
+<div class="h-2 w-full bg-primary rounded-full"></div>
+<div class="h-2 w-full bg-primary rounded-full"></div>
+<div class="h-2 w-full bg-surface-variant rounded-full"></div>
+</div>
+</div>
+</section>
+<!-- Wellness Quote/Insight -->
+<section class="px-edge-margin py-stack-lg">
+<div class="bg-surface-container-high rounded-xl p-8 text-center soft-gradient">
+<span class="material-symbols-outlined text-primary-container text-[40px] mb-4" data-icon="format_quote">format_quote</span>
+<p class="font-headline-md text-headline-md italic text-on-surface-variant mb-4 leading-relaxed">
+                    "Healing is not a linear process, but a series of quiet, persistent choices to return to yourself."
+                </p>
+<div class="h-px w-12 bg-outline-variant mx-auto"></div>
+</div>
+</section>
+<!-- Recommendations: New Circles -->
+<section class="px-edge-margin">
+<div class="flex justify-between items-end mb-6">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">New Circles You Might Like</h3>
+<p class="font-body-md text-on-surface-variant">Handpicked for your current journey</p>
+</div>
+<a class="font-label-caps text-primary hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-inline-md">
+<!-- Circle Card 1 -->
+<div class="flex gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors group cursor-pointer border border-transparent hover:border-outline-variant/30">
+<img alt="Mindful Morning Circle" class="w-20 h-20 rounded-lg object-cover" data-alt="A serene close-up of a steaming ceramic mug of tea resting on a weathered wooden table, surrounded by soft morning light and blurred green foliage in the background. The atmosphere is calm and focused, reflecting a morning mindfulness practice. The color palette features earthy tones, soft browns, and gentle greens, maintaining a high-key, peaceful aesthetic typical of a wellness retreat." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbZJrt2_ZlO5OKS_J-KKBb18LPdvO_SoDwRMqnq_B1PCiMT44XB4woo9qhTW6dEeWpZ28ntA68uoNmYLqDz0h4u6sYKXM9xB2NXCrSg1HkOVGK2YezHvNHPUyL2VOQUK6eKSpMZWax795O11j-bfajDxOBp918W8BSc-A9LU-84IfFrB3HHkK7wu1iE5vD4qw0HmN4ar2sq1DLumDT0aDPSU8jOVaSqVWECeQ4MzeH8tSKn-B2De-4R9IuCAhntIdE6VQuizdQEu4"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-body-lg font-bold text-on-surface group-hover:text-primary transition-colors">Mindful Mornings</h4>
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+<p class="font-body-md text-on-surface-variant line-clamp-2">A small collective focused on grounding rituals before the day begins.</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">8 Members</span>
+<span class="text-footer-sm text-outline">• Starts Monday</span>
+</div>
+</div>
+</div>
+<!-- Circle Card 2 -->
+<div class="flex gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors group cursor-pointer border border-transparent hover:border-outline-variant/30">
+<img alt="Grief &amp; Grace Circle" class="w-20 h-20 rounded-lg object-cover" data-alt="A tranquil landscape at sunset featuring a still lake reflecting a soft, hazy sky in shades of pale orange and lavender. Minimalist silhouettes of tall grasses sway in the foreground. The mood is contemplative and healing, capturing a sense of transition and grace. The visual style is ethereal and clean, emphasizing breathable whitespace and a calm, corporate-wellness color story." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgSgkPO27HJXURVhMqpa2mWd7YAPCTrLoHifPaThCNU09uZRJdkRNdBRiSp3tg8oDUaqLpDavx6fNstxz3fcsX4Bjzm_8q_zI2o2yMlfNJ9O-7OyNq_6ktNy_MbgI0p_ybi4WUR1U1MRBmNjItxQuBLKa1wh2VKFOZRvJeobVm2cs5mCF7nOIqv_wzbGRSffh6oV8DRUukcMiA0BOfhZALIvcssm7WSLCM8BD5LMTAfIJwmQQvk96mw_ynMqX9303B48FOQ1XUaqY"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-body-lg font-bold text-on-surface group-hover:text-primary transition-colors">Grief &amp; Grace</h4>
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+<p class="font-body-md text-on-surface-variant line-clamp-2">Navigating loss through shared stories and therapeutic breathwork.</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">12 Members</span>
+<span class="text-footer-sm text-outline">• Ongoing</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Primary CTA -->
+<section class="px-edge-margin py-stack-lg">
+<button class="w-full py-4 bg-primary text-white font-headline-md rounded-xl shadow-sm hover:bg-on-primary-fixed-variant transition-all transform active:scale-95 duration-150 flex items-center justify-center gap-2">
+<span>View Full Dashboard</span>
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</button>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-low dark:bg-inverse-surface full-width rounded-t-xl w-full max-w-[600px] mx-auto px-edge-margin py-stack-lg flex flex-col gap-inline-md">
+<div class="flex flex-col items-center text-center gap-4">
+<div class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface">ApnaHealer</div>
+<div class="bg-error-container text-on-error-container p-3 rounded-lg w-full">
+<p class="font-footer-sm text-footer-sm mb-1">Need immediate support?</p>
+<a class="font-bold underline text-error hover:opacity-80 transition-opacity" href="tel:988">Crisis Resources: 988</a>
+</div>
+<nav class="flex flex-wrap justify-center gap-4 py-2">
+<a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Unsubscribe</a>
+<a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Preferences</a>
+<a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</nav>
+<div class="pt-4 border-t border-outline-variant w-full">
+<p class="font-footer-sm text-footer-sm text-secondary dark:text-secondary-fixed-dim opacity-80">
+                    © 2024 Digital Atrium. All rights reserved.<br/>
+                    123 Sanctuary Way, Wellness District, CA 90210
+                </p>
+</div>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for stats entry
+        document.addEventListener('DOMContentLoaded', () => {
+            const circles = document.querySelectorAll('.progress-circle');
+            circles.forEach(circle => {
+                const dashArray = circle.getAttribute('stroke-dasharray').split(',');
+                const progress = dashArray[0].trim();
+                circle.style.strokeDashoffset = '100';
+                setTimeout(() => {
+                    circle.style.strokeDashoffset = (100 - progress).toString();
+                }, 300);
+            });
+        });
+    </script>
+</body></html>

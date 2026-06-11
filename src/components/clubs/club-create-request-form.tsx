@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ClubFormFields } from "@/components/clubs/club-form-fields";
+import {
+  DEFAULT_ONBOARDING_STEPS,
+} from "@/components/clubs/club-onboarding-steps-editor";
 import { apiMutation } from "@/lib/api-client";
+import { buildClubApiPayload, emptyClubForm, type ClubFormState } from "@/lib/club-form";
 
 type ClubCreateRequestFormProps = {
   onSuccess?: () => void;
@@ -11,33 +16,22 @@ type ClubCreateRequestFormProps = {
 
 export function ClubCreateRequestForm({ onSuccess, onCancel }: ClubCreateRequestFormProps) {
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [description, setDescription] = useState("");
-  const [heroImageUrl, setHeroImageUrl] = useState("");
-  const [monthlyFee, setMonthlyFee] = useState("299");
-  const [questions, setQuestions] = useState("What brings you to this club?\nHow can we support your journey?");
+  const [form, setForm] = useState<ClubFormState>(() => ({
+    ...emptyClubForm(),
+    onboardingSteps: DEFAULT_ONBOARDING_STEPS,
+  }));
   const [error, setError] = useState<string | null>(null);
+
+  const fieldInput =
+    "mt-2 w-full rounded-gentle border border-accent/80 bg-background px-4 py-2.5 text-sm outline-none focus:border-primary/40";
+  const fieldLabel = "block text-xs font-semibold uppercase tracking-[0.12em] text-text-primary/45";
 
   const createMutation = useMutation({
     mutationFn: () => {
-      const onboardingSteps = questions
-        .split("\n")
-        .map((q) => q.trim())
-        .filter(Boolean)
-        .map((question, i) => ({ question, required: true, sortOrder: i }));
-
-      return apiMutation("/api/clubs/creation-requests", "POST", {
-        title,
-        subtitle,
-        purpose: purpose || null,
-        description: description || null,
-        heroImageUrl: heroImageUrl || null,
-        monthlyFee: Number(monthlyFee),
-        galleryUrls: [],
-        onboardingSteps,
-      });
+      if (form.onboardingSteps.length === 0) {
+        throw new Error("Add at least one onboarding step with questions.");
+      }
+      return apiMutation("/api/clubs/creation-requests", "POST", buildClubApiPayload(form));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["club-creation-requests"] });
@@ -48,72 +42,30 @@ export function ClubCreateRequestForm({ onSuccess, onCancel }: ClubCreateRequest
 
   return (
     <form
-      className="space-y-4 rounded-calm border border-accent/70 bg-white p-6"
+      className="space-y-8 rounded-calm border border-accent/70 bg-white p-6"
       onSubmit={(e) => {
         e.preventDefault();
         createMutation.mutate();
       }}
     >
-      <h2 className="font-display text-2xl font-semibold text-text-primary">Request a new club</h2>
-      <p className="text-sm text-text-primary/60">
-        Submit your club idea for admin review. Include onboarding questions members will answer.
-      </p>
-      <input
-        required
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Club title"
-        className="w-full rounded-gentle border border-accent/80 px-4 py-2 text-sm"
+      <div>
+        <h2 className="font-display text-2xl font-semibold text-text-primary">Request a new club</h2>
+        <p className="mt-2 text-sm text-text-primary/60">
+          Build the same sections visitors see on your public club page — cover image, story,
+          landing content, testimonials, and member onboarding questions.
+        </p>
+      </div>
+
+      <ClubFormFields
+        form={form}
+        onChange={(patch) => setForm((p) => ({ ...p, ...patch }))}
+        labelClassName={fieldLabel}
+        inputClassName={fieldInput}
       />
-      <textarea
-        required
-        value={subtitle}
-        onChange={(e) => setSubtitle(e.target.value)}
-        placeholder="Short subtitle"
-        rows={2}
-        className="w-full rounded-gentle border border-accent/80 px-4 py-2 text-sm"
-      />
-      <textarea
-        value={purpose}
-        onChange={(e) => setPurpose(e.target.value)}
-        placeholder="Purpose of the club"
-        rows={2}
-        className="w-full rounded-gentle border border-accent/80 px-4 py-2 text-sm"
-      />
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Full description (optional)"
-        rows={3}
-        className="w-full rounded-gentle border border-accent/80 px-4 py-2 text-sm"
-      />
-      <input
-        value={heroImageUrl}
-        onChange={(e) => setHeroImageUrl(e.target.value)}
-        placeholder="Hero image URL (optional)"
-        className="w-full rounded-gentle border border-accent/80 px-4 py-2 text-sm"
-      />
-      <label className="block text-sm">
-        Monthly fee (₹)
-        <input
-          type="number"
-          min={1}
-          value={monthlyFee}
-          onChange={(e) => setMonthlyFee(e.target.value)}
-          className="mt-1 w-full rounded-gentle border border-accent/80 px-4 py-2"
-        />
-      </label>
-      <label className="block text-sm">
-        Onboarding questions (one per line)
-        <textarea
-          value={questions}
-          onChange={(e) => setQuestions(e.target.value)}
-          rows={4}
-          className="mt-1 w-full rounded-gentle border border-accent/80 px-4 py-2 text-sm"
-        />
-      </label>
-      {error ? <p className="text-sm text-[#cf4f45]">{error}</p> : null}
-      <div className="flex gap-3">
+
+      {error ? <p className="text-sm text-theme-status-error">{error}</p> : null}
+
+      <div className="flex gap-3 border-t border-accent/50 pt-6">
         {onCancel ? (
           <button
             type="button"

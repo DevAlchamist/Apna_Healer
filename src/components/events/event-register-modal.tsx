@@ -127,7 +127,7 @@ export function EventRegisterModal({
                   <span className="font-semibold">{formatCurrency(walletBalance)}</span>
                 </p>
                 {!canPayWallet ? (
-                  <p className="mt-2 text-[#cf4f45]">
+                  <p className="mt-2 text-theme-status-error">
                     Insufficient balance.{" "}
                     <Link href="/dashboard/wallet" className="font-semibold underline">
                       Top up wallet
@@ -165,7 +165,7 @@ export function EventRegisterModal({
         </label>
 
         {registerMutation.isError ? (
-          <p className="mt-3 text-sm text-[#cf4f45]">
+          <p className="mt-3 text-sm text-theme-status-error">
             {(registerMutation.error as Error).message}
           </p>
         ) : null}

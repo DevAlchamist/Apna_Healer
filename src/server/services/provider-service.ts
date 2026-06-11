@@ -283,6 +283,12 @@ export async function getPublicTherapistById(providerId: string) {
     experienceYears: profile.experienceYears,
     rating: profile.rating.toString(),
     profileSessionCount: profile.totalSessions,
+    profileDescription: profile.profileDescription,
+    philosophyQuote: profile.philosophyQuote,
+    experienceDescription: profile.experienceDescription,
+    testimonialQuote: profile.testimonialQuote,
+    testimonialAuthor: profile.testimonialAuthor,
+    retentionRate: profile.retentionRate,
   };
 }
 

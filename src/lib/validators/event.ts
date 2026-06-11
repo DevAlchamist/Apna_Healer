@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { eventLandingFieldsSchema } from "@/lib/validators/event-landing-fields";
 
-export const createEventSchema = z.object({
+export const createEventSchema = eventLandingFieldsSchema.extend({
   clubId: z.string().cuid().optional().nullable(),
   title: z.string().trim().min(2).max(160),
   subtitle: z.string().trim().max(500).optional().nullable(),

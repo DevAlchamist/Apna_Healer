@@ -1,5 +1,8 @@
 import { CareSessionStatus } from "@prisma/client";
 
+/** Minimum notice required before a participant may cancel a therapist booking. */
+export const SESSION_PARTICIPANT_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Pure helper: derives the *time-based* lifecycle phase of a session.
  * The DB still owns the authoritative `status` (incl. CANCELLED / MISSED),
@@ -44,4 +47,39 @@ export function displaySessionStatus(input: {
   }
   const phase = derivedSessionPhase(input);
   return CareSessionStatus[phase];
+}
+
+export function resolveScheduledSessionEnd(input: {
+  startTime: Date | string;
+  endTime?: Date | string | null;
+  duration: number;
+}): Date {
+  if (input.endTime) {
+    return new Date(input.endTime);
+  }
+  const start = new Date(input.startTime);
+  return new Date(start.getTime() + Math.max(0, input.duration) * 60_000);
+}
+
+/**
+ * When a session is still marked UPCOMING but its start time has passed, derive
+ * the status the row should have in the database.
+ */
+export function autoAdvanceUpcomingStatus(input: {
+  startTime: Date | string;
+  endTime?: Date | string | null;
+  duration: number;
+  now?: Date;
+}): "ONGOING" | "MISSED" | null {
+  const now = input.now ?? new Date();
+  const start = new Date(input.startTime);
+  if (now < start) return null;
+
+  const end = resolveScheduledSessionEnd(input);
+  return now < end ? CareSessionStatus.ONGOING : CareSessionStatus.MISSED;
+}
+
+export function formatLocalTimeValue(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

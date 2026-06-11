@@ -7,6 +7,7 @@ import type {
   TherapistProfilePatchInput,
 } from "@/lib/validators/provider-profile";
 import { normalizeWeeklyWindows } from "@/lib/time-format";
+import { landingFieldsToDb } from "@/lib/provider-profile-form";
 import { replaceListenerWeeklySchedule } from "@/server/services/listener-availability-service";
 import { replaceTherapistWeeklySchedule } from "@/server/services/therapist-availability-service";
 
@@ -59,6 +60,7 @@ function mapWeeklyToSchedule(
 export async function upsertTherapistProfile(userId: string, input: TherapistProfilePatchInput) {
   const specs = specializationToArray(input.specialization);
   const availability = input.weeklyAvailability as unknown as Prisma.InputJsonValue;
+  const landing = landingFieldsToDb(input);
 
   await prisma.therapistProfile.upsert({
     where: { userId },
@@ -73,6 +75,7 @@ export async function upsertTherapistProfile(userId: string, input: TherapistPro
       links: [],
       rating: 0,
       totalSessions: 0,
+      ...landing,
     },
     update: {
       bio: input.bio,
@@ -81,6 +84,7 @@ export async function upsertTherapistProfile(userId: string, input: TherapistPro
       experienceYears: input.experienceYears,
       hourlyRate: input.hourlyRate,
       availability,
+      ...landing,
     },
   });
 

@@ -6,6 +6,7 @@ import {
   type ListenerProfilePatchInput,
   type TherapistProfilePatchInput,
 } from "@/lib/validators/provider-profile";
+import type { TherapistLandingFieldsInput } from "@/lib/validators/therapist-landing-fields";
 
 export type WeeklyWindow = {
   id?: string;
@@ -13,6 +14,15 @@ export type WeeklyWindow = {
   startTime: string;
   endTime: string;
   timezone?: string;
+};
+
+export type TherapistLandingFormFields = {
+  profileDescription: string;
+  philosophyQuote: string;
+  experienceDescription: string;
+  testimonialQuote: string;
+  testimonialAuthor: string;
+  retentionRate: string;
 };
 
 const defaultWeeklyAvailability: WeeklyWindow[] = [
@@ -67,6 +77,19 @@ export function weeklyFromScheduleRows(
   );
 }
 
+export function therapistLandingFormFromProfile(
+  tp: ApiTherapistProfile | null | undefined,
+): TherapistLandingFormFields {
+  return {
+    profileDescription: tp?.profileDescription?.trim() ?? "",
+    philosophyQuote: tp?.philosophyQuote?.trim() ?? "",
+    experienceDescription: tp?.experienceDescription?.trim() ?? "",
+    testimonialQuote: tp?.testimonialQuote?.trim() ?? "",
+    testimonialAuthor: tp?.testimonialAuthor?.trim() ?? "",
+    retentionRate: tp?.retentionRate?.trim() ?? "",
+  };
+}
+
 export function therapistFormFromUser(
   user: ApiUser,
   weekly: WeeklyWindow[],
@@ -77,7 +100,7 @@ export function therapistFormFromUser(
   experienceYears: string;
   hourlyRate: string;
   weekly: WeeklyWindow[];
-} {
+} & TherapistLandingFormFields {
   const tp = user.therapistProfile;
   return {
     profileBio: tp?.bio?.trim() || user.bio?.trim() || "",
@@ -86,6 +109,7 @@ export function therapistFormFromUser(
     experienceYears: String(tp?.experienceYears ?? 3),
     hourlyRate: tp?.hourlyRate ? String(Math.round(Number(tp.hourlyRate))) : "1500",
     weekly: weekly.length ? weekly : weeklyFromJson(tp?.availability),
+    ...therapistLandingFormFromProfile(tp),
   };
 }
 
@@ -114,7 +138,7 @@ export function buildTherapistProfilePayload(form: {
   experienceYears: string;
   hourlyRate: string;
   weekly: WeeklyWindow[];
-}): { ok: true; data: TherapistProfilePatchInput } | { ok: false; errors: Record<string, string> } {
+} & TherapistLandingFormFields): { ok: true; data: TherapistProfilePatchInput } | { ok: false; errors: Record<string, string> } {
   const parsed = therapistProfilePatchSchema.safeParse({
     bio: form.profileBio,
     specialization: form.specialization,
@@ -122,6 +146,12 @@ export function buildTherapistProfilePayload(form: {
     experienceYears: Number(form.experienceYears),
     hourlyRate: Number(form.hourlyRate),
     weeklyAvailability: normalizeWeeklyWindows(form.weekly),
+    profileDescription: form.profileDescription,
+    philosophyQuote: form.philosophyQuote,
+    experienceDescription: form.experienceDescription,
+    testimonialQuote: form.testimonialQuote,
+    testimonialAuthor: form.testimonialAuthor,
+    retentionRate: form.retentionRate,
   });
   if (!parsed.success) {
     const errors: Record<string, string> = {};
@@ -176,4 +206,15 @@ export function listenerProfileLooksComplete(lp: ApiListenerProfile | null | und
     lp.languages.length > 0 &&
     lp.emotionalStrengths.length > 0
   );
+}
+
+export function landingFieldsToDb(input: TherapistLandingFieldsInput) {
+  return {
+    profileDescription: input.profileDescription ?? null,
+    philosophyQuote: input.philosophyQuote ?? null,
+    experienceDescription: input.experienceDescription ?? null,
+    testimonialQuote: input.testimonialQuote ?? null,
+    testimonialAuthor: input.testimonialAuthor ?? null,
+    retentionRate: input.retentionRate ?? null,
+  };
 }

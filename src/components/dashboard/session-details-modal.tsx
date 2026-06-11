@@ -189,6 +189,9 @@ function SessionDetailsModal({
   const [sessionEndLocal, setSessionEndLocal] = useState(() =>
     toDateTimeLocalValue(new Date()),
   );
+  const [rescheduleStartLocal, setRescheduleStartLocal] = useState("");
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [rating, setRating] = useState<number>(0);
   const [feedback, setFeedback] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -202,6 +205,9 @@ function SessionDetailsModal({
       setDraftNotes(session.notes ?? "");
       setDraftDescription(session.description ?? "");
       setSessionEndLocal(toDateTimeLocalValue(new Date()));
+      setRescheduleStartLocal(toDateTimeLocalValue(new Date(session.startTime)));
+      setShowRescheduleForm(false);
+      setShowCancelConfirm(false);
       setLogisticsError(null);
     });
   }, [session]);
@@ -259,12 +265,16 @@ function SessionDetailsModal({
       description?: string;
       notes?: string;
       endedAt?: string;
+      startTime?: string;
     }) => apiMutation<ApiCareSession>(`/api/sessions/${localSession.id}`, "PATCH", body),
     onSuccess: (data) => {
       setLocalSession(data);
       setDraftMeetingLink(data.meetingLink?.trim() ?? "");
       setDraftNotes(data.notes ?? "");
       setDraftDescription(data.description ?? "");
+      setRescheduleStartLocal(toDateTimeLocalValue(new Date(data.startTime)));
+      setShowRescheduleForm(false);
+      setShowCancelConfirm(false);
       setLogisticsError(null);
       void queryClient.invalidateQueries({ queryKey: ["listener-inbox-sessions"] });
       void queryClient.invalidateQueries({ queryKey: ["consultations-sessions"] });
@@ -274,6 +284,8 @@ function SessionDetailsModal({
       void queryClient.invalidateQueries({ queryKey: ["admin-sessions-dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["admin-overview-sessions"] });
       void queryClient.invalidateQueries({ queryKey: ["admin-control-center"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
     onError: (error: Error) => {
       setLogisticsError(error.message);
@@ -338,27 +350,35 @@ function SessionDetailsModal({
     window.open(localSession.meetingLink, "_blank", "noopener,noreferrer");
   }, [joinReady, localSession.meetingLink]);
 
-  const canManageListenerLogistics =
+  const canManageProviderLogistics =
     !!viewer &&
-    isListenerSupportSession(localSession) &&
     (viewer.role === "ADMIN" || viewer.id === localSession.providerId);
 
-  const listenerLogisticsOpen =
-    canManageListenerLogistics &&
+  const providerLogisticsOpen =
+    canManageProviderLogistics &&
     localSession.status !== "COMPLETED" &&
     localSession.status !== "CANCELLED" &&
     localSession.status !== "MISSED";
 
+  const listenerFlowSession = isListenerSupportSession(localSession);
+
+  const canRescheduleOrCancel =
+    !!viewer &&
+    (viewer.id === localSession.userId ||
+      viewer.id === localSession.providerId ||
+      viewer.role === "ADMIN") &&
+    (localSession.status === "UPCOMING" || localSession.status === "ONGOING");
+
   const endTimePreviewMin = useMemo(() => {
-    if (!listenerLogisticsOpen) return null;
+    if (!providerLogisticsOpen || !listenerFlowSession) return null;
     const start = new Date(localSession.startTime).getTime();
     const end = new Date(sessionEndLocal).getTime();
     if (Number.isNaN(end)) return null;
     const raw = Math.round((end - start) / 60_000);
     return Math.max(1, Math.min(240, raw));
-  }, [listenerLogisticsOpen, localSession.startTime, sessionEndLocal]);
+  }, [providerLogisticsOpen, listenerFlowSession, localSession.startTime, sessionEndLocal]);
 
-  const saveListenerLogistics = () => {
+  const saveProviderLogistics = () => {
     const link = draftMeetingLink.trim();
     if (link.length > 0) {
       try {
@@ -383,6 +403,11 @@ function SessionDetailsModal({
     patchSession.mutate({ status: "ONGOING" });
   };
 
+  const completeTherapistSession = () => {
+    setLogisticsError(null);
+    patchSession.mutate({ status: "COMPLETED" });
+  };
+
   const completeListenerSession = () => {
     const end = new Date(sessionEndLocal);
     if (Number.isNaN(end.getTime())) {
@@ -399,6 +424,34 @@ function SessionDetailsModal({
       endedAt: end.toISOString(),
     });
   };
+
+  const submitReschedule = () => {
+    const nextStart = new Date(rescheduleStartLocal);
+    if (Number.isNaN(nextStart.getTime())) {
+      setLogisticsError("Choose a valid date and time.");
+      return;
+    }
+    if (nextStart.getTime() <= Date.now()) {
+      setLogisticsError("Pick a future date and time.");
+      return;
+    }
+    setLogisticsError(null);
+    patchSession.mutate({ startTime: nextStart.toISOString() });
+  };
+
+  const cancelSession = () => {
+    setLogisticsError(null);
+    patchSession.mutate({ status: "CANCELLED" });
+  };
+
+  const providerRoleLabel =
+    localSession.sessionMode === "LISTENER"
+      ? viewer?.role === "ADMIN"
+        ? "Admin"
+        : "Listener"
+      : viewer?.role === "ADMIN"
+        ? "Admin"
+        : "Therapist";
 
   return (
     <motion.div
@@ -569,26 +622,106 @@ function SessionDetailsModal({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    disabled
-                    title="Rescheduling from the app is coming soon. Contact support if you need help."
-                    className="rounded-xl bg-[#e8dcc8]/90 py-2.5 text-center text-xs font-semibold text-[#5c4a32] opacity-70"
+                    disabled={!canRescheduleOrCancel || patchSession.isPending}
+                    onClick={() => {
+                      setShowCancelConfirm(false);
+                      setShowRescheduleForm((open) => !open);
+                      setLogisticsError(null);
+                    }}
+                    title={
+                      canRescheduleOrCancel
+                        ? "Move this session to a new date and time"
+                        : "Only upcoming or ongoing sessions can be rescheduled"
+                    }
+                    className="rounded-xl bg-[#e8dcc8]/90 py-2.5 text-center text-xs font-semibold text-[#5c4a32] transition hover:bg-[#e0d2bc] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Reschedule
+                    {showRescheduleForm ? "Hide reschedule" : "Reschedule"}
                   </button>
                   <button
                     type="button"
-                    disabled
-                    title="Cancellation from the app is coming soon. Contact support if you need help."
-                    className="rounded-xl border border-[#cf4f45]/25 py-2.5 text-center text-xs font-semibold text-[#cf4f45] opacity-70"
+                    disabled={!canRescheduleOrCancel || patchSession.isPending}
+                    onClick={() => {
+                      setShowRescheduleForm(false);
+                      setShowCancelConfirm((open) => !open);
+                      setLogisticsError(null);
+                    }}
+                    title={
+                      canRescheduleOrCancel
+                        ? "Cancel this session and release any held payment"
+                        : "This session can no longer be cancelled"
+                    }
+                    className="rounded-xl border border-[#cf4f45]/25 py-2.5 text-center text-xs font-semibold text-[#cf4f45] transition hover:bg-[#fff3f1] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Cancel session
                   </button>
                 </div>
 
-                {listenerLogisticsOpen ? (
+                {showRescheduleForm && canRescheduleOrCancel ? (
+                  <div className="rounded-xl border border-[#e8dcc8]/90 bg-[#faf6ef] p-4 space-y-3">
+                    <p className="text-xs font-semibold text-[#5c4a32]">Choose a new start time</p>
+                    <label className="block text-xs font-semibold text-text-primary/65">
+                      New date & time
+                      <input
+                        type="datetime-local"
+                        min={toDateTimeLocalValue(new Date(Date.now() + 60_000))}
+                        value={rescheduleStartLocal}
+                        onChange={(e) => setRescheduleStartLocal(e.target.value)}
+                        className="mt-1.5 w-full max-w-xs rounded-lg border border-accent/80 bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
+                      />
+                    </label>
+                    <p className="text-[11px] leading-relaxed text-text-primary/60">
+                      Members must cancel at least 24 hours before start. Providers and admins can
+                      reschedule anytime while the session is still active.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={patchSession.isPending}
+                      onClick={submitReschedule}
+                      className="rounded-full bg-[#5c4a32] px-4 py-2 text-xs font-semibold text-white transition disabled:opacity-60"
+                    >
+                      {patchSession.isPending ? "Saving…" : "Confirm reschedule"}
+                    </button>
+                  </div>
+                ) : null}
+
+                {showCancelConfirm && canRescheduleOrCancel ? (
+                  <div className="rounded-xl border border-[#cf4f45]/20 bg-[#fff7f6] p-4 space-y-3">
+                    <p className="text-sm font-semibold text-[#8b3a34]">Cancel this session?</p>
+                    <p className="text-xs leading-relaxed text-text-primary/65">
+                      Held wallet funds are released back to the member. Listener sessions that were
+                      already paid are refunded. This cannot be undone.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={patchSession.isPending}
+                        onClick={cancelSession}
+                        className="rounded-full bg-[#cf4f45] px-4 py-2 text-xs font-semibold text-white transition disabled:opacity-60"
+                      >
+                        {patchSession.isPending ? "Cancelling…" : "Yes, cancel session"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCancelConfirm(false)}
+                        className="rounded-full px-4 py-2 text-xs font-semibold text-text-primary/60"
+                      >
+                        Keep session
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {logisticsError &&
+                !providerLogisticsOpen &&
+                !showRescheduleForm &&
+                !showCancelConfirm ? (
+                  <p className="text-xs font-semibold text-[#cf4f45]">{logisticsError}</p>
+                ) : null}
+
+                {providerLogisticsOpen ? (
                   <div className="mt-6 space-y-4 rounded-xl border border-[#c5e3d4]/80 bg-[#f8fcf9] p-4 sm:p-5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#0f5147]/90">
-                      {viewer?.role === "ADMIN" ? "Admin" : "Listener"} · session logistics
+                      {providerRoleLabel} · session logistics
                     </p>
                     <label className="block text-xs font-semibold text-text-primary/65">
                       Meeting link
@@ -629,7 +762,7 @@ function SessionDetailsModal({
                       <button
                         type="button"
                         disabled={patchSession.isPending}
-                        onClick={saveListenerLogistics}
+                        onClick={saveProviderLogistics}
                         className="rounded-full bg-[#045b4f] px-4 py-2 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60"
                       >
                         {patchSession.isPending ? "Saving…" : "Save details"}
@@ -638,11 +771,18 @@ function SessionDetailsModal({
 
                     <div className="border-t border-[#dceee3] pt-4 space-y-3">
                       <p className="text-xs font-semibold text-[#0f5147]">When the session ends</p>
-                      <p className="text-[11px] leading-relaxed text-text-primary/60">
-                        Pick the real end time. We record duration from the scheduled start to this time
-                        (up to 240 minutes) and update the session for your history and the member&apos;s
-                        view.
-                      </p>
+                      {listenerFlowSession ? (
+                        <p className="text-[11px] leading-relaxed text-text-primary/60">
+                          Pick the real end time. We record duration from the scheduled start to this
+                          time (up to 240 minutes) and pay out your share when you complete the
+                          session.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] leading-relaxed text-text-primary/60">
+                          Mark the session complete when you are done. Payment is captured from the
+                          member&apos;s hold and your payout is released automatically.
+                        </p>
+                      )}
                       {localSession.status === "UPCOMING" ? (
                         <button
                           type="button"
@@ -653,37 +793,50 @@ function SessionDetailsModal({
                           Mark as ongoing
                         </button>
                       ) : null}
-                      <label className="block text-xs font-semibold text-text-primary/65">
-                        Session ended at (your device time)
-                        <input
-                          type="datetime-local"
-                          min={toDateTimeLocalValue(new Date(localSession.startTime))}
-                          value={sessionEndLocal}
-                          onChange={(e) => setSessionEndLocal(e.target.value)}
-                          className="mt-1.5 w-full max-w-xs rounded-lg border border-accent/80 bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
-                        />
-                      </label>
-                      {endTimePreviewMin != null ? (
-                        <p className="text-[11px] text-text-primary/65">
-                          Recorded duration: about <span className="font-semibold">{endTimePreviewMin}</span>{" "}
-                          minutes
-                        </p>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={patchSession.isPending}
-                        onClick={completeListenerSession}
-                        className="rounded-full bg-[#17313a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0f2529] disabled:opacity-60"
-                      >
-                        {patchSession.isPending ? "Updating…" : "Complete session & save duration"}
-                      </button>
+                      {listenerFlowSession ? (
+                        <>
+                          <label className="block text-xs font-semibold text-text-primary/65">
+                            Session ended at (your device time)
+                            <input
+                              type="datetime-local"
+                              min={toDateTimeLocalValue(new Date(localSession.startTime))}
+                              value={sessionEndLocal}
+                              onChange={(e) => setSessionEndLocal(e.target.value)}
+                              className="mt-1.5 w-full max-w-xs rounded-lg border border-accent/80 bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
+                            />
+                          </label>
+                          {endTimePreviewMin != null ? (
+                            <p className="text-[11px] text-text-primary/65">
+                              Recorded duration: about{" "}
+                              <span className="font-semibold">{endTimePreviewMin}</span> minutes
+                            </p>
+                          ) : null}
+                          <button
+                            type="button"
+                            disabled={patchSession.isPending}
+                            onClick={completeListenerSession}
+                            className="rounded-full bg-[#17313a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0f2529] disabled:opacity-60"
+                          >
+                            {patchSession.isPending ? "Updating…" : "Complete session & save duration"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={patchSession.isPending}
+                          onClick={completeTherapistSession}
+                          className="rounded-full bg-[#17313a] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0f2529] disabled:opacity-60"
+                        >
+                          {patchSession.isPending ? "Updating…" : "Complete session"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : null}
               </div>
             </motion.div>
 
-            {!listenerLogisticsOpen && localSession.notes ? (
+            {!providerLogisticsOpen && localSession.notes ? (
               <motion.div
                 variants={itemVariants}
                 className="flex cursor-default items-center justify-between gap-3 rounded-[1rem] border border-[#c5e3d4]/80 bg-[#f0faf4] px-4 py-3.5 transition hover:border-[#9bc4ae]"
@@ -703,7 +856,7 @@ function SessionDetailsModal({
               </motion.div>
             ) : null}
 
-            {!listenerLogisticsOpen && localSession.description ? (
+            {!providerLogisticsOpen && localSession.description ? (
               <motion.div
                 variants={itemVariants}
                 className="rounded-[1rem] border border-accent/50 bg-white/70 px-4 py-3 text-sm text-text-primary/75"

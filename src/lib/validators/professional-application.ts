@@ -1,4 +1,5 @@
 import { z, type ZodError } from "zod";
+import { therapistLandingFieldsSchema } from "@/lib/validators/therapist-landing-fields";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -24,7 +25,7 @@ export const listenerApplicationPayloadSchema = z.object({
   optionalNote: z.string().trim().max(8000).optional(),
 });
 
-export const therapistApplicationPayloadSchema = z.object({
+export const therapistApplicationPayloadSchema = therapistLandingFieldsSchema.extend({
   bio: z.string().trim().min(20, "Bio should be at least 20 characters.").max(8000),
   specialization: z.string().trim().min(2, "Specialization is required.").max(2000),
   certifications: z.array(z.string().trim().min(1)).min(1, "List at least one certification."),

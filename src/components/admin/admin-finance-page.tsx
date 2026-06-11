@@ -80,9 +80,9 @@ function MethodIcon({ method }: { method: string }) {
 }
 
 function getStatusClasses(status: TransactionStatusValue) {
-  if (status === "SUCCESS") return "bg-[#d8f5e8] text-[#2f745f]";
+  if (status === "SUCCESS") return "bg-[#d8f5e8] text-theme-status-success";
   if (status === "PENDING") return "bg-[#ece8e1] text-[#7a756c]";
-  return "bg-[#fde1de] text-[#cf4f45]";
+  return "bg-[#fde1de] text-theme-status-error";
 }
 
 function exportTransactionsCsv(items: AdminFinanceDashboard["items"]) {
@@ -142,7 +142,7 @@ export function AdminFinancePage() {
             ? `${data.stats.revenueDeltaPercent >= 0 ? "+" : ""}${data.stats.revenueDeltaPercent}% from last month`
             : "Lifetime platform volume",
         icon: "revenue" as const,
-        iconTone: "bg-[#d8f5e8] text-[#2f745f]",
+        iconTone: "bg-[#d8f5e8] text-theme-status-success",
       },
       {
         label: "Active Healers",
@@ -155,9 +155,9 @@ export function AdminFinancePage() {
         label: "Pending Reports",
         value: String(data?.stats.pendingReports ?? 0),
         meta: "Needs urgent review",
-        metaTone: "text-[#cf4f45]",
+        metaTone: "text-theme-status-error",
         icon: "reports" as const,
-        iconTone: "bg-[#fde8e6] text-[#cf4f45]",
+        iconTone: "bg-[#fde8e6] text-theme-status-error",
       },
     ],
     [data?.stats],
@@ -180,7 +180,7 @@ export function AdminFinancePage() {
                 <StatIcon variant={card.icon} />
               </span>
             </motion.div>
-            <p className="mt-5 font-display text-[40px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+            <p className="mt-5 font-display text-[40px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
               {financeQuery.isLoading && !financeQuery.data ? (
                 <span className="inline-block h-9 w-16 animate-pulse rounded-lg bg-[#ece8e0]/90" />
               ) : (
@@ -193,7 +193,7 @@ export function AdminFinancePage() {
       </motion.div>
 
       {financeQuery.error ? (
-        <motion.p variants={fadeUp} className="rounded-[22px] bg-white px-5 py-4 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <motion.p variants={fadeUp} className="rounded-[22px] bg-white px-5 py-4 text-sm font-medium text-theme-status-error shadow-soft">
           {financeQuery.error.message}
         </motion.p>
       ) : null}
@@ -202,7 +202,7 @@ export function AdminFinancePage() {
         <section className="overflow-hidden rounded-[28px] border border-[#f0eeea] bg-white shadow-[0_18px_44px_-30px_rgba(47,63,56,0.16)]">
           <div className="flex flex-col gap-4 border-b border-[#f0ebe3] px-6 py-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-[#243230]">
+              <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-theme-heading">
                 Transaction Logs
               </h1>
               <p className="mt-1 text-sm text-text-primary/55">
@@ -214,7 +214,7 @@ export function AdminFinancePage() {
                 type="button"
                 onClick={() => exportTransactionsCsv(items)}
                 disabled={items.length === 0}
-                className="rounded-full border border-[#e5dfd4] bg-white px-4 py-2 text-sm font-semibold text-[#243230] transition hover:border-[#c9bfb0] disabled:opacity-50"
+                className="rounded-full border border-[#e5dfd4] bg-white px-4 py-2 text-sm font-semibold text-theme-heading transition hover:border-[#c9bfb0] disabled:opacity-50"
               >
                 Export CSV
               </button>
@@ -335,10 +335,10 @@ export function AdminFinancePage() {
                             email={row.user?.email}
                             image={row.user?.image}
                             className="h-10 w-10"
-                            fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-[#2f745f] text-xs"
+                            fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-theme-status-success text-xs"
                           />
                           <motion.div>
-                            <p className="font-semibold text-[#243230]">{row.user?.name ?? "Member"}</p>
+                            <p className="font-semibold text-theme-heading">{row.user?.name ?? "Member"}</p>
                             <p className="text-xs text-text-primary/45">{row.counterpartyLabel}</p>
                             <Link
                               href={`/admin/users`}
@@ -349,14 +349,14 @@ export function AdminFinancePage() {
                           </motion.div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-[#243230]">{row.displayId}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-theme-heading">{row.displayId}</td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center gap-2 text-sm text-text-primary/70">
                           <MethodIcon method={row.method} />
                           {row.method}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-[#243230]">
+                      <td className="px-6 py-4 text-sm font-semibold text-theme-heading">
                         {formatCurrency(row.amount)}
                       </td>
                       <td className="px-6 py-4">
@@ -404,12 +404,12 @@ export function AdminFinancePage() {
           <section className="rounded-[28px] border border-[#f0eeea] bg-white p-6 shadow-[0_18px_44px_-30px_rgba(47,63,56,0.16)]">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="font-display text-[26px] font-semibold tracking-[-0.02em] text-[#243230]">
+                <h2 className="font-display text-[26px] font-semibold tracking-[-0.02em] text-theme-heading">
                   Reports
                 </h2>
                 <p className="mt-1 text-sm text-text-primary/55">Community moderation queue</p>
               </div>
-              <span className="rounded-full bg-[#fde8e6] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#cf4f45]">
+              <span className="rounded-full bg-[#fde8e6] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-theme-status-error">
                 Live
               </span>
             </div>
@@ -422,14 +422,14 @@ export function AdminFinancePage() {
                     className="rounded-[18px] border border-[#f0ebe3] bg-[#faf8f5] p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="rounded-full bg-[#fde8e6] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#cf4f45]">
+                      <span className="rounded-full bg-[#fde8e6] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-theme-status-error">
                         {report.status}
                       </span>
                       <span className="text-[11px] text-text-primary/40">
                         {formatSentAgo(report.occurredAt)}
                       </span>
                     </div>
-                    <h3 className="mt-3 font-semibold text-[#243230]">{report.title}</h3>
+                    <h3 className="mt-3 font-semibold text-theme-heading">{report.title}</h3>
                     <p className="mt-1 text-sm leading-6 text-text-primary/55">{report.description}</p>
                     <Link
                       href={report.href}
@@ -459,7 +459,7 @@ export function AdminFinancePage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-primary/45">
               Member expenditure
             </p>
-            <p className="mt-2 font-display text-2xl font-semibold text-[#243230]">
+            <p className="mt-2 font-display text-2xl font-semibold text-theme-heading">
               {formatCurrency(data?.expenditureSummary.totalWalletSpent ?? 0)}
             </p>
             <p className="mt-1 text-xs text-text-primary/50">Total spent across all wallets</p>
@@ -508,7 +508,7 @@ export function AdminFinancePage() {
             </svg>
             Last sync
           </p>
-          <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+          <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
             {financeQuery.dataUpdatedAt
               ? new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(
                   new Date(financeQuery.dataUpdatedAt),

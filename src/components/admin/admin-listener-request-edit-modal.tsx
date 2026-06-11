@@ -105,10 +105,10 @@ export function AdminListenerRequestEditModal({
           transition={morphTransition}
           onClick={(e) => e.stopPropagation()}
         >
-          <motion.div className="border-b border-[#ebe6de] px-6 py-5">
+          <motion.div className="border-b border-theme-muted px-6 py-5">
             <h2
               id="edit-listener-request-title"
-              className="font-display text-[20px] font-semibold tracking-tight text-[#243230]"
+              className="font-display text-[20px] font-semibold tracking-tight text-theme-heading"
             >
               Edit session request
             </h2>
@@ -126,7 +126,7 @@ export function AdminListenerRequestEditModal({
                   required
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                  className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                 />
               </label>
               <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8278]">
@@ -136,7 +136,7 @@ export function AdminListenerRequestEditModal({
                   required
                   value={preferredTime}
                   onChange={(e) => setPreferredTime(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                  className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                 />
               </label>
             </div>
@@ -150,7 +150,7 @@ export function AdminListenerRequestEditModal({
                 step={15}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
               />
             </label>
 
@@ -161,7 +161,7 @@ export function AdminListenerRequestEditModal({
                 value={tagsText}
                 onChange={(e) => setTagsText(e.target.value)}
                 placeholder="grief, anxiety, loneliness"
-                className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
               />
             </label>
 
@@ -172,7 +172,7 @@ export function AdminListenerRequestEditModal({
                   type="text"
                   value={preferredTone}
                   onChange={(e) => setPreferredTone(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                  className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                 />
               </label>
               <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8278]">
@@ -181,7 +181,7 @@ export function AdminListenerRequestEditModal({
                   type="text"
                   value={preferredLanguage}
                   onChange={(e) => setPreferredLanguage(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                  className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                 />
               </label>
             </div>
@@ -192,24 +192,24 @@ export function AdminListenerRequestEditModal({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={4}
-                className="mt-1.5 w-full resize-y rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                className="mt-1.5 w-full resize-y rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
               />
             </label>
           </motion.div>
 
-          <motion.div className="flex items-center justify-between gap-4 border-t border-[#ebe6de] bg-[#faf8f5] px-6 py-4">
+          <motion.div className="flex items-center justify-between gap-4 border-t border-theme-muted bg-[#faf8f5] px-6 py-4">
             <button
               type="button"
               onClick={onClose}
               disabled={isPending}
-              className="text-sm font-semibold text-[#5c574f] hover:text-[#243230] disabled:opacity-50"
+              className="text-sm font-semibold text-[#5c574f] hover:text-theme-heading disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="rounded-xl bg-[#2f6f5b] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e4a3d] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-theme-button-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e4a3d] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? "Saving…" : "Save changes"}
             </button>

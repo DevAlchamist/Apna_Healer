@@ -227,12 +227,12 @@ export function AdminListenerRequestsPage() {
   return (
     <div className="space-y-6">
       <motion.section
-        className="rounded-[1.25rem] border border-[#ebe6de]/80 bg-[#faf8f5] p-6 md:p-8"
+        className="rounded-[1.25rem] border border-theme-muted/80 bg-[#faf8f5] p-6 md:p-8"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-[#243230] md:text-4xl">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-theme-heading md:text-4xl">
           Session requests
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-[#5c574f]">
@@ -241,7 +241,7 @@ export function AdminListenerRequestsPage() {
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <motion.div
-            className="inline-flex rounded-xl border border-[#e4ddd3] bg-[#f0ebe3]/60 p-1"
+            className="inline-flex rounded-xl border border-theme-muted bg-[#f0ebe3]/60 p-1"
             role="tablist"
             aria-label="Request status"
           >
@@ -256,8 +256,8 @@ export function AdminListenerRequestsPage() {
                   onClick={() => setTab(key)}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                   active
-                      ? "bg-white text-[#243230] shadow-sm"
-                      : "text-[#5c574f] hover:text-[#243230]"
+                      ? "bg-white text-theme-heading shadow-sm"
+                      : "text-[#5c574f] hover:text-theme-heading"
                 }`}
               >
                   {TAB_LABELS[key]} ({counts[key]})
@@ -271,7 +271,7 @@ export function AdminListenerRequestsPage() {
             <select
               value={sortNewest ? "newest" : "oldest"}
               onChange={(e) => setSortNewest(e.target.value === "newest")}
-              className="rounded-lg border border-[#e4ddd3] bg-white px-3 py-1.5 text-sm font-semibold text-[#243230] outline-none focus:border-[#2f6f5b]"
+              className="rounded-lg border border-theme-muted bg-white px-3 py-1.5 text-sm font-semibold text-theme-heading outline-none focus:border-[#2f6f5b]"
             >
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
@@ -281,7 +281,7 @@ export function AdminListenerRequestsPage() {
       </motion.section>
 
       {allQuery.error ? (
-        <p className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-[#cf4f45] shadow-sm">
+        <p className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-theme-status-error shadow-sm">
           {allQuery.error.message}
         </p>
       ) : null}
@@ -293,7 +293,7 @@ export function AdminListenerRequestsPage() {
           ))}
         </div>
         ) : rows.length === 0 ? (
-        <div className="rounded-[1.25rem] border border-[#ebe6de] bg-white px-6 py-12 text-center text-sm text-[#5c574f]">
+        <div className="rounded-[1.25rem] border border-theme-muted bg-white px-6 py-12 text-center text-sm text-[#5c574f]">
           No {TAB_LABELS[tab].toLowerCase()} requests.
           </div>
         ) : (
@@ -414,10 +414,10 @@ export function AdminListenerRequestsPage() {
               exit={{ opacity: 0, y: 10 }}
               transition={morphTransition}
             >
-              <motion.div className="border-b border-[#ebe6de] px-6 py-5">
+              <motion.div className="border-b border-theme-muted px-6 py-5">
               <h2
                 id="approve-listener-title"
-                  className="font-display text-[22px] font-semibold text-[#243230]"
+                  className="font-display text-[22px] font-semibold text-theme-heading"
               >
                   Confirm session
               </h2>
@@ -443,7 +443,7 @@ export function AdminListenerRequestsPage() {
                     value={approveMeetingLink}
                     onChange={(e) => setApproveMeetingLink(e.target.value)}
                     placeholder="https://…"
-                    className="mt-1.5 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                    className="mt-1.5 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                   />
                 </label>
                 <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8278]">
@@ -452,7 +452,7 @@ export function AdminListenerRequestsPage() {
                     value={approveNotes}
                     onChange={(e) => setApproveNotes(e.target.value)}
                     rows={3}
-                    className="mt-1.5 w-full resize-y rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                    className="mt-1.5 w-full resize-y rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                   />
                 </label>
                 <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8278]">
@@ -461,20 +461,20 @@ export function AdminListenerRequestsPage() {
                     value={approveDescription}
                     onChange={(e) => setApproveDescription(e.target.value)}
                     rows={2}
-                    className="mt-1.5 w-full resize-y rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3 py-2.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+                    className="mt-1.5 w-full resize-y rounded-xl border border-theme-muted bg-theme-surface-muted px-3 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
                   />
                 </label>
                 {mutate.error && mutate.variables?.action === "approve" ? (
-                  <p className="text-sm font-semibold text-[#cf4f45]">{mutate.error.message}</p>
+                  <p className="text-sm font-semibold text-theme-status-error">{mutate.error.message}</p>
               ) : null}
               </motion.div>
 
-              <motion.div className="flex justify-end gap-3 border-t border-[#ebe6de] bg-[#faf8f5] px-6 py-4">
+              <motion.div className="flex justify-end gap-3 border-t border-theme-muted bg-[#faf8f5] px-6 py-4">
                 <button
                   type="button"
                   disabled={mutate.isPending}
                   onClick={() => setApproveModalRowId(null)}
-                  className="text-sm font-semibold text-[#5c574f] hover:text-[#243230] disabled:opacity-50"
+                  className="text-sm font-semibold text-[#5c574f] hover:text-theme-heading disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -496,7 +496,7 @@ export function AdminListenerRequestsPage() {
                       },
                     })
                   }
-                  className="rounded-xl bg-[#2f6f5b] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e4a3d] disabled:opacity-50"
+                  className="rounded-xl bg-theme-button-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e4a3d] disabled:opacity-50"
                   whileHover={{ scale: mutate.isPending ? 1 : 1.02 }}
                   whileTap={{ scale: mutate.isPending ? 1 : 0.98 }}
                   transition={hoverLiftTransition}
@@ -545,7 +545,7 @@ function SessionRequestCard({
 
   return (
     <motion.article
-      className="relative flex flex-col rounded-[1.25rem] border border-[#ebe6de] bg-white p-5 shadow-[0_8px_32px_-12px_rgb(36_50_48/12%)]"
+      className="relative flex flex-col rounded-[1.25rem] border border-theme-muted bg-white p-5 shadow-[0_8px_32px_-12px_rgb(36_50_48/12%)]"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
@@ -563,10 +563,10 @@ function SessionRequestCard({
           email={row.user.email}
           image={row.user.image}
           className="h-11 w-11 shrink-0"
-          fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#9bc4ae] text-[#2f745f] text-sm"
+          fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#9bc4ae] text-theme-status-success text-sm"
         />
         <div className="min-w-0 flex-1 pr-6">
-          <p className="font-semibold text-[#243230]">{row.user.name ?? row.user.email}</p>
+          <p className="font-semibold text-theme-heading">{row.user.name ?? row.user.email}</p>
           <p className="text-xs text-[#8a8278]">{memberSubtitle(row)}</p>
         </div>
         <span className="shrink-0 rounded-full bg-[#fff0e0] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#a66a00]">
@@ -580,7 +580,7 @@ function SessionRequestCard({
             Preferred time
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-[#3d3832]">
-            <svg viewBox="0 0 20 20" className="h-4 w-4 text-[#2f6f5b]" aria-hidden>
+            <svg viewBox="0 0 20 20" className="h-4 w-4 text-theme-status-success" aria-hidden>
               <path
                 fill="currentColor"
                 d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 4h8v8H6V6z"
@@ -594,7 +594,7 @@ function SessionRequestCard({
             Method
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-[#3d3832]">
-            <svg viewBox="0 0 20 20" className="h-4 w-4 text-[#2f6f5b]" aria-hidden>
+            <svg viewBox="0 0 20 20" className="h-4 w-4 text-theme-status-success" aria-hidden>
               <path
                 fill="currentColor"
                 d="M4 4h8v8H4V4zm10 2h2v10h-2V6zm-4 10h6v2H10v-2z"
@@ -617,7 +617,7 @@ function SessionRequestCard({
       {row.assignedListener ? (
         <p className="mt-3 text-xs text-[#8a8278]">
           Assigned to{" "}
-          <span className="font-semibold text-[#243230]">
+          <span className="font-semibold text-theme-heading">
             {row.assignedListener.name ?? row.assignedListener.email}
           </span>
         </p>
@@ -630,7 +630,7 @@ function SessionRequestCard({
               type="button"
               disabled={isPending}
               onClick={onAssign}
-              className="min-w-0 flex-1 rounded-xl bg-[#1e4a3d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2f6f5b] disabled:opacity-50"
+              className="min-w-0 flex-1 rounded-xl bg-[#1e4a3d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-theme-button-primary disabled:opacity-50"
             >
               Assign provider
             </button>
@@ -638,7 +638,7 @@ function SessionRequestCard({
               type="button"
               disabled={isPending}
               onClick={onEdit}
-              className="rounded-xl border border-[#e4ddd3] bg-[#f5f3ef] px-4 py-2.5 text-sm font-semibold text-[#3d3832] transition hover:bg-[#ebe6de] disabled:opacity-50"
+              className="rounded-xl border border-theme-muted bg-[#f5f3ef] px-4 py-2.5 text-sm font-semibold text-[#3d3832] transition hover:bg-[#ebe6de] disabled:opacity-50"
             >
               Edit details
             </button>
@@ -651,7 +651,7 @@ function SessionRequestCard({
               type="button"
               disabled={isPending}
               onClick={onConfirm}
-              className="min-w-0 flex-1 rounded-xl bg-[#1e4a3d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2f6f5b] disabled:opacity-50"
+              className="min-w-0 flex-1 rounded-xl bg-[#1e4a3d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-theme-button-primary disabled:opacity-50"
             >
               Confirm session
             </button>
@@ -659,7 +659,7 @@ function SessionRequestCard({
               type="button"
               disabled={isPending}
               onClick={onEdit}
-              className="rounded-xl border border-[#e4ddd3] bg-[#f5f3ef] px-4 py-2.5 text-sm font-semibold text-[#3d3832] transition hover:bg-[#ebe6de] disabled:opacity-50"
+              className="rounded-xl border border-theme-muted bg-[#f5f3ef] px-4 py-2.5 text-sm font-semibold text-[#3d3832] transition hover:bg-[#ebe6de] disabled:opacity-50"
             >
               Edit details
             </button>
@@ -670,7 +670,7 @@ function SessionRequestCard({
           <button
             type="button"
             onClick={onOpenSession}
-            className="flex-1 rounded-xl bg-[#1e4a3d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2f6f5b]"
+            className="flex-1 rounded-xl bg-[#1e4a3d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-theme-button-primary"
           >
             Open session
           </button>
@@ -680,7 +680,7 @@ function SessionRequestCard({
           <button
             type="button"
             onClick={onToggleMenu}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e4ddd3] text-[#5c574f] hover:bg-[#f5f3ef]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-theme-muted text-[#5c574f] hover:bg-[#f5f3ef]"
             aria-label="More actions"
             aria-expanded={menuOpen}
           >
@@ -691,11 +691,11 @@ function SessionRequestCard({
             </svg>
           </button>
           {menuOpen ? (
-            <div className="absolute bottom-full right-0 z-10 mb-1 min-w-[10rem] rounded-xl border border-[#ebe6de] bg-white py-1 shadow-lg">
+            <div className="absolute bottom-full right-0 z-10 mb-1 min-w-[10rem] rounded-xl border border-theme-muted bg-white py-1 shadow-lg">
               <button
                 type="button"
                 onClick={onEdit}
-                className="block w-full px-4 py-2 text-left text-sm text-[#243230] hover:bg-[#f5f3ef]"
+                className="block w-full px-4 py-2 text-left text-sm text-theme-heading hover:bg-[#f5f3ef]"
               >
                 Edit details
               </button>
@@ -704,7 +704,7 @@ function SessionRequestCard({
                   type="button"
                   disabled={isPending}
                   onClick={onDecline}
-                  className="block w-full px-4 py-2 text-left text-sm text-[#cf4f45] hover:bg-[#fdecea] disabled:opacity-50"
+                  className="block w-full px-4 py-2 text-left text-sm text-theme-status-error hover:bg-[#fdecea] disabled:opacity-50"
                 >
                   Decline request
                 </button>
@@ -715,7 +715,7 @@ function SessionRequestCard({
       </div>
 
       {errorMessage ? (
-        <p className="mt-2 text-xs font-semibold text-[#cf4f45]">{errorMessage}</p>
+        <p className="mt-2 text-xs font-semibold text-theme-status-error">{errorMessage}</p>
       ) : null}
 
       <p className="mt-2 text-[10px] text-[#b5aea3]">

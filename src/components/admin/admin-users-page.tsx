@@ -9,6 +9,7 @@ import { UserAvatarCircle } from "@/components/dashboard/user-avatar-circle";
 import { formatCurrency, formatShortDate, toSentenceCase } from "@/lib/display";
 import type { ApiUser } from "@/types/api";
 import { StatCardsSkeleton, TableSkeleton } from "@/components/skeletons";
+import { ROLE_BADGE_CLASSES } from "@/lib/theme/role-badge-classes";
 
 const viewport = { once: true, amount: 0.15 } as const;
 const easeOut = [0.22, 1, 0.36, 1] as const;
@@ -33,15 +34,9 @@ const userSegments = ["All Users", "Listeners", "Therapists"] as const;
 type UserSegment = (typeof userSegments)[number];
 
 function getRoleClasses(tone: "green" | "sand" | "slate") {
-  if (tone === "green") {
-    return "bg-[#c9f2df] text-[#2f745f]";
-  }
-
-  if (tone === "sand") {
-    return "bg-[#efe2d2] text-[#9f774f]";
-  }
-
-  return "bg-[#eef0f0] text-[#6b7574]";
+  if (tone === "green") return ROLE_BADGE_CLASSES.therapist;
+  if (tone === "sand") return ROLE_BADGE_CLASSES.listener;
+  return ROLE_BADGE_CLASSES.default;
 }
 
 function getMetaClasses(tone: "default" | "success" | "danger" | "muted") {
@@ -67,7 +62,7 @@ function StatusDot({
 }) {
   const className =
     tone === "active" || tone === "verified"
-      ? "bg-[#2f745f]"
+      ? "bg-theme-button-primary"
       : tone === "pending"
         ? "border border-[#baa591]"
         : "bg-[#cf4f45]";
@@ -82,10 +77,10 @@ function VerificationIcon({
 }) {
   const colorClass =
     tone === "verified"
-      ? "text-[#2f745f]"
+      ? "text-theme-status-success"
       : tone === "pending"
         ? "text-[#baa591]"
-        : "text-[#cf4f45]";
+        : "text-theme-status-error";
 
   if (tone === "verified") {
     return (
@@ -224,7 +219,7 @@ export function AdminUsersPage() {
       >
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <motion.div variants={fadeUp}>
-            <h1 className="font-display text-[40px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[48px]">
+            <h1 className="font-display text-[40px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[48px]">
               User Management
             </h1>
             <p className="mt-1 max-w-[760px] text-[15px] leading-7 text-text-primary/62">
@@ -263,7 +258,7 @@ export function AdminUsersPage() {
                     setSegment(item);
                   }}
                   className={`relative rounded-full px-5 py-2 text-sm font-medium transition ${
-                    segment === item ? "text-[#2f745f]" : "text-text-primary/55"
+                    segment === item ? "text-theme-status-success" : "text-text-primary/55"
                   }`}
                 >
                   {segment === item ? (
@@ -297,7 +292,7 @@ export function AdminUsersPage() {
                 {card.label}
               </p>
               <div className="mt-4 flex items-end gap-2">
-                <p className="font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+                <p className="font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
                   {card.value}
                 </p>
                 <p className={`pb-1 text-xs font-semibold ${getMetaClasses(card.metaTone)}`}>
@@ -315,7 +310,7 @@ export function AdminUsersPage() {
       {usersQuery.isLoading ? (
         <TableSkeleton columns={6} rows={8} hasAvatarColumn />
       ) : usersQuery.error ? (
-        <section className="rounded-[30px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_18px_44px_-30px_rgba(47,63,56,0.18)]">
+        <section className="rounded-[30px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_18px_44px_-30px_rgba(47,63,56,0.18)]">
           {usersQuery.error.message}
         </section>
       ) : (
@@ -382,7 +377,7 @@ export function AdminUsersPage() {
                     ? "bg-linear-to-br from-[#e8ded1] to-[#d4c0a8] text-[#6e5542] text-sm"
                     : row.role === "THERAPIST"
                       ? "bg-linear-to-br from-[#17313a] to-[#45616b] text-white text-sm"
-                      : "bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-[#2f745f] text-sm";
+                      : "bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-theme-status-success text-sm";
 
                 return (
                 <motion.tr
@@ -403,7 +398,7 @@ export function AdminUsersPage() {
                         fallbackClassName={avatarFallback}
                       />
                       <div>
-                        <p className="text-[22px] font-semibold leading-6 tracking-[-0.02em] text-[#243230]">
+                        <p className="text-[22px] font-semibold leading-6 tracking-[-0.02em] text-theme-heading">
                           {row.name ?? "Unnamed user"}
                         </p>
                         <p className="mt-1 text-sm text-text-primary/48">{row.email}</p>
@@ -458,7 +453,7 @@ export function AdminUsersPage() {
                     <button
                       type="button"
                       onClick={() => setEditUser(row)}
-                      className="rounded-full border border-[#2f745f]/25 bg-[#f4faf6] px-4 py-1.5 text-xs font-semibold text-[#2f745f] transition hover:border-[#2f745f]/45 hover:bg-white"
+                      className="rounded-full border border-[#2f745f]/25 bg-[#f4faf6] px-4 py-1.5 text-xs font-semibold text-theme-status-success transition hover:border-[#2f745f]/45 hover:bg-white"
                     >
                       Edit user
                     </button>
@@ -496,7 +491,7 @@ export function AdminUsersPage() {
           className="rounded-[30px] bg-[linear-gradient(180deg,#f1f2ee_0%,#eceee8_100%)] px-7 py-7 shadow-[0_16px_40px_-30px_rgba(47,63,56,0.16)]"
         >
           <div className="flex items-start gap-4">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-[#2f745f] shadow-[0_10px_24px_-16px_rgba(47,63,56,0.22)]">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-theme-status-success shadow-[0_10px_24px_-16px_rgba(47,63,56,0.22)]">
               <svg
                 viewBox="0 0 24 24"
                 className="h-6 w-6"
@@ -515,7 +510,7 @@ export function AdminUsersPage() {
             </div>
 
             <div>
-              <h2 className="font-display text-[30px] font-semibold tracking-[-0.02em] text-[#243230]">
+              <h2 className="font-display text-[30px] font-semibold tracking-[-0.02em] text-theme-heading">
                 Verification Queue
               </h2>
               <p className="mt-2 max-w-[420px] text-[15px] leading-7 text-text-primary/58">
@@ -524,7 +519,7 @@ export function AdminUsersPage() {
               </p>
               <button
                 type="button"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#2f745f] transition hover:gap-3"
+                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-theme-status-success transition hover:gap-3"
               >
                 Review Submissions
                 <span aria-hidden>→</span>
@@ -540,7 +535,7 @@ export function AdminUsersPage() {
           className="rounded-[30px] bg-[linear-gradient(180deg,#f6efec_0%,#f3e9e6_100%)] px-7 py-7 shadow-[0_16px_40px_-30px_rgba(47,63,56,0.16)]"
         >
           <div className="flex items-start gap-4">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-[#f8ddd6] text-[#cf4f45] shadow-[0_10px_24px_-16px_rgba(207,79,69,0.25)]">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-[#f8ddd6] text-theme-status-error shadow-[0_10px_24px_-16px_rgba(207,79,69,0.25)]">
               <svg
                 viewBox="0 0 24 24"
                 className="h-6 w-6"
@@ -559,7 +554,7 @@ export function AdminUsersPage() {
             </div>
 
             <div>
-              <h2 className="font-display text-[30px] font-semibold tracking-[-0.02em] text-[#243230]">
+              <h2 className="font-display text-[30px] font-semibold tracking-[-0.02em] text-theme-heading">
                 Urgent Safety Flags
               </h2>
               <p className="mt-2 max-w-[420px] text-[15px] leading-7 text-text-primary/58">
@@ -568,7 +563,7 @@ export function AdminUsersPage() {
               </p>
               <button
                 type="button"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#cf4f45] transition hover:gap-3"
+                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-theme-status-error transition hover:gap-3"
               >
                 Review Live Directory
                 <span aria-hidden>→</span>

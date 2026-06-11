@@ -5,8 +5,10 @@ import type {
   clubCreationRequestSchema,
   reviewCreationRequestSchema,
 } from "@/lib/validators/club";
+import { landingFieldsFromPageData, landingPageDataFromInput } from "@/lib/club-form";
 import { createClub, mapDetail, updateClub } from "@/server/services/club-service";
-import { parseOnboardingStepsJson } from "@/server/services/club-utils";
+import { createMembershipForUser } from "@/server/services/club-billing-service";
+import { parseClubReviewsJson, parseOnboardingStepsJson } from "@/server/services/club-utils";
 import {
   emitClubCreationApproved,
   emitClubCreationRejected,
@@ -42,6 +44,8 @@ export async function submitClubCreationRequest(
       galleryUrls: input.galleryUrls ?? [],
       monthlyFee: input.monthlyFee,
       onboardingSteps: input.onboardingSteps ?? [],
+      reviews: input.reviews ?? [],
+      landingPageData: landingPageDataFromInput(input) as object,
       status: ClubRequestStatus.PENDING,
     },
   });
@@ -104,13 +108,12 @@ export async function reviewClubCreationRequest(
     return updated;
   }
 
-  const stepsRaw = input.club?.onboardingSteps
-    ?? parseOnboardingStepsJson(row.onboardingSteps);
-  const steps = stepsRaw.map((s, i) => ({
-    question: s.question,
-    required: s.required !== false,
-    sortOrder: s.sortOrder ?? i,
-  }));
+  const steps =
+    input.club?.onboardingSteps ?? parseOnboardingStepsJson(row.onboardingSteps);
+  const reviews =
+    input.club?.reviews ?? parseClubReviewsJson(row.reviews);
+
+  const landingFromRequest = landingFieldsFromPageData(row.landingPageData);
 
   const clubInput = {
     title: input.club?.title ?? row.title,
@@ -122,14 +125,35 @@ export async function reviewClubCreationRequest(
     monthlyFee: input.club?.monthlyFee ?? Number(row.monthlyFee),
     visibility: input.club?.visibility ?? ("PUBLIC" as const),
     ownerUserId: row.userId,
-    onboardingSteps: steps as CreateRequestInput["onboardingSteps"],
-    reviews: input.club?.reviews ?? [],
+    onboardingSteps: steps,
+    reviews,
+    ...landingFromRequest,
+    ...(input.club
+      ? {
+          heroTagline: input.club.heroTagline,
+          pulseQuote: input.club.pulseQuote,
+          ritualsIntro: input.club.ritualsIntro,
+          voicesQuote: input.club.voicesQuote,
+          finalCtaText: input.club.finalCtaText,
+          landingFeatures: input.club.landingFeatures,
+          landingRituals: input.club.landingRituals,
+        }
+      : {}),
   };
 
   const club = await createClub(adminId, clubInput, { asAdmin: true });
   await prisma.club.update({
     where: { id: club.id },
     data: { status: ClubStatus.ACTIVE, ownerUserId: row.userId },
+  });
+
+  await createMembershipForUser({
+    clubId: club.id,
+    userId: row.userId,
+    role: "OWNER",
+    skipBilling: true,
+  }).catch(() => {
+    /* owner may already have membership from a prior attempt */
   });
 
   if (input.club) {
@@ -139,7 +163,10 @@ export async function reviewClubCreationRequest(
   const finalClub = await prisma.club.findUniqueOrThrow({
     where: { id: club.id },
     include: {
-      onboardingSteps: { orderBy: { sortOrder: "asc" } },
+      onboardingSteps: {
+        orderBy: { sortOrder: "asc" },
+        include: { questions: { orderBy: { sortOrder: "asc" } } },
+      },
       reviews: { orderBy: { sortOrder: "asc" } },
     },
   });

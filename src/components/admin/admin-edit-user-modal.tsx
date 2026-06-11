@@ -10,6 +10,7 @@ import {
   defaultWeeklyAvailability,
 } from "@/components/dashboard/professional-apply/weekly-availability-fields";
 import { easeCalm, morphTransition } from "@/components/ui/fade-in";
+import { TherapistLandingFields } from "@/components/dashboard/provider-profile-fields";
 import { apiFetch, apiMutation } from "@/lib/api-client";
 import { toSentenceCase } from "@/lib/display";
 import {
@@ -51,7 +52,7 @@ const ROLES: UserRole[] = ["USER", "THERAPIST", "LISTENER", "ADMIN"];
 const fieldLabel =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a8278]";
 const fieldInput =
-  "mt-2 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3.5 py-2.5 text-sm text-[#243230] outline-none transition placeholder:text-[#b1a89d] focus:border-[#2f6f5b] focus:bg-white focus:ring-2 focus:ring-[#2f6f5b]/12";
+  "mt-2 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3.5 py-2.5 text-sm text-theme-heading outline-none transition placeholder:text-[#b1a89d] focus:border-[#2f6f5b] focus:bg-white focus:ring-2 focus:ring-[#2f6f5b]/12";
 
 type AdminEditUserModalProps = {
   open: boolean;
@@ -90,9 +91,9 @@ function SectionHeading({
   aside?: ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-wrap items-center justify-between gap-2 border-b border-[#ebe6de] pb-3">
+    <div className="flex flex-1 flex-wrap items-center justify-between gap-2 border-b border-theme-muted pb-3">
       <motion.div variants={itemVariants} className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e8f4ee] text-[#2f6f5b]">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e8f4ee] text-theme-status-success">
           {icon}
         </span>
         <h3 className={fieldLabel}>{title}</h3>
@@ -138,7 +139,7 @@ function TagInput({
             <button
               type="button"
               onClick={() => onChange(tags.filter((t) => t !== tag))}
-              className="rounded-full p-0.5 text-[#2f6f5b]/70 transition hover:bg-[#d4ebe0] hover:text-[#0f5147]"
+              className="rounded-full p-0.5 text-theme-status-success/70 transition hover:bg-[#d4ebe0] hover:text-[#0f5147]"
               aria-label={`Remove ${tag}`}
             >
               <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden>
@@ -166,17 +167,17 @@ function TagInput({
           }}
           onBlur={() => addTag(draft)}
           placeholder={tags.length ? "" : placeholder}
-          className="min-w-[88px] flex-1 rounded-full border border-dashed border-[#c9c2b6] bg-transparent px-3 py-1.5 text-sm text-[#243230] outline-none focus:border-[#2f6f5b] focus:bg-white"
+          className="min-w-[88px] flex-1 rounded-full border border-dashed border-[#c9c2b6] bg-transparent px-3 py-1.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b] focus:bg-white"
         />
         <button
           type="button"
           onClick={() => addTag(draft)}
-          className="rounded-full border border-dashed border-[#c9c2b6] px-3 py-1.5 text-[12px] font-semibold text-[#5c574f] transition hover:border-[#2f6f5b] hover:text-[#2f6f5b]"
+          className="rounded-full border border-dashed border-[#c9c2b6] px-3 py-1.5 text-[12px] font-semibold text-[#5c574f] transition hover:border-[#2f6f5b] hover:text-theme-status-success"
         >
           + Add
         </button>
       </motion.div>
-      {error ? <p className="mt-1.5 text-xs font-medium text-[#cf4f45]">{error}</p> : null}
+      {error ? <p className="mt-1.5 text-xs font-medium text-theme-status-error">{error}</p> : null}
     </div>
   );
 }
@@ -197,12 +198,12 @@ function VerifiedToggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`flex w-full items-center justify-between gap-3 rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-4 py-3 text-left transition ${
+      className={`flex w-full items-center justify-between gap-3 rounded-xl border border-theme-muted bg-theme-surface-muted px-4 py-3 text-left transition ${
         disabled ? "cursor-not-allowed opacity-60" : "hover:border-[#c9c2b6]"
       }`}
     >
       <span className="flex items-center gap-2.5 text-sm font-medium text-[#3d3832]">
-        <svg viewBox="0 0 20 20" className="h-4 w-4 text-[#2f6f5b]" aria-hidden>
+        <svg viewBox="0 0 20 20" className="h-4 w-4 text-theme-status-success" aria-hidden>
           <path
             fill="currentColor"
             d="M10 1.5l2.2 4.5 4.9.7-3.55 3.5.84 4.9L10 13.2l-4.39 2.4.84-4.9L2.9 6.7l4.9-.7L10 1.5z"
@@ -212,7 +213,7 @@ function VerifiedToggle({
       </span>
       <span
         className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-          checked ? "bg-[#2f6f5b]" : "bg-[#d5cfc4]"
+          checked ? "bg-theme-button-primary" : "bg-[#d5cfc4]"
         }`}
       >
         <span
@@ -266,6 +267,12 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
   const [experienceYears, setExperienceYears] = useState("3");
   const [hourlyRate, setHourlyRate] = useState("1500");
   const [therapistWeekly, setTherapistWeekly] = useState(defaultWeeklyAvailability);
+  const [profileDescription, setProfileDescription] = useState("");
+  const [philosophyQuote, setPhilosophyQuote] = useState("");
+  const [experienceDescription, setExperienceDescription] = useState("");
+  const [testimonialQuote, setTestimonialQuote] = useState("");
+  const [testimonialAuthor, setTestimonialAuthor] = useState("");
+  const [retentionRate, setRetentionRate] = useState("");
 
   const [listenerBio, setListenerBio] = useState("");
   const [languageTags, setLanguageTags] = useState<string[]>([]);
@@ -321,6 +328,12 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
     setExperienceYears(t.experienceYears);
     setHourlyRate(t.hourlyRate);
     setTherapistWeekly(t.weekly);
+    setProfileDescription(t.profileDescription);
+    setPhilosophyQuote(t.philosophyQuote);
+    setExperienceDescription(t.experienceDescription);
+    setTestimonialQuote(t.testimonialQuote);
+    setTestimonialAuthor(t.testimonialAuthor);
+    setRetentionRate(t.retentionRate);
 
     const l = listenerFormFromUser(user, fallbackWeekly);
     setListenerBio(l.profileBio);
@@ -390,6 +403,12 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
           experienceYears,
           hourlyRate,
           weekly: therapistWeekly,
+          profileDescription,
+          philosophyQuote,
+          experienceDescription,
+          testimonialQuote,
+          testimonialAuthor,
+          retentionRate,
         });
         if (!built.ok) {
           setProviderErrors(built.errors);
@@ -452,7 +471,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
         aria-labelledby="admin-edit-user-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-[#ebe6de] px-6 pb-5 pt-6 sm:px-8">
+        <div className="shrink-0 border-b border-theme-muted px-6 pb-5 pt-6 sm:px-8">
           <div className="flex items-start gap-4">
             <motion.div variants={itemVariants} className="relative shrink-0">
               <UserAvatarCircle
@@ -464,7 +483,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
                 fallbackClassName="bg-linear-to-br from-[#d9ebe2] to-[#9bc4ae] text-xl font-semibold text-[#0d2f2a]"
               />
               <span
-                className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#2f6f5b] text-white shadow-sm"
+                className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-theme-button-primary text-white shadow-sm"
                 aria-hidden
               >
                 <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -476,7 +495,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
             <motion.div variants={itemVariants} className="min-w-0 flex-1 pt-1">
               <h2
                 id="admin-edit-user-title"
-                className="font-display text-[22px] font-semibold tracking-tight text-[#243230] sm:text-2xl"
+                className="font-display text-[22px] font-semibold tracking-tight text-theme-heading sm:text-2xl"
               >
                 Edit User Profile
               </h2>
@@ -502,7 +521,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-full p-2 text-[#8a8278] transition hover:bg-[#f4f0ea] hover:text-[#243230]"
+              className="shrink-0 rounded-full p-2 text-[#8a8278] transition hover:bg-[#f4f0ea] hover:text-theme-heading"
               aria-label="Close"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -512,7 +531,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
           </div>
 
           {isSelf ? (
-            <p className="mt-4 rounded-xl bg-[#eef6f1] px-3 py-2 text-xs text-[#2f745f]">
+            <p className="mt-4 rounded-xl bg-[#eef6f1] px-3 py-2 text-xs text-theme-status-success">
               You cannot change your own role here. Another admin can adjust roles if needed.
             </p>
           ) : null}
@@ -594,7 +613,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
               title="Profile details"
             />
 
-            <motion.div className="space-y-4 rounded-2xl border border-[#ebe6de] bg-[#faf8f5] p-5">
+            <motion.div className="space-y-4 rounded-2xl border border-theme-muted bg-[#faf8f5] p-5">
                   <label className="block">
                     <span className={fieldLabel}>Bio</span>
                     <textarea
@@ -658,13 +677,13 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
           </section>
 
           {providerHint ? (
-            <p className="mt-6 rounded-xl bg-[#eef6f1] px-4 py-2.5 text-xs font-medium text-[#2f745f]">
+            <p className="mt-6 rounded-xl bg-[#eef6f1] px-4 py-2.5 text-xs font-medium text-theme-status-success">
               {providerHint}
             </p>
           ) : null}
 
           {role === "THERAPIST" ? (
-            <section className="mt-8 space-y-5 rounded-2xl border border-[#e4ddd3] bg-[#f5f3ef] p-5 sm:p-6">
+            <section className="mt-8 space-y-5 rounded-2xl border border-theme-muted bg-[#f5f3ef] p-5 sm:p-6">
               <SectionHeading
                 icon={
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
@@ -684,7 +703,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
                   placeholder="How you work and who you support."
                 />
                 {providerErrors.bio ? (
-                  <p className="mt-1 text-xs text-[#cf4f45]">{providerErrors.bio}</p>
+                  <p className="mt-1 text-xs text-theme-status-error">{providerErrors.bio}</p>
                 ) : null}
               </label>
 
@@ -699,7 +718,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
                     className={fieldInput}
                   />
                   {providerErrors.hourlyRate ? (
-                    <p className="mt-1 text-xs text-[#cf4f45]">{providerErrors.hourlyRate}</p>
+                    <p className="mt-1 text-xs text-theme-status-error">{providerErrors.hourlyRate}</p>
                   ) : null}
                 </label>
                 <label className="block">
@@ -713,7 +732,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
                     className={fieldInput}
                   />
                   {providerErrors.experienceYears ? (
-                    <p className="mt-1 text-xs text-[#cf4f45]">{providerErrors.experienceYears}</p>
+                    <p className="mt-1 text-xs text-theme-status-error">{providerErrors.experienceYears}</p>
                   ) : null}
                 </label>
               </div>
@@ -740,11 +759,11 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
                   className={`${fieldInput} resize-y`}
                 />
                 {providerErrors.certifications ? (
-                  <p className="mt-1 text-xs text-[#cf4f45]">{providerErrors.certifications}</p>
+                  <p className="mt-1 text-xs text-theme-status-error">{providerErrors.certifications}</p>
                 ) : null}
               </label>
 
-              <div className="rounded-xl border border-[#e4ddd3] bg-white/60 p-4">
+              <div className="rounded-xl border border-theme-muted bg-white/60 p-4">
                 <p className={fieldLabel}>Session timings</p>
                 <div className="mt-3">
                   <WeeklyAvailabilityFields
@@ -760,8 +779,41 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
             </section>
           ) : null}
 
+          {role === "THERAPIST" ? (
+            <section className="mt-8 rounded-2xl border border-theme-muted bg-[#f5f3ef] p-5 sm:p-6">
+              <SectionHeading
+                icon={
+                  <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
+                    <path d="M4 3h12v2H4V3zm0 4h12v2H4V7zm0 4h8v2H4v-2zm8 4h4v2h-4v-2z" />
+                  </svg>
+                }
+                title="Public landing page"
+              />
+              <div className="mt-5">
+                <TherapistLandingFields
+                  profileDescription={profileDescription}
+                  onProfileDescription={setProfileDescription}
+                  philosophyQuote={philosophyQuote}
+                  onPhilosophyQuote={setPhilosophyQuote}
+                  experienceDescription={experienceDescription}
+                  onExperienceDescription={setExperienceDescription}
+                  testimonialQuote={testimonialQuote}
+                  onTestimonialQuote={setTestimonialQuote}
+                  testimonialAuthor={testimonialAuthor}
+                  onTestimonialAuthor={setTestimonialAuthor}
+                  retentionRate={retentionRate}
+                  onRetentionRate={setRetentionRate}
+                  errors={providerErrors}
+                  labelClassName={`block ${fieldLabel}`}
+                  inputClassName={fieldInput}
+                  wrapSection={false}
+                />
+              </div>
+            </section>
+          ) : null}
+
           {role === "LISTENER" ? (
-            <section className="mt-8 space-y-5 rounded-2xl border border-[#e4ddd3] bg-[#f5f3ef] p-5 sm:p-6">
+            <section className="mt-8 space-y-5 rounded-2xl border border-theme-muted bg-[#f5f3ef] p-5 sm:p-6">
               <SectionHeading
                 icon={
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
@@ -780,7 +832,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
                   className={`${fieldInput} resize-y`}
                 />
                 {providerErrors.bio ? (
-                  <p className="mt-1 text-xs text-[#cf4f45]">{providerErrors.bio}</p>
+                  <p className="mt-1 text-xs text-theme-status-error">{providerErrors.bio}</p>
                 ) : null}
               </label>
 
@@ -809,7 +861,7 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
               </div>
 
 
-              <div className="rounded-xl border border-[#e4ddd3] bg-white/60 p-4">
+              <div className="rounded-xl border border-theme-muted bg-white/60 p-4">
                 <p className={fieldLabel}>Availability timings</p>
                 <div className="mt-3">
                   <WeeklyAvailabilityFields
@@ -826,17 +878,17 @@ function AdminEditUserFormInner({ user, onClose }: { user: ApiUser; onClose: () 
           ) : null}
 
           {formError ? (
-            <p className="mt-6 text-sm font-medium text-[#cf4f45]" role="alert">
+            <p className="mt-6 text-sm font-medium text-theme-status-error" role="alert">
               {formError}
             </p>
           ) : null}
         </motion.div>
 
-        <div className="flex shrink-0 items-center justify-between gap-4 border-t border-[#ebe6de] bg-[#faf8f5] px-6 py-4 sm:px-8">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-t border-theme-muted bg-[#faf8f5] px-6 py-4 sm:px-8">
           <button
             type="button"
             onClick={onClose}
-            className="text-sm font-semibold text-[#5c574f] transition hover:text-[#243230]"
+            className="text-sm font-semibold text-[#5c574f] transition hover:text-theme-heading"
           >
             Cancel changes
           </button>

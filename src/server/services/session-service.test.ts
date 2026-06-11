@@ -1,4 +1,5 @@
 import {
+  BookingPaymentMethod,
   CareSessionStatus,
   Prisma,
   Role,
@@ -140,7 +141,9 @@ describe("session service", () => {
       careSession: {
         findUnique: vi.fn().mockResolvedValue({
           ...session,
-          booking: session.bookingId ? { id: session.bookingId } : null,
+          booking: session.bookingId
+            ? { id: session.bookingId, paymentMethod: BookingPaymentMethod.WALLET }
+            : null,
         }),
         update: vi.fn().mockResolvedValue(updatedSession),
       },
@@ -201,6 +204,7 @@ describe("session service", () => {
           platformFee: 30,
           providerNet: 170,
           sessionId: session.id,
+          paymentMethod: BookingPaymentMethod.WALLET,
         },
       },
     });
@@ -216,6 +220,7 @@ describe("session service", () => {
         bookingId: session.bookingId,
         grossAmount: 200,
         platformFee: 30,
+        paymentMethod: BookingPaymentMethod.WALLET,
       },
     });
     expect(tx.booking.update).toHaveBeenCalledWith({
@@ -250,8 +255,18 @@ describe("session service", () => {
         }),
         update: vi.fn().mockResolvedValue(updatedSession),
       },
-      wallet: { findUnique: vi.fn(), update: vi.fn() },
-      transaction: { findFirst: vi.fn(), update: vi.fn() },
+      wallet: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "wallet_provider",
+          availableBalance: new Prisma.Decimal("10.00"),
+          totalReceived: new Prisma.Decimal("0.00"),
+        }),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      transaction: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
+      },
       booking: { update: vi.fn() },
       sessionLog: {
         create: vi.fn(),
@@ -283,6 +298,21 @@ describe("session service", () => {
         provider: true,
       },
     });
-    expect(tx.wallet.update).not.toHaveBeenCalled();
+    expect(tx.wallet.update).toHaveBeenCalledWith({
+      where: { id: "wallet_provider" },
+      data: {
+        availableBalance: expect.anything(),
+        totalReceived: expect.anything(),
+      },
+    });
+    expect(createTransactionRecordMock).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        userId: session.providerId,
+        type: TransactionType.PAYOUT,
+        purpose: "SESSION_PAYOUT",
+        referenceId: session.id,
+      }),
+    );
   });
 });

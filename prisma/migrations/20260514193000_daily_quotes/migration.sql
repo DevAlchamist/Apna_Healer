@@ -13,3 +13,6 @@ CREATE TABLE "daily_quotes" (
 
 -- CreateIndex
 CREATE INDEX "daily_quotes_isActive_sortOrder_idx" ON "daily_quotes"("isActive", "sortOrder");
+
+-- AlterTable
+ALTER TABLE "daily_quotes" ALTER COLUMN "updatedAt" DROP DEFAULT;

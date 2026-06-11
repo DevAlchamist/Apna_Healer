@@ -225,7 +225,7 @@ export function AdminCommunitiesPage() {
         variants={staggerContainer}
       >
         <motion.div variants={fadeBlock}>
-          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[52px]">
+          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[52px]">
             Community Operations
           </h1>
           <p className="mt-2 max-w-[820px] text-[15px] leading-7 text-text-primary/65 md:text-base">
@@ -236,7 +236,7 @@ export function AdminCommunitiesPage() {
         </motion.div>
 
         {queryError ? (
-          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
+          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
             {queryError}
           </div>
         ) : null}
@@ -253,7 +253,7 @@ export function AdminCommunitiesPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b1a89d]">
                 {stat.label}
               </p>
-              <p className="mt-3 font-display text-[48px] font-semibold leading-none tracking-[-0.04em] text-[#2f6f5b]">
+              <p className="mt-3 font-display text-[48px] font-semibold leading-none tracking-[-0.04em] text-theme-status-success">
                 {stat.value}
               </p>
               <p className="mt-3 text-sm text-text-primary/55">{stat.meta}</p>
@@ -272,7 +272,7 @@ export function AdminCommunitiesPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Cohort Health
           </motion.h2>
@@ -286,7 +286,7 @@ export function AdminCommunitiesPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a3917d]">
                   Verified Access
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-[#243230]">
+                <p className="mt-2 text-2xl font-semibold text-theme-heading">
                   {communityMembers.filter((user) => user.isVerified).length}
                 </p>
                 <p className="mt-1 text-sm text-text-primary/55">
@@ -297,7 +297,7 @@ export function AdminCommunitiesPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b8f7f]">
                   Awaiting First Session
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-[#243230]">
+                <p className="mt-2 text-2xl font-semibold text-theme-heading">
                   {membersAwaitingFirstSession}
                 </p>
                 <p className="mt-1 text-sm text-text-primary/55">
@@ -308,7 +308,7 @@ export function AdminCommunitiesPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a80a4]">
                   New Members
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-[#243230]">{newMembers.length}</p>
+                <p className="mt-2 text-2xl font-semibold text-theme-heading">{newMembers.length}</p>
                 <p className="mt-1 text-sm text-text-primary/55">
                   joined during the last 30 days
                 </p>
@@ -317,7 +317,7 @@ export function AdminCommunitiesPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#bb7e5c]">
                   Open Provider Intake
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-[#243230]">
+                <p className="mt-2 text-2xl font-semibold text-theme-heading">
                   {openApplications.length}
                 </p>
                 <p className="mt-1 text-sm text-text-primary/55">
@@ -333,7 +333,7 @@ export function AdminCommunitiesPage() {
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="font-display text-[30px] font-semibold tracking-[-0.03em] text-[#243230]">
+                <h3 className="font-display text-[30px] font-semibold tracking-[-0.03em] text-theme-heading">
                   Recent Community Joins
                 </h3>
                 <p className="mt-1 text-sm text-text-primary/55">
@@ -350,7 +350,7 @@ export function AdminCommunitiesPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[17px] font-semibold text-[#243230]">
+                      <p className="text-[17px] font-semibold text-theme-heading">
                         {member.name ?? member.email}
                       </p>
                       <p className="mt-1 text-sm text-text-primary/45">{member.email}</p>
@@ -383,7 +383,7 @@ export function AdminCommunitiesPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Support Queue
           </motion.h2>
@@ -406,7 +406,7 @@ export function AdminCommunitiesPage() {
                         sizeClassName="h-10 w-10"
                       />
                       <div className="min-w-0">
-                        <p className="text-[17px] font-semibold text-[#243230]">
+                        <p className="text-[17px] font-semibold text-theme-heading">
                           {booking.user?.name ?? "Participant"} with{" "}
                           {booking.provider?.name ?? "Provider"}
                         </p>
@@ -434,11 +434,11 @@ export function AdminCommunitiesPage() {
 
             <div className="mt-5 rounded-[22px] bg-[#f7f4ee] px-4 py-4 text-sm text-text-primary/62">
               <p>
-                <span className="font-semibold text-[#243230]">Upcoming or ongoing sessions:</span>{" "}
+                <span className="font-semibold text-theme-heading">Upcoming or ongoing sessions:</span>{" "}
                 {activeSessions.length}
               </p>
               <p className="mt-2">
-                <span className="font-semibold text-[#243230]">Completed sessions loaded:</span>{" "}
+                <span className="font-semibold text-theme-heading">Completed sessions loaded:</span>{" "}
                 {sessions.filter((session) => session.status === "COMPLETED").length}
               </p>
             </div>
@@ -448,7 +448,7 @@ export function AdminCommunitiesPage() {
             variants={fadeBlock}
             className="rounded-[30px] bg-white px-6 py-6 shadow-[0_18px_50px_-34px_rgba(47,63,56,0.18)]"
           >
-            <h3 className="font-display text-[30px] font-semibold tracking-[-0.03em] text-[#243230]">
+            <h3 className="font-display text-[30px] font-semibold tracking-[-0.03em] text-theme-heading">
               Member Spaces
             </h3>
             <p className="mt-1 text-sm text-text-primary/55">
@@ -483,7 +483,7 @@ export function AdminCommunitiesPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Provider Coverage
           </motion.h2>
@@ -494,16 +494,16 @@ export function AdminCommunitiesPage() {
           >
             <div className="rounded-[22px] bg-[#eef7f2] px-4 py-4 text-sm text-text-primary/62">
               <p>
-                <span className="font-semibold text-[#243230]">Available providers:</span>{" "}
+                <span className="font-semibold text-theme-heading">Available providers:</span>{" "}
                 {providerCoverage.length} of {providers.length} currently publish availability.
               </p>
               <p className="mt-2">
-                <span className="font-semibold text-[#243230]">Listener coverage:</span>{" "}
+                <span className="font-semibold text-theme-heading">Listener coverage:</span>{" "}
                 {providerCoverage.filter((provider) => provider.role === "LISTENER").length} open
                 listener profiles.
               </p>
               <p className="mt-2">
-                <span className="font-semibold text-[#243230]">Therapist coverage:</span>{" "}
+                <span className="font-semibold text-theme-heading">Therapist coverage:</span>{" "}
                 {providerCoverage.filter((provider) => provider.role === "THERAPIST").length} open
                 therapist profiles.
               </p>
@@ -517,7 +517,7 @@ export function AdminCommunitiesPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[17px] font-semibold text-[#243230]">
+                      <p className="text-[17px] font-semibold text-theme-heading">
                         {provider.name ?? "Verified provider"}
                       </p>
                       <p className="mt-1 text-sm text-text-primary/45">

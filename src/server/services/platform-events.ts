@@ -1,4 +1,5 @@
 import type { BookingStatus, CareSessionStatus, ListenerRequestStatus, Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { recordAuditLog } from "@/server/services/audit-log-service";
 import {
   sanitizeAdminUserUpdateDetails,
@@ -8,6 +9,69 @@ import {
 } from "@/server/services/audit-log-sanitizers";
 import { createNotification, notifyUsers } from "@/server/services/notification-service";
 import type { AdminPatchUserInput } from "@/lib/validators/user";
+
+const WELCOME_BACK_INACTIVE_MS = 7 * 24 * 60 * 60 * 1000;
+const NEW_USER_WINDOW_MS = 5 * 60 * 1000;
+
+async function buildSessionEmailMetadata(sessionId: string) {
+  const session = await prisma.careSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      user: { select: { timezone: true } },
+      provider: { select: { name: true, image: true } },
+    },
+  });
+  if (!session) return null;
+  return {
+    sessionId: session.id,
+    providerName: session.provider.name,
+    providerImageUrl: session.provider.image,
+    startTimeIso: session.startTime.toISOString(),
+    durationMinutes: session.duration,
+    meetingLink: session.meetingLink,
+    timezone: session.user.timezone,
+  };
+}
+
+export async function emitAuthLoginEmail(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, createdAt: true, lastLoginAt: true },
+  });
+  if (!user) return;
+
+  const now = Date.now();
+  const isNewUser = now - user.createdAt.getTime() <= NEW_USER_WINDOW_MS;
+  const inactiveMs = user.lastLoginAt ? now - user.lastLoginAt.getTime() : Infinity;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { lastLoginAt: new Date() },
+  });
+
+  if (isNewUser) {
+    await createNotification({
+      userId,
+      type: "WELCOME",
+      title: "Welcome to Apna Healer",
+      body: "Your sanctuary is ready. Explore blogs, book a session, or join a healing circle.",
+      href: "/dashboard",
+      metadata: { userName: user.name, isNewUser: true },
+    });
+    return;
+  }
+
+  if (inactiveMs >= WELCOME_BACK_INACTIVE_MS) {
+    await createNotification({
+      userId,
+      type: "WELCOME_BACK",
+      title: "Welcome back to Apna Healer",
+      body: "Your sanctuary remains exactly as you left it—quiet, supportive, and ready for your return.",
+      href: "/dashboard",
+      metadata: { userName: user.name, isNewUser: false },
+    });
+  }
+}
 
 type UserWithProfiles = {
   id: string;
@@ -144,17 +208,28 @@ export async function emitBookingStatusChanged(input: {
 
   const title =
     input.toStatus === "ACCEPTED"
-      ? "Booking accepted"
+      ? "Session confirmed"
       : input.toStatus === "REJECTED"
         ? "Booking declined"
         : "Booking cancelled";
+
+  const body =
+    input.toStatus === "ACCEPTED"
+      ? "Your session has been confirmed. We've included calendar details in this email."
+      : `Your booking request is now ${input.toStatus.toLowerCase()}.`;
+
+  const sessionMetadata =
+    input.toStatus === "ACCEPTED" && input.sessionId
+      ? await buildSessionEmailMetadata(input.sessionId)
+      : null;
 
   await createNotification({
     userId: input.userId,
     type: notifType,
     title,
-    body: `Your booking request is now ${input.toStatus.toLowerCase()}.`,
+    body,
     href: "/dashboard",
+    metadata: sessionMetadata ?? undefined,
   });
 }
 
@@ -221,6 +296,18 @@ export async function emitSessionStatusChanged(input: {
     body: payload.body,
     href: "/dashboard",
   });
+
+  if (input.toStatus === "COMPLETED") {
+    const sessionMetadata = await buildSessionEmailMetadata(input.sessionId);
+    await createNotification({
+      userId: input.userId,
+      type: "SESSION_FEEDBACK_REQUEST",
+      title: "How was your session?",
+      body: "Share a quick rating to help us improve and guide others on their healing journey.",
+      href: `/dashboard?reviewSession=${input.sessionId}`,
+      metadata: sessionMetadata ?? { sessionId: input.sessionId },
+    });
+  }
 }
 
 export async function emitListenerRequestUpdated(input: {
@@ -230,6 +317,7 @@ export async function emitListenerRequestUpdated(input: {
   toStatus: ListenerRequestStatus;
   userId: string;
   assignedListenerId?: string | null;
+  sessionId?: string | null;
 }) {
   if (input.fromStatus === input.toStatus) return;
 
@@ -258,11 +346,15 @@ export async function emitListenerRequestUpdated(input: {
   }
 
   if (input.toStatus === "APPROVED") {
+    const sessionMetadata = input.sessionId
+      ? await buildSessionEmailMetadata(input.sessionId)
+      : null;
     await notifyUsers([input.userId, ...(input.assignedListenerId ? [input.assignedListenerId] : [])], {
       type: "LISTENER_REQUEST_APPROVED",
       title: "Listener session confirmed",
-      body: "Your listener session request was approved.",
+      body: "Your listener session has been confirmed. Calendar details are in this email.",
       href: "/dashboard",
+      metadata: sessionMetadata ?? undefined,
     });
     return;
   }
@@ -307,6 +399,11 @@ export async function emitWalletTransaction(input: {
     title: input.type === "CREDIT" ? "Wallet credited" : "Wallet debited",
     body: `${input.purpose}: ${input.amount}`,
     href: "/dashboard/wallet",
+    metadata: {
+      amount: input.amount,
+      purpose: input.purpose,
+      isCredit: input.type === "CREDIT",
+    },
   });
 }
 
@@ -397,8 +494,13 @@ export async function emitClubJoinApproved(input: {
     userId: input.userId,
     type: "CLUB_JOIN_APPROVED",
     title: "Welcome to the club",
-    body: `You are now a member of "${input.clubTitle}".`,
+    body: `You are now a member of "${input.clubTitle}". Explore discussions and upcoming events.`,
     href: `/dashboard/clubs/${input.clubSlug}`,
+    metadata: {
+      clubTitle: input.clubTitle,
+      clubSlug: input.clubSlug,
+      actorName: "Apna Healer",
+    },
   });
 }
 
@@ -440,7 +542,7 @@ export async function emitClubSubscriptionCharged(input: {
     title: "Club subscription paid",
     body: `${input.amount} was charged for "${input.clubTitle}".`,
     href: "/dashboard/wallet",
-    metadata: { clubId: input.clubId },
+    metadata: { clubId: input.clubId, clubTitle: input.clubTitle, amount: input.amount },
   });
 }
 
@@ -457,7 +559,7 @@ export async function emitClubSubscriptionFailed(input: {
     title: "Club payment failed",
     body: `We could not charge ${input.amount} for "${input.clubTitle}". Please top up your wallet.`,
     href: "/dashboard/wallet",
-    metadata: { clubId: input.clubId },
+    metadata: { clubId: input.clubId, clubTitle: input.clubTitle, amount: input.amount },
   });
 }
 
@@ -479,6 +581,7 @@ export async function emitClubMemberPaymentOverdue(input: {
     metadata: {
       membershipId: input.membershipId,
       memberUserId: input.memberUserId,
+      clubTitle: input.clubTitle,
     },
   });
 }
@@ -507,6 +610,10 @@ export async function emitEventRegistrationConfirmed(input: {
         ? `Your spot for "${input.eventTitle}" is confirmed. ₹${input.amount} was charged.`
         : `Your spot for "${input.eventTitle}" is confirmed.`,
     href: `/dashboard/events/${input.eventSlug}`,
+    metadata: {
+      clubTitle: input.eventTitle,
+      actorName: "Apna Healer",
+    },
   });
 }
 
@@ -539,5 +646,47 @@ export async function emitEventRegistrationCancelled(input: {
     title: "Registration cancelled",
     body: `Your registration for "${input.eventTitle}" was cancelled.`,
     href: `/dashboard/events/${input.eventSlug}`,
+  });
+}
+
+export async function emitRoleThemeUpdated(input: {
+  actorId: string;
+  role: string;
+  previousVersion: number;
+  newVersion: number;
+  changedKeys: string[];
+}) {
+  await recordAuditLog({
+    action: "ROLE_THEME_UPDATED",
+    actorId: input.actorId,
+    targetType: "role_theme",
+    targetId: input.role,
+    summary: `Updated theme for ${input.role} role`,
+    details: {
+      role: input.role,
+      previousVersion: input.previousVersion,
+      newVersion: input.newVersion,
+      changedKeys: input.changedKeys,
+    },
+  });
+}
+
+export async function emitRoleThemeReset(input: {
+  actorId: string;
+  role: string;
+  previousVersion: number;
+  newVersion: number;
+}) {
+  await recordAuditLog({
+    action: "ROLE_THEME_RESET",
+    actorId: input.actorId,
+    targetType: "role_theme",
+    targetId: input.role,
+    summary: `Reset theme to defaults for ${input.role} role`,
+    details: {
+      role: input.role,
+      previousVersion: input.previousVersion,
+      newVersion: input.newVersion,
+    },
   });
 }

@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { apiMutation } from "@/lib/api-client";
+import { ClubFormFields } from "@/components/clubs/club-form-fields";
+import {
+  DEFAULT_ONBOARDING_STEPS,
+} from "@/components/clubs/club-onboarding-steps-editor";
 import { morphTransition } from "@/components/ui/fade-in";
+import { apiMutation } from "@/lib/api-client";
+import { buildClubApiPayload, emptyClubForm, type ClubFormState } from "@/lib/club-form";
 
 type AdminCreateClubModalProps = {
   open: boolean;
@@ -14,30 +19,24 @@ type AdminCreateClubModalProps = {
 const fieldLabel =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a8278]";
 const fieldInput =
-  "mt-2 w-full rounded-xl border border-[#e4ddd3] bg-[#f8f6f2] px-3.5 py-2.5 text-sm text-[#243230] outline-none transition placeholder:text-[#b1a89d] focus:border-[#2f6f5b] focus:bg-white focus:ring-2 focus:ring-[#2f6f5b]/12";
-
-const emptyForm = {
-  title: "",
-  subtitle: "",
-  purpose: "",
-  description: "",
-  heroImageUrl: "",
-  monthlyFee: "299",
-  visibility: "PUBLIC" as "PUBLIC" | "PRIVATE",
-  questions:
-    "What brings you to this circle?\nHow can we support your journey?",
-};
+  "mt-2 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3.5 py-2.5 text-sm text-theme-heading outline-none transition placeholder:text-[#b1a89d] focus:border-[#2f6f5b] focus:bg-white focus:ring-2 focus:ring-[#2f6f5b]/12";
 
 export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProps) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<ClubFormState>(emptyClubForm);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setForm(emptyForm);
+    if (open) {
+      setForm({
+        ...emptyClubForm(),
+        onboardingSteps: DEFAULT_ONBOARDING_STEPS.map((step) => ({
+          ...step,
+          id: crypto.randomUUID(),
+        })),
+      });
       setTagInput("");
       setTags([]);
       setError(null);
@@ -60,29 +59,11 @@ export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProp
 
   const createMutation = useMutation({
     mutationFn: () => {
-      const onboardingSteps = form.questions
-        .split("\n")
-        .map((q) => q.trim())
-        .filter(Boolean)
-        .map((question, i) => ({ question, required: true, sortOrder: i }));
-
-      const heroUrl = form.heroImageUrl.trim();
-      const purposeText = [form.purpose.trim(), tags.length ? `Tags: ${tags.join(", ")}` : ""]
-        .filter(Boolean)
-        .join("\n");
-
-      return apiMutation("/api/admin/clubs", "POST", {
-        title: form.title.trim(),
-        subtitle: form.subtitle.trim(),
-        purpose: purposeText || null,
-        description: form.description.trim() || null,
-        heroImageUrl: heroUrl || null,
-        monthlyFee: Number(form.monthlyFee),
-        visibility: form.visibility,
-        galleryUrls: [],
-        onboardingSteps,
-        reviews: [],
-      });
+      if (form.onboardingSteps.length === 0) {
+        throw new Error("Add at least one onboarding step with questions.");
+      }
+      const purposeSuffix = tags.length ? `Tags: ${tags.join(", ")}` : undefined;
+      return apiMutation("/api/admin/clubs", "POST", buildClubApiPayload(form, { purposeSuffix }));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin-clubs"] });
@@ -104,24 +85,24 @@ export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProp
           <motion.div
             role="dialog"
             aria-labelledby="create-club-title"
-            className="max-h-[min(92vh,880px)] w-full max-w-[640px] overflow-y-auto rounded-[28px] border border-[#e8e4dc] bg-[#faf9f6] shadow-[0_32px_80px_-24px_rgba(26,40,36,0.35)]"
+            className="max-h-[min(92vh,880px)] w-full max-w-[640px] overflow-y-auto rounded-[28px] border border-theme-muted bg-theme-surface-muted shadow-[0_32px_80px_-24px_rgba(26,40,36,0.35)]"
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={morphTransition}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 border-b border-[#ebe6de] bg-[#faf9f6]/95 px-8 py-6 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 border-b border-theme-muted bg-theme-surface-muted/95 px-8 py-6 backdrop-blur-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className={fieldLabel}>New sanctuary</p>
                   <h2
                     id="create-club-title"
-                    className="mt-1 font-display text-2xl font-semibold tracking-[-0.02em] text-[#1f2827]"
+                    className="mt-1 font-display text-2xl font-semibold tracking-[-0.02em] text-theme-heading"
                   >
                     Create a club
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-[#6b7573]">
+                  <p className="mt-2 text-sm leading-6 text-theme-muted">
                     Curate a new community space in The Digital Atrium. The club will be active
                     immediately for members to discover.
                   </p>
@@ -146,63 +127,6 @@ export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProp
               }}
             >
               <div>
-                <label className={fieldLabel} htmlFor="club-title">
-                  Club name
-                </label>
-                <input
-                  id="club-title"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                  placeholder="e.g. Mindful Movement"
-                  className={fieldInput}
-                />
-              </div>
-
-              <div>
-                <label className={fieldLabel} htmlFor="club-subtitle">
-                  Short tagline
-                </label>
-                <textarea
-                  id="club-subtitle"
-                  required
-                  rows={2}
-                  value={form.subtitle}
-                  onChange={(e) => setForm((p) => ({ ...p, subtitle: e.target.value }))}
-                  placeholder="A one-line invitation for new members"
-                  className={fieldInput}
-                />
-              </div>
-
-              <div>
-                <label className={fieldLabel} htmlFor="club-purpose">
-                  Purpose
-                </label>
-                <textarea
-                  id="club-purpose"
-                  rows={2}
-                  value={form.purpose}
-                  onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))}
-                  placeholder="Why does this circle exist?"
-                  className={fieldInput}
-                />
-              </div>
-
-              <div>
-                <label className={fieldLabel} htmlFor="club-description">
-                  Full description
-                </label>
-                <textarea
-                  id="club-description"
-                  rows={4}
-                  value={form.description}
-                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Describe rituals, rhythm, and who this space is for..."
-                  className={fieldInput}
-                />
-              </div>
-
-              <div>
                 <label className={fieldLabel}>Tags</label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {tags.map((tag) => (
@@ -214,7 +138,7 @@ export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProp
                       <button
                         type="button"
                         onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                        className="text-[#8a8278] hover:text-[#243230]"
+                        className="text-[#8a8278] hover:text-theme-heading"
                         aria-label={`Remove ${tag}`}
                       >
                         ×
@@ -238,82 +162,25 @@ export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProp
                   <button
                     type="button"
                     onClick={addTag}
-                    className="mt-0 shrink-0 rounded-xl border border-[#e4ddd3] bg-white px-4 py-2.5 text-sm font-semibold text-[#2f745f] transition hover:border-[#2f745f]/30"
+                    className="mt-0 shrink-0 rounded-xl border border-theme-muted bg-white px-4 py-2.5 text-sm font-semibold text-theme-status-success transition hover:border-[#2f745f]/30"
                   >
                     Add
                   </button>
                 </div>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label className={fieldLabel} htmlFor="club-fee">
-                    Monthly fee (₹)
-                  </label>
-                  <input
-                    id="club-fee"
-                    type="number"
-                    min={1}
-                    required
-                    value={form.monthlyFee}
-                    onChange={(e) => setForm((p) => ({ ...p, monthlyFee: e.target.value }))}
-                    className={fieldInput}
-                  />
-                </div>
-                <div>
-                  <label className={fieldLabel} htmlFor="club-visibility">
-                    Visibility
-                  </label>
-                  <select
-                    id="club-visibility"
-                    value={form.visibility}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        visibility: e.target.value as "PUBLIC" | "PRIVATE",
-                      }))
-                    }
-                    className={fieldInput}
-                  >
-                    <option value="PUBLIC">Public — listed for all</option>
-                    <option value="PRIVATE">Private — invite only</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className={fieldLabel} htmlFor="club-hero">
-                  Hero image URL
-                </label>
-                <input
-                  id="club-hero"
-                  type="url"
-                  value={form.heroImageUrl}
-                  onChange={(e) => setForm((p) => ({ ...p, heroImageUrl: e.target.value }))}
-                  placeholder="https://…"
-                  className={fieldInput}
-                />
-              </div>
-
-              <div>
-                <label className={fieldLabel} htmlFor="club-questions">
-                  Member onboarding questions
-                </label>
-                <textarea
-                  id="club-questions"
-                  rows={4}
-                  value={form.questions}
-                  onChange={(e) => setForm((p) => ({ ...p, questions: e.target.value }))}
-                  placeholder="One question per line"
-                  className={fieldInput}
-                />
-              </div>
+              <ClubFormFields
+                form={form}
+                onChange={(patch) => setForm((p) => ({ ...p, ...patch }))}
+                labelClassName={fieldLabel}
+                inputClassName={fieldInput}
+              />
 
               {error ? (
                 <p className="rounded-xl bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]">{error}</p>
               ) : null}
 
-              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#ebe6de] pt-6">
+              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-theme-muted pt-6">
                 <button
                   type="button"
                   onClick={onClose}
@@ -325,7 +192,7 @@ export function AdminCreateClubModal({ open, onClose }: AdminCreateClubModalProp
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="rounded-full bg-[#2f745f] px-8 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(47,116,95,0.55)] transition hover:bg-[#245d4c] disabled:opacity-50 active:scale-[0.98]"
+                  className="rounded-full bg-theme-button-primary px-8 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(47,116,95,0.55)] transition hover:bg-theme-button-primary-hover disabled:opacity-50 active:scale-[0.98]"
                 >
                   {createMutation.isPending ? "Creating…" : "Create club"}
                 </button>

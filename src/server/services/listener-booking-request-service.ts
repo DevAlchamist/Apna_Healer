@@ -354,6 +354,7 @@ export async function adminPatchListenerRequest(input: {
         toStatus: result.status,
         userId: result.userId,
         assignedListenerId: result.assignedListenerId,
+        sessionId: result.session?.id ?? null,
       }).catch((err) => console.error("[platform-events] listener request:", err));
     }
 
@@ -409,6 +410,7 @@ export async function adminPatchListenerRequest(input: {
         toStatus: result.status,
         userId: result.userId,
         assignedListenerId: result.assignedListenerId,
+        sessionId: result.session?.id ?? null,
       }).catch((err) => console.error("[platform-events] listener request:", err));
     }
 
@@ -619,6 +621,7 @@ export async function adminPatchListenerRequest(input: {
       toStatus: result.status,
       userId: result.userId,
       assignedListenerId: result.assignedListenerId,
+      sessionId: result.session?.id ?? null,
     }).catch((err) => console.error("[platform-events] listener request:", err));
   }
 

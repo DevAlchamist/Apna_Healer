@@ -181,7 +181,7 @@ export default function ProfilePage() {
       <ProfileEditModal open={editOpen} onClose={() => setEditOpen(false)} user={user ?? null} />
 
       {userQuery.error ? (
-        <div className="rounded-calm bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <div className="rounded-calm bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-soft">
           {userQuery.error.message}
         </div>
       ) : null}

@@ -5,6 +5,7 @@ import { LandingAuthActions } from "@/components/landing/landing-auth-actions";
 
 const NAV_LINKS = [
   { label: "About", href: "/about" },
+  { label: "Blog", href: "/blog" },
   { label: "Therapists", href: "/therapists" },
   { label: "Clubs", href: "/clubs" },
   { label: "Events", href: "/events" },

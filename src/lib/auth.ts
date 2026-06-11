@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { ensureUserBootstrap, syncUserProfileFromOAuth } from "@/server/services/auth-service";
+import { emitAuthLoginEmail } from "@/server/services/platform-events";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -34,6 +35,9 @@ export const authOptions: NextAuthOptions = {
           profile,
           adapterUser: { name: user.name, image: user.image },
         });
+        void emitAuthLoginEmail(user.id).catch((err) =>
+          console.error("[auth] welcome email failed:", err),
+        );
       }
 
       const authUser = await ensureUserBootstrap(userId);

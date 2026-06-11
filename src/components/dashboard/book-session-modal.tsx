@@ -240,6 +240,7 @@ function BookSessionModal({
   const [selectedEndTime, setSelectedEndTime] = useState("");
 
   const isProviderLocked = !!requestedHealer.providerId;
+  /** Anonymous listener support is booked via `ListenerSupportModal`, not this modal. */
   const isListenerCheckIn = false;
 
   const [mood, setMood] = useState<MoodId | null>(null);
@@ -684,36 +685,6 @@ function BookSessionModal({
       const moodLabel =
         MOOD_OPTIONS.find((option) => option.id === mood)?.label ?? null;
       const trimmedNotes = notes.trim();
-
-      if (isListenerCheckIn) {
-        if (
-          !selectedProvider ||
-          !selectedAvailability ||
-          !resolvedStart ||
-          customTimeStatus.state !== "valid" ||
-          bookingDuration <= 0 ||
-          sessionAmount <= 0
-        ) {
-          throw new Error(
-            "Pick a valid start and end time inside the provider's available hours.",
-          );
-        }
-
-        const composedNote = moodLabel
-          ? `Mood: ${moodLabel}${trimmedNotes ? `\n${trimmedNotes}` : ""}`
-          : trimmedNotes || undefined;
-
-        return apiMutation("/api/bookings", "POST", {
-          providerId: selectedProvider.id,
-          type: selectedProvider.role,
-          requestedDate: selectedAvailability.date,
-          requestedTime: resolvedStart,
-          duration: bookingDuration,
-          amount: sessionAmount,
-          paymentMethod: "WALLET",
-          note: composedNote,
-        });
-      }
 
       if (
         !selectedProvider ||

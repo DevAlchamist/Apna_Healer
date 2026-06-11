@@ -1,56 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiMutation } from "@/lib/api-client";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { EventFormFields } from "@/components/events/event-form-fields";
+import { apiFetch, apiMutation } from "@/lib/api-client";
+import {
+  applyFacilitatorChoice,
+  buildEventApiPayload,
+  emptyClubEventForm,
+  type EventFormState,
+} from "@/lib/event-form";
+import type { ApiEventFacilitatorOption } from "@/types/api";
 
 type EventCreateFormProps = {
   apiPath: string;
   onCreated?: () => void;
+  defaultOwnerUserId?: string | null;
 };
 
-export function EventCreateForm({ apiPath, onCreated }: EventCreateFormProps) {
-  const [form, setForm] = useState({
-    title: "",
-    subtitle: "",
-    category: "Gathering",
-    venue: "",
-    capacity: "20",
-    basePrice: "0",
-    membersPay: true,
-    nonMembersPay: true,
-    startsAt: "",
-    heroImageUrl: "",
+export function EventCreateForm({ apiPath, onCreated, defaultOwnerUserId }: EventCreateFormProps) {
+  const [form, setForm] = useState<EventFormState>(() => ({
+    ...emptyClubEventForm(defaultOwnerUserId),
+    status: "PUBLISHED",
+  }));
+
+  const facilitatorsQuery = useQuery({
+    queryKey: ["event-facilitator-options"],
+    queryFn: () => apiFetch<ApiEventFacilitatorOption[]>("/api/events/facilitator-options"),
   });
 
+  useEffect(() => {
+    if (!defaultOwnerUserId || !facilitatorsQuery.data) return;
+    const choice = `owner:${defaultOwnerUserId}`;
+    const preset = facilitatorsQuery.data.find((o) => o.id === choice);
+    if (preset) {
+      setForm((prev) => ({
+        ...prev,
+        ...applyFacilitatorChoice(choice, facilitatorsQuery.data!),
+      }));
+    }
+  }, [defaultOwnerUserId, facilitatorsQuery.data]);
+
   const createMutation = useMutation({
-    mutationFn: () =>
-      apiMutation(apiPath, "POST", {
-        title: form.title,
-        subtitle: form.subtitle || null,
-        category: form.category,
-        venue: form.venue || null,
-        capacity: Number(form.capacity),
-        basePrice: Number(form.basePrice),
-        membersPay: form.membersPay,
-        nonMembersPay: form.nonMembersPay,
-        startsAt: new Date(form.startsAt).toISOString(),
-        heroImageUrl: form.heroImageUrl || null,
-        status: "PUBLISHED",
-      }),
+    mutationFn: () => apiMutation(apiPath, "POST", buildEventApiPayload(form)),
     onSuccess: () => {
-      setForm({
-        title: "",
-        subtitle: "",
-        category: "Gathering",
-        venue: "",
-        capacity: "20",
-        basePrice: "0",
-        membersPay: true,
-        nonMembersPay: true,
-        startsAt: "",
-        heroImageUrl: "",
-      });
+      setForm({ ...emptyClubEventForm(defaultOwnerUserId), status: "PUBLISHED" });
       onCreated?.();
     },
   });
@@ -64,99 +58,16 @@ export function EventCreateForm({ apiPath, onCreated }: EventCreateFormProps) {
       }}
     >
       <h3 className="font-display text-xl font-semibold text-text-primary">Create event</h3>
-      <div className="grid gap-3 md:grid-cols-2">
-        <label className="text-sm md:col-span-2">
-          Title
-          <input
-            required
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm md:col-span-2">
-          Subtitle
-          <input
-            value={form.subtitle}
-            onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          Category
-          <input
-            value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          Venue
-          <input
-            value={form.venue}
-            onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          Starts at
-          <input
-            required
-            type="datetime-local"
-            value={form.startsAt}
-            onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          Capacity
-          <input
-            type="number"
-            min={1}
-            value={form.capacity}
-            onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          Base price (₹)
-          <input
-            type="number"
-            min={0}
-            value={form.basePrice}
-            onChange={(e) => setForm((f) => ({ ...f, basePrice: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm md:col-span-2">
-          Hero image URL
-          <input
-            value={form.heroImageUrl}
-            onChange={(e) => setForm((f) => ({ ...f, heroImageUrl: e.target.value }))}
-            className="mt-1 w-full rounded-gentle border border-accent/80 px-3 py-2"
-          />
-        </label>
-      </div>
-      <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={form.membersPay}
-            onChange={(e) => setForm((f) => ({ ...f, membersPay: e.target.checked }))}
-          />
-          Members pay
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={form.nonMembersPay}
-            onChange={(e) => setForm((f) => ({ ...f, nonMembersPay: e.target.checked }))}
-          />
-          Non-members pay
-        </label>
-      </div>
+      <EventFormFields
+        form={form}
+        onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+        showStatus={false}
+        forceClubEvent
+        labelClassName="block text-xs font-semibold uppercase tracking-[0.12em] text-text-primary/45"
+        inputClassName="mt-1.5 w-full rounded-gentle border border-accent/80 bg-background px-4 py-2.5 text-sm outline-none focus:border-primary/40"
+      />
       {createMutation.isError ? (
-        <p className="text-sm text-[#cf4f45]">{(createMutation.error as Error).message}</p>
+        <p className="text-sm text-theme-status-error">{(createMutation.error as Error).message}</p>
       ) : null}
       <button
         type="submit"

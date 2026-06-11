@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Digital Atrium - Session Confirmation</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#9da7a3",
+                        "secondary-fixed-dim": "#b1cdc0",
+                        "inverse-surface": "#30312f",
+                        "surface-variant": "#e4e2df",
+                        "on-primary-fixed": "#002116",
+                        "primary-container": "#7faf9a",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#fbf9f6",
+                        "on-secondary": "#ffffff",
+                        "primary": "#396755",
+                        "surface-dim": "#dbdad7",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f2f0ed",
+                        "surface-container-highest": "#e4e2df",
+                        "surface-container-high": "#eae8e5",
+                        "tertiary": "#57605d",
+                        "surface-tint": "#396755",
+                        "on-tertiary-fixed": "#141d1b",
+                        "error-container": "#ffdad6",
+                        "primary-fixed-dim": "#a0d1bb",
+                        "on-surface": "#1b1c1a",
+                        "surface-container-low": "#f5f3f0",
+                        "secondary": "#4b645a",
+                        "on-tertiary-container": "#333d39",
+                        "outline": "#717974",
+                        "secondary-fixed": "#cde9dc",
+                        "surface-container": "#efeeeb",
+                        "on-primary-fixed-variant": "#204f3e",
+                        "secondary-container": "#cde9dc",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#3f4945",
+                        "on-background": "#1b1c1a",
+                        "inverse-primary": "#a0d1bb",
+                        "on-surface-variant": "#414944",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#072018",
+                        "background": "#fbf9f6",
+                        "primary-fixed": "#bbedd6",
+                        "surface": "#fbf9f6",
+                        "on-secondary-fixed-variant": "#334c42",
+                        "outline-variant": "#c0c8c3",
+                        "tertiary-fixed": "#dbe5e0",
+                        "tertiary-fixed-dim": "#bfc9c4",
+                        "on-secondary-container": "#516a5f",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#124332"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-lg": "32px",
+                        "edge-margin": "24px",
+                        "container-max": "600px",
+                        "stack-md": "24px",
+                        "stack-xl": "48px",
+                        "inline-md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Manrope"],
+                        "footer-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Manrope"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "footer-sm": ["12px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "22px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["22px", { "lineHeight": "30px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "26px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface flex flex-col items-center py-stack-xl">
+    <!-- Header Section (Shared Component logic applied) -->
+    <header
+        class="flex justify-center items-center h-12 w-full max-w-[600px] mx-auto pt-stack-lg bg-surface mb-stack-lg">
+        <div class="flex flex-col items-center text-center">
+            <h1 class="font-headline-lg text-headline-lg text-primary">Digital Atrium</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant mt-2">Finding your breath, Alex</p>
+        </div>
+    </header>
+    <!-- Main Content Container -->
+    <main class="w-full max-w-[600px] mx-auto flex flex-col gap-stack-lg bg-surface">
+        <!-- Hero Graphic -->
+        <section class="w-full px-edge-margin">
+            <div class="relative w-full h-[240px] overflow-hidden rounded-xl bg-surface-container-low">
+                <img alt="Serene wellness graphic" class="w-full h-full object-cover opacity-80"
+                    data-alt="A tranquil, high-key photograph of a single soft green leaf catching the golden morning sunlight against a minimalist beige wall. The scene is characterized by soft-focus blur in the background, creating a serene and ethereal mood. The lighting is warm and diffused, reflecting a peaceful Digital Atrium aesthetic with a palette of sage green, soft stone, and cream."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_8c3Jcb1-dsfZcIPyQOHWjaZ8wNe1StCKYqG5ivKcGo5eDm5Du5Q0ajO4k2McT3owmisctk_5Ird3uDJe2Rw1moRR6nsrozKe3OEdyL20GfSq6uIQfuE1Jy6KWFwx3xpm135-9Mavx0smkDZv9eJwbIlTLA8rLYtO5gI58ITMJ8hRvx5vYmAEHvgXdMmne0FFF9v70kpK3mnLTCcAwdCWC-IPXsybc90c1C5lm4fGBhiQ8i-pnbG8Xq0bb0bAo78laQ0wNHSyDQ8" />
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-surface-container-low/20"></div>
+            </div>
+        </section>
+        <!-- Narrative & Confirmation Section -->
+        <section class="px-edge-margin flex flex-col gap-stack-md">
+            <div class="flex flex-col gap-2">
+                <h2 class="font-headline-md text-headline-md text-on-surface">Your Healing Journey Awaits</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant">
+                    We've confirmed your session. Take a moment to acknowledge this commitment to your well-being.
+                </p>
+            </div>
+            <!-- Session Detail Card (Information Card Component) -->
+            <div class="bg-secondary-container/30 p-stack-md rounded-xl flex flex-col gap-inline-md">
+                <div class="flex items-center gap-4">
+                    <div class="bg-white/80 p-3 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary"
+                            data-icon="calendar_today">calendar_today</span>
+                    </div>
+                    <div>
+                        <p class="font-label-caps text-label-caps text-on-secondary-container uppercase tracking-wider">
+                            Date &amp; Time</p>
+                        <p class="font-body-lg text-body-lg text-on-surface font-semibold">Thursday, October 24th • 4:00
+                            PM EST</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="bg-white/80 p-3 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary"
+                            data-icon="self_improvement">self_improvement</span>
+                    </div>
+                    <div>
+                        <p class="font-label-caps text-label-caps text-on-secondary-container uppercase tracking-wider">
+                            Healer</p>
+                        <p class="font-body-lg text-body-lg text-on-surface font-semibold">Dr. Elena Thorne</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Action Area -->
+        <section class="px-edge-margin flex justify-center">
+            <button
+                class="w-full sm:w-auto min-w-[200px] py-4 px-8 bg-primary-container text-on-primary-container font-semibold rounded-full shadow-sm hover:brightness-95 transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined" data-icon="event_available">event_available</span>
+                Add to Calendar
+            </button>
+        </section>
+        <!-- Secondary Engagement Section (While you wait...) -->
+        <section class="px-edge-margin mt-stack-md">
+            <div class="bg-surface-container-lowest p-stack-md rounded-xl">
+                <h3 class="font-headline-md text-[18px] text-on-surface mb-stack-md">While you wait...</h3>
+                <div class="grid grid-cols-1 gap-inline-md">
+                    <a class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors group"
+                        href="#">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-secondary"
+                                data-icon="edit_note">edit_note</span>
+                            <span class="font-body-md text-body-md text-on-surface">Write a Reflection</span>
+                        </div>
+                        <span
+                            class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform"
+                            data-icon="chevron_right">chevron_right</span>
+                    </a>
+                    <a class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors group"
+                        href="#">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-secondary" data-icon="groups">groups</span>
+                            <span class="font-body-md text-body-md text-on-surface">Join a Club</span>
+                        </div>
+                        <span
+                            class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform"
+                            data-icon="chevron_right">chevron_right</span>
+                    </a>
+                    <a class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors group"
+                        href="#">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-secondary"
+                                data-icon="shopping_bag">shopping_bag</span>
+                            <span class="font-body-md text-body-md text-on-surface">Browse the Store</span>
+                        </div>
+                        <span
+                            class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform"
+                            data-icon="chevron_right">chevron_right</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Footer Section (Shared Component logic applied) -->
+    <footer
+        class="w-full max-w-[600px] mx-auto px-edge-margin py-stack-lg flex flex-col gap-inline-md mt-stack-xl bg-surface-container-low rounded-t-xl text-center">
+        <div class="mb-4">
+            <p class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface mb-2">ApnaHealer Mission
+            </p>
+            <p class="font-body-md text-body-md text-on-surface-variant italic px-8">
+                "Creating a sanctuary within the digital noise, empowering your healing journey one breath at a time."
+            </p>
+        </div>
+        <div class="flex flex-col gap-2 border-t border-outline-variant/30 pt-6">
+            <p class="font-footer-sm text-footer-sm text-error font-bold">
+                Crisis Resources: <a class="underline" href="tel:988">988</a> (National Suicide &amp; Crisis Lifeline)
+            </p>
+            <div class="flex justify-center gap-4 flex-wrap mt-2">
+                <a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors underline"
+                    href="#">Preferences</a>
+                <a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors underline"
+                    href="#">Unsubscribe</a>
+                <a class="font-footer-sm text-footer-sm text-on-surface-variant hover:text-primary transition-colors underline"
+                    href="#">Privacy Policy</a>
+            </div>
+            <p class="font-footer-sm text-footer-sm text-on-surface-variant mt-4">
+                © 2024 Digital Atrium. All rights reserved.
+            </p>
+        </div>
+    </footer>
+    <!-- Simple Atmospheric Effect -->
+    <script>
+        // Subtle interaction for the hero image to breathe
+        const heroImg = document.querySelector('img[src="image-hero-wellness"]');
+        if (heroImg) {
+            let opacity = 0.8;
+            let direction = 0.002;
+            function breathe() {
+                opacity += direction;
+                if (opacity >= 0.95 || opacity <= 0.7) direction *= -1;
+                heroImg.style.opacity = opacity;
+                requestAnimationFrame(breathe);
+            }
+            breathe();
+        }
+    </script>
+</body>
+
+</html>

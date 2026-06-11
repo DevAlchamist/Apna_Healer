@@ -13,7 +13,8 @@ export type DashboardIcon =
   | "dashboard"
   | "blog"
   | "journal"
-  | "circle";
+  | "circle"
+  | "social";
 
 export type DashboardModule = {
   id: string;
@@ -238,6 +239,16 @@ export const dashboardModules: readonly DashboardModule[] = [
     roles: ADMIN_ROLES,
   },
   {
+    id: "admin.side.blogs",
+    href: "/admin/blogs",
+    label: "Blogs",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "blog",
+    roles: ADMIN_ROLES,
+  },
+  {
     id: "admin.side.users",
     href: "/admin/users",
     label: "Users",
@@ -270,6 +281,16 @@ export const dashboardModules: readonly DashboardModule[] = [
     roles: ADMIN_ROLES,
   },
   {
+    id: "admin.system.themes",
+    href: "/admin/settings/themes",
+    label: "Theme Management",
+    surface: "admin",
+    placement: "sidebar",
+    group: "system",
+    icon: "settings",
+    roles: ADMIN_ROLES,
+  },
+  {
     id: "admin.system.finance",
     href: "/admin/finance",
     label: "Finance",
@@ -287,6 +308,35 @@ export type ModuleFilter = {
   group?: DashboardGroup;
   role?: UserRole | null;
 };
+
+export type DashboardSidebarMenu = {
+  id: string;
+  label: string;
+  icon: DashboardIcon;
+  childModuleIds: readonly string[];
+};
+
+/** Sidebar dropdown groups — child modules stay in `dashboardModules` for access control. */
+export const dashboardSidebarMenus: readonly DashboardSidebarMenu[] = [
+  {
+    id: "social",
+    label: "Social",
+    icon: "social",
+    childModuleIds: [
+      "dashboard.side.blog",
+      "dashboard.side.journal",
+      "dashboard.side.safe-circle",
+    ],
+  },
+];
+
+const sidebarMenuChildIds = new Set(
+  dashboardSidebarMenus.flatMap((menu) => menu.childModuleIds),
+);
+
+export function isSidebarMenuChild(moduleId: string) {
+  return sidebarMenuChildIds.has(moduleId);
+}
 
 export function getDashboardModules(filter: ModuleFilter): DashboardModule[] {
   return dashboardModules.filter((module) => {

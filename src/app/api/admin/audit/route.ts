@@ -10,17 +10,23 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = adminAuditQuerySchema.parse({
       take: searchParams.get("take") ?? undefined,
+      page: searchParams.get("page") ?? undefined,
       cursor: searchParams.get("cursor") ?? undefined,
+      days: searchParams.get("days") ?? undefined,
       category: searchParams.get("category") ?? undefined,
       action: searchParams.get("action") ?? undefined,
+      role: searchParams.get("role") ?? undefined,
       targetType: searchParams.get("targetType") ?? undefined,
     });
 
     const data = await listAuditLogsForAdmin({
       take: query.take,
+      page: query.page,
       cursor: query.cursor,
+      days: query.days,
       category: query.category,
       action: query.action,
+      role: query.role,
       targetType: query.targetType,
     });
 

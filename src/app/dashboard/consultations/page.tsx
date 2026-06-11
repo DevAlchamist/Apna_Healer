@@ -18,11 +18,7 @@ import {
 } from "@/lib/display";
 import type { ApiBooking, ApiCareSession, ApiUser } from "@/types/api";
 import { SessionCardSkeleton, SessionRowSkeleton } from "@/components/skeletons";
-
-const FOREST = "#2D5A4C";
-const MINT = "#B8E6D3";
-const PEACH = "#E9D5C8";
-const BEIGE = "#E9E0D3";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -132,6 +128,7 @@ function bookingStatusLabel(booking: ApiBooking): string {
 }
 
 export default function ConsultationsPage() {
+  const { forest: FOREST, mint: MINT, peach: PEACH, beige: BEIGE } = useThemePalette();
   const queryClient = useQueryClient();
   const { open: openSessionDetails } = useSessionDetailsModal();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -259,7 +256,7 @@ export default function ConsultationsPage() {
   return (
     <FadeIn className="space-y-8 md:space-y-10">
       {pageError ? (
-        <motion.div className="rounded-calm border border-[#cf4f45]/25 bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <motion.div className="rounded-calm border border-[#cf4f45]/25 bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-soft">
           {pageError}
         </motion.div>
       ) : null}
@@ -445,7 +442,7 @@ export default function ConsultationsPage() {
                     })}
                   </AnimatePresence>
                   {bookingMutation.isError ? (
-                    <p className="text-xs font-semibold text-[#cf4f45]">
+                    <p className="text-xs font-semibold text-theme-status-error">
                       {bookingMutation.error.message}
                     </p>
                   ) : null}

@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { signIn, useSession } from "next-auth/react";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingJoinModal } from "@/components/landing/landing-join-modal";
+import { ListenersOnlineMarquee } from "@/components/landing/listeners-online-marquee";
 import { LandingNavbar } from "@/components/landing/navbar";
 import { useBookSessionModal } from "@/components/dashboard/book-session-modal";
 import { useListenerSupportModal } from "@/components/dashboard/listener-support-modal";
@@ -48,17 +49,6 @@ const heroSlides = [
     visual:
       "bg-[radial-gradient(circle_at_48%_20%,#e6d4b7,#aa8862_45%,#5e4732)]",
   },
-] as const;
-
-const fallbackListeners = [
-  "Elena",
-  "Marcus",
-  "Sarah",
-  "David",
-  "Ava",
-  "Noah",
-  "Zara",
-  "Ibrahim",
 ] as const;
 
 const fallbackVoiceColumns = [
@@ -140,13 +130,6 @@ function HomePage() {
 
   const home = homeQuery.data;
   const publicClubs = clubsQuery.data ?? [];
-  const marqueeListeners = useMemo(() => {
-    const fromApi = (home?.listeners ?? [])
-      .map((l) => l.name?.split(" ")[0] ?? "Listener")
-      .filter(Boolean);
-    return fromApi.length ? fromApi : [...fallbackListeners];
-  }, [home?.listeners]);
-
   const voiceColumns = home?.testimonials?.length ? home.testimonials : fallbackVoiceColumns;
   const faqItems = home?.faq?.length ? home.faq : fallbackFaqItems;
   const featuredTherapists = home?.featuredTherapists ?? [];
@@ -427,38 +410,7 @@ function HomePage() {
               Listeners Online Now
             </h2>
             <div className="mx-auto mt-2 h-1 w-20 rounded-full bg-[#bcead8]" />
-            <div className="relative mt-10 overflow-hidden">
-              <motion.div
-                className="flex w-max gap-8"
-                animate={{ x: ["0%", "-50%"] }}
-                transition={{ duration: 18, ease: "linear", repeat: Infinity }}
-              >
-                {marqueeListeners.map((name, idx) => {
-                  const listener = home?.listeners[idx % (home?.listeners.length || 1)];
-                  return (
-                    <div
-                      key={`${name}-${idx}`}
-                      className="flex min-w-20 flex-col items-center gap-2"
-                    >
-                      <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[linear-gradient(150deg,#12171f,#555)] ring-2 ring-[#d9d9d9]">
-                        {listener?.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={listener.image}
-                            alt={name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#32d17a]" />
-                      </div>
-                      <p className="text-sm font-semibold text-[#36403e]">{name}</p>
-                    </div>
-                  );
-                })}
-              </motion.div>
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-linear-to-r from-[#f4f4f2] via-[#f4f4f2]/80 to-transparent backdrop-blur-[2px] md:w-28" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-linear-to-l from-[#f4f4f2] via-[#f4f4f2]/80 to-transparent backdrop-blur-[2px] md:w-28" />
-            </div>
+            <ListenersOnlineMarquee listeners={home?.listeners} />
             <button
               type="button"
               onClick={openListenerBooking}

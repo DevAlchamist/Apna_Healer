@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ActivityFeedSkeleton } from "@/components/skeletons";
 import { apiFetch } from "@/lib/api-client";
-import { getDashboardModules } from "@/config/dashboard-modules";
+import {
+  dashboardSidebarMenus,
+  getDashboardModules,
+  isSidebarMenuChild,
+  type DashboardModule,
+} from "@/config/dashboard-modules";
 import {
   displayAccountLabel,
   formatCurrency,
@@ -26,6 +31,7 @@ import { UserAvatarCircle } from "@/components/dashboard/user-avatar-circle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { dashboardSuggestedEvents } from "@/data/events";
 import { morphTransition } from "@/components/ui/fade-in";
+import { RoleThemeProvider } from "@/components/providers/role-theme-provider";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -44,8 +50,26 @@ export function SidebarIcon({
     | "dashboard"
     | "blog"
     | "journal"
-    | "circle";
+    | "circle"
+    | "social";
 }) {
+  if (icon === "social") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        aria-hidden
+      >
+        <circle cx="9" cy="9" r="2.5" />
+        <circle cx="15" cy="9" r="2.5" />
+        <path d="M5 17a4 4 0 0 1 8 0M11 17a4 4 0 0 1 8 0" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   if (icon === "dashboard") {
     return (
       <svg
@@ -233,6 +257,90 @@ export function SidebarItem({
   );
 }
 
+function isNavPathActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function SidebarDropdown({
+  label,
+  icon,
+  items,
+}: {
+  label: string;
+  icon: Parameters<typeof SidebarIcon>[0]["icon"];
+  items: DashboardModule[];
+}) {
+  const pathname = usePathname();
+  const isChildActive = items.some((item) => isNavPathActive(pathname, item.href));
+  const [open, setOpen] = useState(isChildActive);
+
+  useEffect(() => {
+    if (isChildActive) setOpen(true);
+  }, [isChildActive]);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        className={`flex w-full items-center justify-between rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
+          isChildActive
+            ? "bg-primary/15 font-semibold text-text-secondary"
+            : "text-text-primary/65 hover:bg-accent/50"
+        }`}
+      >
+        <span className="flex items-center gap-3">
+          <SidebarIcon icon={icon} />
+          {label}
+        </span>
+        <span className="flex items-center gap-2">
+          {isChildActive ? (
+            <span className="h-6 w-1 rounded-full bg-primary" aria-hidden />
+          ) : null}
+          <svg
+            viewBox="0 0 20 20"
+            className={`h-4 w-4 text-text-primary/45 transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
+            <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </button>
+      {open ? (
+        <div className="mt-1 grid gap-1 pl-3">
+          {items.map((item) => {
+            if (!item.icon) return null;
+            const isActive = isNavPathActive(pathname, item.href);
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={`flex items-center justify-between rounded-gentle px-4 py-2.5 text-sm transition-colors duration-300 ease-(--ease-calm) ${
+                  isActive
+                    ? "bg-primary/10 font-semibold text-text-secondary"
+                    : "text-text-primary/60 hover:bg-accent/50"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <SidebarIcon icon={item.icon} />
+                  {item.label}
+                </span>
+                {isActive ? (
+                  <span className="h-5 w-1 rounded-full bg-primary" aria-hidden />
+                ) : null}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function toTitleCase(value: string) {
   return value
     .split("-")
@@ -340,6 +448,21 @@ function DashboardShellContent({ children }: DashboardShellProps) {
       }),
     [role],
   );
+  const sidebarMenus = useMemo(() => {
+    const moduleById = new Map(sideNavItems.map((item) => [item.id, item]));
+    return dashboardSidebarMenus
+      .map((menu) => ({
+        ...menu,
+        items: menu.childModuleIds
+          .map((id) => moduleById.get(id))
+          .filter((item): item is DashboardModule => Boolean(item?.icon)),
+      }))
+      .filter((menu) => menu.items.length > 0);
+  }, [sideNavItems]);
+  const standaloneSideNavItems = useMemo(
+    () => sideNavItems.filter((item) => !isSidebarMenuChild(item.id)),
+    [sideNavItems],
+  );
   const personalNavItems = useMemo(
     () =>
       getDashboardModules({
@@ -394,7 +517,7 @@ function DashboardShellContent({ children }: DashboardShellProps) {
           </div>
 
           <div className="mt-8 grid gap-2">
-            {sideNavItems.map((item) =>
+            {standaloneSideNavItems.map((item) =>
               item.icon ? (
                 <SidebarItem
                   key={item.id}
@@ -404,6 +527,14 @@ function DashboardShellContent({ children }: DashboardShellProps) {
                 />
               ) : null,
             )}
+            {sidebarMenus.map((menu) => (
+              <SidebarDropdown
+                key={menu.id}
+                label={menu.label}
+                icon={menu.icon}
+                items={menu.items}
+              />
+            ))}
           </div>
 
           {personalNavItems.length > 0 ? (
@@ -754,8 +885,10 @@ function DashboardShellContent({ children }: DashboardShellProps) {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <SessionDetailsModalProvider>
-      <DashboardShellContent>{children}</DashboardShellContent>
-    </SessionDetailsModalProvider>
+    <RoleThemeProvider>
+      <SessionDetailsModalProvider>
+        <DashboardShellContent>{children}</DashboardShellContent>
+      </SessionDetailsModalProvider>
+    </RoleThemeProvider>
   );
 }

@@ -29,6 +29,20 @@ export function formatShortDate(value: string | Date | null | undefined) {
   return shortDateFormatter.format(new Date(value));
 }
 
+export function formatBlogDate(value: string | Date | null | undefined) {
+  if (!value) return "Draft";
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function formatCompactCount(value: number) {
+  if (value >= 1000) return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(value);
+}
+
 export function formatDateTime(value: string | Date | null | undefined) {
   if (!value) {
     return "Not available";
@@ -37,7 +51,39 @@ export function formatDateTime(value: string | Date | null | undefined) {
   return dateTimeFormatter.format(new Date(value));
 }
 
+const auditTimestampFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+});
+
+export function formatAuditTimestamp(value: string | Date | null | undefined) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return auditTimestampFormatter.format(new Date(value));
+}
+
 /** Short relative label for "Sent 2h ago" style UI. */
+export function formatSharedAgo(iso: string | Date): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "Shared recently";
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return "Shared recently";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "Shared just now";
+  if (mins < 60) return `Shared ${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `Shared ${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hrs / 24);
+  return `Shared ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 export function formatSentAgo(iso: string | Date): string {
   const t = new Date(iso).getTime();
   if (!Number.isFinite(t)) return "Sent recently";

@@ -114,7 +114,7 @@ export function AdminOverview() {
 
   if (errorMessage) {
     return (
-      <div className="rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
+      <div className="rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
         {errorMessage}
       </div>
     );
@@ -145,7 +145,7 @@ export function AdminOverview() {
       ? "bg-[#fde8e6] text-[#b42318]"
       : kpis.queueSeverity === "warning"
         ? "bg-[#fff4e5] text-[#b54708]"
-        : "bg-[#e6f4ef] text-[#2f6f5b]";
+        : "bg-[#e6f4ef] text-theme-status-success";
 
   return (
     <div className="space-y-10 pb-8">
@@ -158,7 +158,7 @@ export function AdminOverview() {
       >
         <motion.div variants={fadeBlock} className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[42px]">
+            <h1 className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[42px]">
               {header.title}
             </h1>
             <p className="mt-2 max-w-[640px] text-[15px] leading-relaxed text-[#5c574f] md:text-base">
@@ -174,7 +174,7 @@ export function AdminOverview() {
             </Link>
             <Link
               href="/admin/settings"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#2f6f5b] px-5 text-[14px] font-semibold text-white shadow-[0_10px_30px_-16px_rgba(47,111,91,0.65)] transition hover:bg-[#285c4c]"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-theme-button-primary px-5 text-[14px] font-semibold text-white shadow-[0_10px_30px_-16px_rgba(47,111,91,0.65)] transition hover:bg-theme-button-primary-hover"
             >
               <IconBolt className="text-white opacity-95" />
               System Action
@@ -194,13 +194,13 @@ export function AdminOverview() {
                 Total users
               </span>
               {kpis.userGrowthPercent != null ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5ef] px-2.5 py-1 text-[12px] font-semibold text-[#2f6f5b]">
-                  <IconArrowUp className="text-[#2f6f5b]" />
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5ef] px-2.5 py-1 text-[12px] font-semibold text-theme-status-success">
+                  <IconArrowUp className="text-theme-status-success" />
                   {formatSignedPercent(kpis.userGrowthPercent)}
                 </span>
               ) : null}
             </div>
-            <p className="mt-5 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+            <p className="mt-5 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
               {intlCompact.format(kpis.totalUsers)}
             </p>
             <p className="mt-2 text-sm text-[#7a7268]">
@@ -228,13 +228,13 @@ export function AdminOverview() {
                 Active sessions
               </span>
               {kpis.sessionGrowthPercent != null ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5ef] px-2.5 py-1 text-[12px] font-semibold text-[#2f6f5b]">
-                  <IconArrowUp className="text-[#2f6f5b]" />
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5ef] px-2.5 py-1 text-[12px] font-semibold text-theme-status-success">
+                  <IconArrowUp className="text-theme-status-success" />
                   {formatSignedPercent(kpis.sessionGrowthPercent)}
                 </span>
               ) : null}
             </div>
-            <p className="mt-5 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+            <p className="mt-5 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
               {intlCompact.format(kpis.activeSessions)}
             </p>
             <p className="mt-2 text-sm text-[#7a7268]">
@@ -261,12 +261,12 @@ export function AdminOverview() {
               <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a9288]">
                 Platform revenue
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5ef] px-2.5 py-1 text-[12px] font-semibold text-[#2f6f5b]">
-                <IconArrowUp className="text-[#2f6f5b]" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5ef] px-2.5 py-1 text-[12px] font-semibold text-theme-status-success">
+                <IconArrowUp className="text-theme-status-success" />
                 {revenueBadge}
               </span>
             </div>
-            <p className="mt-5 font-display text-[40px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+            <p className="mt-5 font-display text-[40px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
               {formatCurrency(kpis.grossRevenueMonth)}
             </p>
             <p className="mt-2 text-sm text-[#7a7268]">Gross / Mo · session settlements</p>
@@ -300,7 +300,7 @@ export function AdminOverview() {
                 {queueBadgeLabel}
               </span>
             </div>
-            <p className="mt-5 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#243230]">
+            <p className="mt-5 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-heading">
               {intlCompact.format(kpis.activeQueuesTotal)}
             </p>
             <p className="mt-2 text-sm text-[#7a7268]">Action items across review queues</p>
@@ -337,12 +337,12 @@ export function AdminOverview() {
       >
         <motion.div variants={fadeBlock} className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-[26px] font-semibold tracking-[-0.03em] text-[#243230]">
+            <h2 className="font-display text-[26px] font-semibold tracking-[-0.03em] text-theme-heading">
               Needs attention
             </h2>
             <Link
               href="/admin/applications"
-              className="text-[13px] font-semibold text-[#2f745f] underline-offset-4 transition hover:underline"
+              className="text-[13px] font-semibold text-theme-status-success underline-offset-4 transition hover:underline"
             >
               View all queues
             </Link>
@@ -357,13 +357,13 @@ export function AdminOverview() {
                 <div className="flex flex-wrap gap-6">
                   <div>
                     <p className="text-xs text-[#7a7268]">Healers</p>
-                    <p className="mt-1 inline-flex rounded-full bg-[#e8f5ef] px-3 py-1 text-[18px] font-semibold text-[#2f6f5b]">
+                    <p className="mt-1 inline-flex rounded-full bg-[#e8f5ef] px-3 py-1 text-[18px] font-semibold text-theme-status-success">
                       {needsAttention.onboarding.healers}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[#7a7268]">Listeners</p>
-                    <p className="mt-1 inline-flex rounded-full bg-[#e8f5ef] px-3 py-1 text-[18px] font-semibold text-[#2f6f5b]">
+                    <p className="mt-1 inline-flex rounded-full bg-[#e8f5ef] px-3 py-1 text-[18px] font-semibold text-theme-status-success">
                       {needsAttention.onboarding.listeners}
                     </p>
                   </div>
@@ -445,7 +445,7 @@ export function AdminOverview() {
             </h2>
             <p className="mt-1 text-[13px] text-[#7a7268]">Rolling wallet &amp; settlement view</p>
 
-            <p className="mt-8 font-display text-[36px] font-semibold leading-none tracking-[-0.03em] text-[#243230]">
+            <p className="mt-8 font-display text-[36px] font-semibold leading-none tracking-[-0.03em] text-theme-heading">
               {financial.netFlow24h >= 0 ? "+" : ""}
               {formatCurrency(financial.netFlow24h)}
             </p>
@@ -456,7 +456,7 @@ export function AdminOverview() {
             <div className="mt-8 space-y-4 border-t border-[#e3d8c8] pt-6">
               <div className="flex items-center justify-between text-[15px]">
                 <span className="text-[#5c574f]">Pending payouts</span>
-                <span className="font-semibold text-[#243230]">
+                <span className="font-semibold text-theme-heading">
                   {formatCurrency(financial.pendingPayouts)}
                 </span>
               </div>
@@ -468,10 +468,10 @@ export function AdminOverview() {
               </div>
               <div className="flex items-center justify-between text-[15px]">
                 <span className="text-[#5c574f]">Reconciliation</span>
-                <span className="inline-flex items-center gap-2 font-semibold text-[#2f6f5b]">
+                <span className="inline-flex items-center gap-2 font-semibold text-theme-status-success">
                   {financial.reconciliationStatus === "verified" ? (
                     <>
-                      <IconCheck className="text-[#2f6f5b]" />
+                      <IconCheck className="text-theme-status-success" />
                       Verified
                     </>
                   ) : (
@@ -507,7 +507,7 @@ export function AdminOverview() {
           variants={fadeBlock}
           className="rounded-[28px] border border-[#eee9e1] bg-white p-6 shadow-[0_18px_48px_-40px_rgba(47,63,56,0.3)]"
         >
-          <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-[#243230]">
+          <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-theme-heading">
             Supply-side health
           </h2>
           <p className="mt-1 text-[13px] text-[#7a7268]">
@@ -519,14 +519,14 @@ export function AdminOverview() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9a9288]">
                 Provider coverage
               </p>
-              <p className="mt-3 font-display text-[38px] font-semibold text-[#2f6f5b]">
+              <p className="mt-3 font-display text-[38px] font-semibold text-theme-status-success">
                 {supplyHealth.providerCoveragePercent}%
               </p>
               <p className="mt-1 text-[13px] text-[#6a655d]">Peak ready</p>
               <div className="mt-4">
                 <SegmentedMeter
                   filled={supplyHealth.coverageSegments}
-                  activeClassName="bg-[#2f6f5b]"
+                  activeClassName="bg-theme-button-primary"
                   mutedClassName="bg-[#dfe8df]"
                 />
               </div>
@@ -536,7 +536,7 @@ export function AdminOverview() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9a9288]">
                 Quality score
               </p>
-              <p className="mt-3 font-display text-[38px] font-semibold text-[#2f6f5b]">
+              <p className="mt-3 font-display text-[38px] font-semibold text-theme-status-success">
                 {supplyHealth.qualityScore.toFixed(2)}
               </p>
               <p className="mt-1 text-[13px] text-[#6a655d]">Avg rating</p>
@@ -574,7 +574,7 @@ export function AdminOverview() {
           variants={fadeBlock}
           className="rounded-[28px] border border-[#eee9e1] bg-white p-6 shadow-[0_18px_48px_-40px_rgba(47,63,56,0.3)]"
         >
-          <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-[#243230]">
+          <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-theme-heading">
             System integration
           </h2>
           <p className="mt-1 text-[13px] text-[#7a7268]">
@@ -591,7 +591,7 @@ export function AdminOverview() {
                     : "bg-[#e07066]";
               const dotColor =
                 row.status === "healthy"
-                  ? "bg-[#2f6f5b]"
+                  ? "bg-theme-button-primary"
                   : row.status === "warning"
                     ? "bg-[#e3a53d]"
                     : "bg-[#e07066]";
@@ -620,9 +620,9 @@ export function AdminOverview() {
 
           <Link
             href="/admin/settings"
-            className="mt-7 inline-flex items-center gap-2 text-[13px] font-semibold text-[#2f745f] underline-offset-4 transition hover:underline"
+            className="mt-7 inline-flex items-center gap-2 text-[13px] font-semibold text-theme-status-success underline-offset-4 transition hover:underline"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" className="text-[#2f745f]" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" className="text-theme-status-success" aria-hidden>
               <path
                 fill="currentColor"
                 d="M4 19h16v-2H4v2zm0-6h16v-2H4v2zm0-6V5H2v2h2zm4 0h12V5H8v2zm-4 8h16v-2H4v2zm0-4h12V9H4v2z"

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -134,7 +135,7 @@ export function AdminSettingsPage() {
         variants={staggerContainer}
       >
         <motion.div variants={fadeBlock}>
-          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-[#243230] md:text-[52px]">
+          <h1 className="font-display text-[42px] font-semibold tracking-[-0.03em] text-theme-heading md:text-[52px]">
             Settings Snapshot
           </h1>
           <p className="mt-2 max-w-[780px] text-[15px] leading-7 text-text-primary/65 md:text-base">
@@ -142,10 +143,16 @@ export function AdminSettingsPage() {
             for now and reflects the behavior already enforced by auth, middleware, wallet, and
             provider flows.
           </p>
+          <Link
+            href="/admin/settings/themes"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-theme-status-success hover:underline"
+          >
+            Theme Management →
+          </Link>
         </motion.div>
 
         {queryError ? (
-          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
+          <div className="mt-6 rounded-[26px] bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-[0_16px_44px_-34px_rgba(47,63,56,0.18)]">
             {queryError}
           </div>
         ) : null}
@@ -162,7 +169,7 @@ export function AdminSettingsPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b1a89d]">
                 {stat.label}
               </p>
-              <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-[#2f6f5b]">
+              <p className="mt-3 font-display text-[44px] font-semibold leading-none tracking-[-0.04em] text-theme-status-success">
                 {stat.value}
               </p>
               <p className="mt-3 text-sm text-text-primary/55">{stat.meta}</p>
@@ -181,7 +188,7 @@ export function AdminSettingsPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Access Control
           </motion.h2>
@@ -192,19 +199,19 @@ export function AdminSettingsPage() {
           >
             <div className="space-y-4 text-sm text-text-primary/62">
               <p>
-                <span className="font-semibold text-[#243230]">Current admin:</span>{" "}
+                <span className="font-semibold text-theme-heading">Current admin:</span>{" "}
                 {currentUser?.name ?? currentUser?.email ?? "Loading"}
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Admin zone protection:</span>{" "}
+                <span className="font-semibold text-theme-heading">Admin zone protection:</span>{" "}
                 enforced through authenticated role checks and middleware.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Verified accounts:</span>{" "}
+                <span className="font-semibold text-theme-heading">Verified accounts:</span>{" "}
                 {users.filter((user) => user.isVerified).length} of {users.length} loaded users.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Latest admin-visible account:</span>{" "}
+                <span className="font-semibold text-theme-heading">Latest admin-visible account:</span>{" "}
                 {users[0] ? formatShortDate(users[0].createdAt) : "Not available"}
               </p>
             </div>
@@ -220,7 +227,7 @@ export function AdminSettingsPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Provider Enablement
           </motion.h2>
@@ -231,11 +238,11 @@ export function AdminSettingsPage() {
           >
             <div className="space-y-4 text-sm text-text-primary/62">
               <p>
-                <span className="font-semibold text-[#243230]">Approved providers:</span>{" "}
+                <span className="font-semibold text-theme-heading">Approved providers:</span>{" "}
                 {providers.length} verified directory entries.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Open application pressure:</span>{" "}
+                <span className="font-semibold text-theme-heading">Open application pressure:</span>{" "}
                 {
                   applications.filter(
                     (application) =>
@@ -245,12 +252,12 @@ export function AdminSettingsPage() {
                 records currently need review.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Availability adoption:</span>{" "}
+                <span className="font-semibold text-theme-heading">Availability adoption:</span>{" "}
                 {providers.filter((provider) => provider.nextAvailabilityDate).length} providers
                 currently expose at least one open day.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Pricing coverage:</span>{" "}
+                <span className="font-semibold text-theme-heading">Pricing coverage:</span>{" "}
                 {providers.filter((provider) => provider.hourlyRate).length} providers have session
                 rates configured.
               </p>
@@ -267,7 +274,7 @@ export function AdminSettingsPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Finance Rules
           </motion.h2>
@@ -278,19 +285,19 @@ export function AdminSettingsPage() {
           >
             <div className="space-y-4 text-sm text-text-primary/62">
               <p>
-                <span className="font-semibold text-[#243230]">Wallet float:</span>{" "}
+                <span className="font-semibold text-theme-heading">Wallet float:</span>{" "}
                 {formatCurrency(totals.walletAvailable)} available across loaded wallets.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Held balances:</span>{" "}
+                <span className="font-semibold text-theme-heading">Held balances:</span>{" "}
                 {formatCurrency(totals.walletHeld)} currently reserved for pending bookings.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Payout ledger:</span>{" "}
+                <span className="font-semibold text-theme-heading">Payout ledger:</span>{" "}
                 {payouts.length} successful payout events loaded from the settlement stream.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Settlement model:</span>{" "}
+                <span className="font-semibold text-theme-heading">Settlement model:</span>{" "}
                 immutable transaction records back wallet movements and session payouts.
               </p>
             </div>
@@ -306,7 +313,7 @@ export function AdminSettingsPage() {
         >
           <motion.h2
             variants={fadeBlock}
-            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-[#243230]"
+            className="font-display text-[34px] font-semibold tracking-[-0.03em] text-theme-heading"
           >
             Platform Notes
           </motion.h2>
@@ -317,19 +324,19 @@ export function AdminSettingsPage() {
           >
             <div className="space-y-4 text-sm text-text-primary/62">
               <p>
-                <span className="font-semibold text-[#243230]">Authentication:</span> Google sign-in
+                <span className="font-semibold text-theme-heading">Authentication:</span> Google sign-in
                 with enriched session roles and wallet identity.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Provider lifecycle:</span>{" "}
+                <span className="font-semibold text-theme-heading">Provider lifecycle:</span>{" "}
                 application review promotes roles and creates the matching profile records.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Export posture:</span> client-side
+                <span className="font-semibold text-theme-heading">Export posture:</span> client-side
                 exports are available for loaded admin datasets in the export center.
               </p>
               <p>
-                <span className="font-semibold text-[#243230]">Most recent payout:</span>{" "}
+                <span className="font-semibold text-theme-heading">Most recent payout:</span>{" "}
                 {payouts[0] ? formatShortDate(payouts[0].createdAt) : "Not available"}
               </p>
             </div>

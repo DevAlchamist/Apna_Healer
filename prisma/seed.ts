@@ -1005,6 +1005,23 @@ const DAILY_QUOTE_SEEDS: Array<{
   },
 ];
 
+async function seedBlogCategories() {
+  const categories = [
+    { slug: "mindfulness", name: "Mindfulness" },
+    { slug: "nature", name: "Nature" },
+    { slug: "healing", name: "Healing" },
+    { slug: "community", name: "Community" },
+  ];
+
+  for (const category of categories) {
+    await prisma.blogCategory.upsert({
+      where: { slug: category.slug },
+      update: { name: category.name },
+      create: category,
+    });
+  }
+}
+
 async function seedDailyQuotes() {
   for (const row of DAILY_QUOTE_SEEDS) {
     await prisma.dailyQuote.upsert({
@@ -1034,6 +1051,9 @@ async function main() {
 
   await seedDailyQuotes();
   console.log(`  ${DAILY_QUOTE_SEEDS.length} daily quotes`);
+
+  await seedBlogCategories();
+  console.log("  4 blog categories");
 
   await seedProviderProfiles();
   console.log(`  ${THERAPIST_PROFILES.length} therapist + ${LISTENER_PROFILES.length} listener profiles`);

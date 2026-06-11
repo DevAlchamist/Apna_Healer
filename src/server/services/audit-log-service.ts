@@ -1,8 +1,13 @@
-import type { AuditAction, Prisma } from "@prisma/client";
+import type { AuditAction, Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ApiAuditLogEntry, ApiAuditLogListResponse } from "@/types/api";
 import type { SanitizedAuditDetails } from "@/server/services/audit-log-sanitizers";
-import { auditActionCategory } from "@/lib/audit-display";
+import {
+  auditActionCategory,
+  auditEntityLabel,
+  deriveAuditStatus,
+  resolveAuditIpAddress,
+} from "@/lib/audit-display";
 
 export type RecordAuditLogInput = {
   action: AuditAction;
@@ -14,7 +19,7 @@ export type RecordAuditLogInput = {
   details?: SanitizedAuditDetails | null;
 };
 
-function toApiAuditLog(row: {
+type AuditLogRow = {
   id: string;
   action: AuditAction;
   actorId: string | null;
@@ -24,18 +29,37 @@ function toApiAuditLog(row: {
   summary: string;
   details: Prisma.JsonValue | null;
   createdAt: Date;
-}): ApiAuditLogEntry {
-  return {
+  actor: {
+    name: string | null;
+    email: string;
+    role: Role;
+    image: string | null;
+  } | null;
+};
+
+function toApiAuditLog(row: AuditLogRow): ApiAuditLogEntry {
+  const entry: ApiAuditLogEntry = {
     id: row.id,
     action: row.action,
     actorId: row.actorId,
-    actorEmail: row.actorEmail,
+    actorEmail: row.actorEmail ?? row.actor?.email ?? null,
+    actorName: row.actor?.name ?? null,
+    actorRole: row.actor?.role ?? null,
+    actorImage: row.actor?.image ?? null,
     targetType: row.targetType,
     targetId: row.targetId,
     summary: row.summary,
+    entityLabel: auditEntityLabel(row.targetType),
+    status: "success",
+    ipAddress: "Platform",
     details: (row.details as Record<string, unknown> | null) ?? null,
     createdAt: row.createdAt.toISOString(),
   };
+
+  entry.status = deriveAuditStatus(entry);
+  entry.ipAddress = resolveAuditIpAddress(entry);
+
+  return entry;
 }
 
 export async function recordAuditLog(input: RecordAuditLogInput) {
@@ -66,10 +90,14 @@ export async function listAuditLogsForAdmin(filters: {
   action?: AuditAction;
   targetType?: string;
   category?: string;
+  role?: Role | "SYSTEM";
+  days?: number;
+  page?: number;
   take?: number;
   cursor?: string;
 }): Promise<ApiAuditLogListResponse> {
-  const take = Math.min(filters.take ?? 50, 100);
+  const take = Math.min(filters.take ?? 10, 100);
+  const page = Math.max(filters.page ?? 1, 1);
 
   const where: Prisma.AuditLogWhereInput = {
     ...(filters.targetType ? { targetType: filters.targetType } : {}),
@@ -80,27 +108,78 @@ export async function listAuditLogsForAdmin(filters: {
         : {}),
   };
 
-  const rows = await prisma.auditLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: take + 1,
-    ...(filters.cursor
-      ? {
-          cursor: { id: filters.cursor },
-          skip: 1,
-        }
-      : {}),
-  });
+  if (filters.role === "SYSTEM") {
+    where.actorId = null;
+  } else if (filters.role) {
+    where.actor = { role: filters.role };
+  }
 
-  const hasMore = rows.length > take;
-  const items = (hasMore ? rows.slice(0, take) : rows).map(toApiAuditLog);
+  if (filters.days) {
+    const from = new Date();
+    from.setDate(from.getDate() - filters.days);
+    where.createdAt = { gte: from };
+  }
+
+  if (filters.cursor) {
+    const rows = await prisma.auditLog.findMany({
+      where,
+      include: {
+        actor: {
+          select: { name: true, email: true, role: true, image: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: take + 1,
+      cursor: { id: filters.cursor },
+      skip: 1,
+    });
+
+    const hasMore = rows.length > take;
+    const slice = hasMore ? rows.slice(0, take) : rows;
+    const items = slice.map((row) => toApiAuditLog(row as AuditLogRow));
+
+    return {
+      items,
+      meta: {
+        take,
+        page: 1,
+        total: items.length,
+        totalPages: 1,
+        cursor: filters.cursor ?? null,
+        nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+      },
+    };
+  }
+
+  const skip = (page - 1) * take;
+
+  const [total, rows] = await Promise.all([
+    prisma.auditLog.count({ where }),
+    prisma.auditLog.findMany({
+      where,
+      include: {
+        actor: {
+          select: { name: true, email: true, role: true, image: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+  ]);
+
+  const items = rows.map((row) => toApiAuditLog(row as AuditLogRow));
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   return {
     items,
     meta: {
       take,
-      cursor: filters.cursor ?? null,
-      nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+      page,
+      total,
+      totalPages,
+      cursor: null,
+      nextCursor: page < totalPages ? items[items.length - 1]?.id ?? null : null,
     },
   };
 }
@@ -117,6 +196,20 @@ function categoryToActions(category: string): AuditAction | { in: AuditAction[] 
       return "SESSION_STATUS_CHANGED";
     case "payouts":
       return "WALLET_TRANSACTION";
+    case "clubs":
+      return {
+        in: [
+          "CLUB_CREATED",
+          "CLUB_UPDATED",
+          "CLUB_CREATION_REVIEWED",
+          "CLUB_JOIN_REVIEWED",
+          "CLUB_MEMBERSHIP_BILLING",
+        ],
+      };
+    case "events":
+      return {
+        in: ["EVENT_CREATED", "EVENT_UPDATED", "EVENT_REGISTRATION_CREATED"],
+      };
     default:
       return { in: [] };
   }

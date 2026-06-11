@@ -146,7 +146,7 @@ export default function TherapistsPage() {
             ))}
           </div>
         ) : providersQuery.error ? (
-          <div className="rounded-calm bg-white px-5 py-4 text-sm font-medium text-[#cf4f45] shadow-soft">
+          <div className="rounded-calm bg-white px-5 py-4 text-sm font-medium text-theme-status-error shadow-soft">
             {providersQuery.error.message}
           </div>
         ) : visibleProviders.length > 0 ? (

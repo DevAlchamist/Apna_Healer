@@ -243,7 +243,7 @@ export default function ResourcesPage() {
       </motion.header>
 
       {queryError ? (
-        <div className="rounded-calm bg-white px-6 py-5 text-sm font-medium text-[#cf4f45] shadow-soft">
+        <div className="rounded-calm bg-white px-6 py-5 text-sm font-medium text-theme-status-error shadow-soft">
           {queryError}
         </div>
       ) : null}

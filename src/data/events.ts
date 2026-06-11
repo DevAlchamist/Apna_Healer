@@ -25,6 +25,8 @@ export type EventDetail = {
   facilitatorRole: string;
   facilitatorImage: string;
   facilitatorBio: string;
+  testimonialQuote?: string | null;
+  testimonialAuthor?: string | null;
   reflections: Array<{
     quote: string;
     by: string;

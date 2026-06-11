@@ -15,7 +15,10 @@ export async function listMyClubMemberships(userId: string): Promise<{
     include: {
       club: {
         include: {
-          onboardingSteps: { orderBy: { sortOrder: "asc" } },
+          onboardingSteps: {
+            orderBy: { sortOrder: "asc" },
+            include: { questions: { orderBy: { sortOrder: "asc" } } },
+          },
           reviews: { orderBy: { sortOrder: "asc" } },
         },
       },
