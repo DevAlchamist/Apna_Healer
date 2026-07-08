@@ -10,7 +10,35 @@ import { FadeIn, hoverLiftTransition, morphTransition } from "@/components/ui/fa
 import { apiFetch } from "@/lib/api-client";
 import { formatCurrency, formatDateTime, formatShortDate, toSentenceCase } from "@/lib/display";
 import type { ApiBooking, ApiCareSession, ApiProvider, ApiUser } from "@/types/api";
-import { wellnessPackages } from "@/data/packages";
+
+type PackageAllocation = {
+  role: string;
+  sessionCount: number;
+};
+
+type DbPackage = {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  coverImage: string;
+  galleryImages: string[];
+  bannerImage?: string | null;
+  price: string;
+  discount: number;
+  category: string;
+  displayOrder: number;
+  isFeatured: boolean;
+  publicationStatus: string;
+  isVisible: boolean;
+  durationValue: number;
+  durationUnit: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  maxPurchases?: number | null;
+  purchaseCount: number;
+  allocations: PackageAllocation[];
+};
 
 function isProviderRole(role?: ApiUser["role"]) {
   return role === "THERAPIST" || role === "LISTENER";
@@ -75,6 +103,11 @@ export default function ShopPage() {
     queryFn: () => apiFetch<ApiProvider[]>("/api/providers?take=12"),
   });
 
+  const packagesQuery = useQuery({
+    queryKey: ["packages-list"],
+    queryFn: () => apiFetch<DbPackage[]>("/api/packages"),
+  });
+
   const user = userQuery.data;
   const bookings = useMemo(() => bookingsQuery.data ?? [], [bookingsQuery.data]);
   const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
@@ -84,23 +117,45 @@ export default function ShopPage() {
   const completedSessionsCount = sessions.filter((session) => session.status === "COMPLETED").length;
   const pendingBookingsCount = bookings.filter((booking) => booking.status === "PENDING").length;
 
+  const packageCards = useMemo(() => {
+    const list = packagesQuery.data ?? [];
+    return list.map((entry) => {
+      const originalPrice = Number(entry.price);
+      const discountPercent = Number(entry.discount);
+      const price = originalPrice - originalPrice * (discountPercent / 100);
+      const totalSessions = entry.allocations.reduce((sum, a) => sum + a.sessionCount, 0);
+
+      return {
+        ...entry,
+        price,
+        currentPrice: formatCurrency(price),
+        originalPrice: discountPercent > 0 ? formatCurrency(originalPrice) : null,
+        sessions: `${totalSessions} Session${totalSessions === 1 ? "" : "s"}`,
+        badge: discountPercent > 0 ? `${discountPercent}% Off` : undefined,
+        ctaLabel: "View Bundle"
+      };
+    });
+  }, [packagesQuery.data]);
+
   const featuredPackage = useMemo(() => {
+    const list = packageCards;
+    if (list.length === 0) return null;
     if (completedSessionsCount >= 2) {
-      return wellnessPackages.find((entry) => entry.id === "deep-healing-journey") ?? wellnessPackages[0];
+      return list.find((entry) => entry.id === "deep-healing-journey") ?? list[0];
     }
 
     if (pendingBookingsCount > 0 || upcomingSessionsCount > 0) {
       return (
-        wellnessPackages.find((entry) => entry.id === "self-care-essentials") ??
-        wellnessPackages[0]
+        list.find((entry) => entry.id === "self-care-essentials") ??
+        list[0]
       );
     }
 
     return (
-      wellnessPackages.find((entry) => entry.id === "mindfulness-starter-pack") ??
-      wellnessPackages[0]
+      list.find((entry) => entry.id === "mindfulness-starter-pack") ??
+      list[0]
     );
-  }, [completedSessionsCount, pendingBookingsCount, upcomingSessionsCount]);
+  }, [packageCards, completedSessionsCount, pendingBookingsCount, upcomingSessionsCount]);
 
   const suggestedProviders = useMemo(
     () =>
@@ -211,12 +266,14 @@ export default function ShopPage() {
 
   const queryError =
     userQuery.error?.message ??
+    packagesQuery.error?.message ??
     bookingsQuery.error?.message ??
     sessionsQuery.error?.message ??
     providersQuery.error?.message;
 
   const isPageLoading =
     userQuery.isLoading ||
+    packagesQuery.isLoading ||
     bookingsQuery.isLoading ||
     sessionsQuery.isLoading ||
     providersQuery.isLoading;
@@ -339,58 +396,64 @@ export default function ShopPage() {
             <span className="text-sm text-text-primary/45">Suggested from live signals</span>
           </div>
 
-          <article className="mt-5 rounded-gentle bg-background px-5 py-5">
-            {featuredPackage.badge ? (
-              <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-                {featuredPackage.badge}
-              </span>
-            ) : null}
-            <h3 className="mt-3 font-display text-4xl font-semibold text-text-primary">
-              {featuredPackage.title}
-            </h3>
-            <p className="mt-2 text-sm text-text-primary/60">{featuredPackage.description}</p>
+          {featuredPackage ? (
+            <article className="mt-5 rounded-gentle bg-background px-5 py-5 text-left">
+              {featuredPackage.badge ? (
+                <span className="rounded-full bg-primary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
+                  {featuredPackage.badge}
+                </span>
+              ) : null}
+              <h3 className="mt-3 font-display text-4xl font-semibold text-text-primary">
+                {featuredPackage.title}
+              </h3>
+              <p className="mt-2 text-sm text-text-primary/60">{featuredPackage.description}</p>
 
-            <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-primary/40">
-                  Bundle Price
-                </p>
-                <p className="mt-1 font-display text-4xl font-semibold text-text-primary">
-                  {featuredPackage.currentPrice}
-                </p>
-                <p className="mt-1 text-sm text-text-primary/50">{featuredPackage.sessions}</p>
+              <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-primary/40">
+                    Bundle Price
+                  </p>
+                  <p className="mt-1 font-display text-4xl font-semibold text-text-primary">
+                    {featuredPackage.currentPrice}
+                  </p>
+                  <p className="mt-1 text-sm text-text-primary/50">{featuredPackage.sessions}</p>
+                </div>
+
+                <div className="text-right text-sm text-text-primary/58">
+                  <p>
+                    Wallet available: {formatCurrency(user?.wallet?.availableBalance)}
+                  </p>
+                  <p className="mt-1">
+                    Latest care signal:{" "}
+                    {sessions[0]
+                      ? formatDateTime(sessions[0].startTime)
+                      : bookings[0]
+                        ? formatDateTime(bookings[0].requestedDate)
+                        : "No live activity yet"}
+                  </p>
+                </div>
               </div>
 
-              <div className="text-right text-sm text-text-primary/58">
-                <p>
-                  Wallet available: {formatCurrency(user?.wallet?.availableBalance)}
-                </p>
-                <p className="mt-1">
-                  Latest care signal:{" "}
-                  {sessions[0]
-                    ? formatDateTime(sessions[0].startTime)
-                    : bookings[0]
-                      ? formatDateTime(bookings[0].requestedDate)
-                      : "No live activity yet"}
-                </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href={`/dashboard/packages/${featuredPackage.id}`}
+                  className="rounded-full bg-text-secondary px-5 py-3 text-sm font-semibold text-white"
+                >
+                  View bundle
+                </Link>
+                <Link
+                  href="/dashboard/packages"
+                  className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-text-primary/75"
+                >
+                  Browse all bundles
+                </Link>
               </div>
+            </article>
+          ) : (
+            <div className="mt-5 py-12 text-center text-neutral-400 bg-background rounded-gentle text-xs">
+              No featured packages available.
             </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href={`/dashboard/packages/${featuredPackage.id}`}
-                className="rounded-full bg-text-secondary px-5 py-3 text-sm font-semibold text-white"
-              >
-                View bundle
-              </Link>
-              <Link
-                href="/dashboard/packages"
-                className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-text-primary/75"
-              >
-                Browse all bundles
-              </Link>
-            </div>
-          </article>
+          )}
         </motion.section>
       </div>
 
@@ -418,54 +481,60 @@ export default function ShopPage() {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {wellnessPackages.map((entry, index) => (
-            <motion.article
-              key={entry.id}
-              className="rounded-gentle bg-background px-5 py-5"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...morphTransition, delay: 0.26 + index * 0.04 }}
-              whileHover={{ y: -4, transition: hoverLiftTransition }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-primary/40">
-                    {entry.sessions}
-                  </p>
-                  <h3 className="mt-2 font-display text-3xl font-semibold text-text-primary">
-                    {entry.title}
-                  </h3>
-                </div>
-                {entry.badge ? (
-                  <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-primary/60">
-                    {entry.badge}
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="mt-4 text-sm text-text-primary/62">{entry.description}</p>
-
-              <div className="mt-5 flex items-end justify-between gap-3">
-                <div>
-                  {entry.originalPrice ? (
-                    <p className="text-xs font-semibold text-text-primary/35 line-through">
-                      {entry.originalPrice}
+          {packageCards.length > 0 ? (
+            packageCards.map((entry, index) => (
+              <motion.article
+                key={entry.id}
+                className="rounded-gentle bg-background px-5 py-5 text-left"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...morphTransition, delay: 0.26 + index * 0.04 }}
+                whileHover={{ y: -4, transition: hoverLiftTransition }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-primary/40">
+                      {entry.sessions}
                     </p>
+                    <h3 className="mt-2 font-display text-3xl font-semibold text-text-primary">
+                      {entry.title}
+                    </h3>
+                  </div>
+                  {entry.badge ? (
+                    <span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-primary/60">
+                      {entry.badge}
+                    </span>
                   ) : null}
-                  <p className="font-display text-4xl font-semibold text-text-primary">
-                    {entry.currentPrice}
-                  </p>
                 </div>
 
-                <Link
-                  href={`/dashboard/packages/${entry.id}`}
-                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-text-primary/75"
-                >
-                  {entry.ctaLabel}
-                </Link>
-              </div>
-            </motion.article>
-          ))}
+                <p className="mt-4 text-sm text-text-primary/62">{entry.description}</p>
+
+                <div className="mt-5 flex items-end justify-between gap-3">
+                  <div className="text-left">
+                    {entry.originalPrice ? (
+                      <p className="text-xs font-semibold text-text-primary/35 line-through">
+                        {entry.originalPrice}
+                      </p>
+                    ) : null}
+                    <p className="font-display text-4xl font-semibold text-text-primary">
+                      {entry.currentPrice}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/dashboard/packages/${entry.id}`}
+                    className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-text-primary/75"
+                  >
+                    View Bundle
+                  </Link>
+                </div>
+              </motion.article>
+            ))
+          ) : (
+            <div className="py-12 text-center text-neutral-400 col-span-full text-xs">
+              No package bundles available at this moment.
+            </div>
+          )}
         </div>
       </motion.section>
 

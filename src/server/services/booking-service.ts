@@ -140,6 +140,10 @@ export async function createBooking(input: {
       throw new ApiError(404, "Booking requester was not found.", "USER_NOT_FOUND");
     }
 
+    if (requester.role !== Role.USER) {
+      throw new ApiError(403, "Only users can create therapist session bookings.", "FORBIDDEN");
+    }
+
     if (!provider) {
       throw new ApiError(404, "Selected provider was not found.", "PROVIDER_NOT_FOUND");
     }

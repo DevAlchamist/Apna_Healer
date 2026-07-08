@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { BookingPaymentMethod, BookingType } from "@prisma/client";
+import { BookingPaymentMethod, BookingType, Role } from "@prisma/client";
 import { created, handleApiError, ok } from "@/lib/api-response";
 import { requireSessionUser } from "@/lib/session-auth";
 import { bookingQuerySchema, createBookingSchema } from "@/lib/validators/booking";
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const sessionUser = await requireSessionUser();
+    const sessionUser = await requireSessionUser([Role.USER]);
     const input = createBookingSchema.parse(await request.json());
     const booking = await createBooking({
       userId: sessionUser.id,

@@ -95,6 +95,9 @@ export function assertBookingScope(role: Role, scope: BookingScope): void {
   if (scope === "provider" && role === Role.USER) {
     throw new ApiError(403, "Only providers can view provider bookings.", "FORBIDDEN_SCOPE");
   }
+  if (scope === "requester" && isProviderRole(role)) {
+    throw new ApiError(403, "Only users can view customer bookings.", "FORBIDDEN_SCOPE");
+  }
 }
 
 export function assertSessionScope(role: Role, scope: SessionScope): void {
@@ -104,18 +107,23 @@ export function assertSessionScope(role: Role, scope: SessionScope): void {
   if (scope === "provider" && role === Role.USER) {
     throw new ApiError(403, "Only providers can view provider sessions.", "FORBIDDEN_SCOPE");
   }
-  if (scope === "both" && !isProviderRole(role)) {
-    throw new ApiError(403, "This session scope is only for listener and therapist accounts.", "FORBIDDEN_SCOPE");
+  if (scope === "participant" && isProviderRole(role)) {
+    throw new ApiError(403, "Only users can view participant sessions.", "FORBIDDEN_SCOPE");
+  }
+  if (scope === "both") {
+    throw new ApiError(403, "Both session scope is no longer supported.", "FORBIDDEN_SCOPE");
   }
 }
 
 export function defaultBookingScope(role: Role): BookingScope {
-  return isAdminRole(role) ? "all" : "requester";
+  if (isAdminRole(role)) return "all";
+  if (isProviderRole(role)) return "provider";
+  return "requester";
 }
 
 export function defaultSessionScope(role: Role): SessionScope {
   if (isAdminRole(role)) return "all";
-  if (isProviderRole(role)) return "both";
+  if (isProviderRole(role)) return "provider";
   return "participant";
 }
 

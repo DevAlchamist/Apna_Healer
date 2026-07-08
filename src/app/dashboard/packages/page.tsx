@@ -8,12 +8,36 @@ import { FadeIn } from "@/components/ui/fade-in";
 import { useBookSessionModal } from "@/components/dashboard/book-session-modal";
 import { apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/display";
-import { wellnessPackages } from "@/data/packages";
 import type { ApiBooking, ApiCareSession, ApiUser } from "@/types/api";
 
-function parsePrice(value: string) {
-  return Number(value.replace(/[^0-9.]/g, ""));
-}
+type PackageAllocation = {
+  role: string;
+  sessionCount: number;
+};
+
+type DbPackage = {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  coverImage: string;
+  galleryImages: string[];
+  bannerImage?: string | null;
+  price: string;
+  discount: number;
+  category: string;
+  displayOrder: number;
+  isFeatured: boolean;
+  publicationStatus: string;
+  isVisible: boolean;
+  durationValue: number;
+  durationUnit: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  maxPurchases?: number | null;
+  purchaseCount: number;
+  allocations: PackageAllocation[];
+};
 
 export default function PackagesPage() {
   const { open: openBookSession } = useBookSessionModal();
@@ -22,25 +46,32 @@ export default function PackagesPage() {
     queryKey: ["user-me"],
     queryFn: () => apiFetch<ApiUser>("/api/users/me"),
   });
+
+  const packagesQuery = useQuery({
+    queryKey: ["packages-list"],
+    queryFn: () => apiFetch<DbPackage[]>("/api/packages"),
+  });
+
   const bookingScope = useMemo(() => {
     if (userQuery.data?.role === "THERAPIST" || userQuery.data?.role === "LISTENER") {
       return "provider";
     }
-
     return "requester";
   }, [userQuery.data?.role]);
+
   const sessionScope = useMemo(() => {
     if (userQuery.data?.role === "THERAPIST" || userQuery.data?.role === "LISTENER") {
       return "provider";
     }
-
     return "participant";
   }, [userQuery.data?.role]);
+
   const bookingsQuery = useQuery({
     queryKey: ["packages-bookings", bookingScope],
     enabled: Boolean(userQuery.data),
     queryFn: () => apiFetch<ApiBooking[]>(`/api/bookings?scope=${bookingScope}&take=12`),
   });
+
   const sessionsQuery = useQuery({
     queryKey: ["packages-sessions", sessionScope],
     enabled: Boolean(userQuery.data),
@@ -54,34 +85,47 @@ export default function PackagesPage() {
   const completedSessions = sessions.filter((session) => session.status === "COMPLETED").length;
   const pendingBookings = bookings.filter((booking) => booking.status === "PENDING").length;
 
-  const packageCards = useMemo(
-    () =>
-      wellnessPackages.map((entry) => {
-        const price = parsePrice(entry.currentPrice);
-        const shortfall = Math.max(price - availableBalance, 0);
-        const affordability =
-          availableBalance >= price
-            ? "Wallet ready"
-            : `Need ${formatCurrency(shortfall)} more`;
+  const packageCards = useMemo(() => {
+    const list = packagesQuery.data ?? [];
+    return list.map((entry) => {
+      // Calculate price and discounts
+      const originalPrice = Number(entry.price);
+      const discountPercent = Number(entry.discount);
+      const price = originalPrice - originalPrice * (discountPercent / 100);
+      const shortfall = Math.max(price - availableBalance, 0);
+      const affordability =
+        availableBalance >= price
+          ? "Wallet ready"
+          : `Need ${formatCurrency(shortfall)} more`;
 
-        return {
-          ...entry,
-          price,
-          affordability,
-          recommended:
-            (entry.id === "mindfulness-starter-pack" && completedSessions === 0) ||
-            (entry.id === "self-care-essentials" && pendingBookings > 0) ||
-            (entry.id === "deep-healing-journey" && completedSessions >= 2),
-        };
-      }),
-    [availableBalance, completedSessions, pendingBookings],
-  );
+      const totalSessions = entry.allocations.reduce((sum, a) => sum + a.sessionCount, 0);
+
+      return {
+        ...entry,
+        price,
+        originalPrice: discountPercent > 0 ? originalPrice : null,
+        affordability,
+        sessionsLabel: `${totalSessions} Session${totalSessions === 1 ? "" : "s"}`,
+        badge: discountPercent > 0 ? `${discountPercent}% Off` : undefined,
+        recommended:
+          (entry.id === "mindfulness-starter-pack" && completedSessions === 0) ||
+          (entry.id === "self-care-essentials" && pendingBookings > 0) ||
+          (entry.id === "deep-healing-journey" && completedSessions >= 2),
+      };
+    });
+  }, [packagesQuery.data, availableBalance, completedSessions, pendingBookings]);
 
   const queryError =
-    userQuery.error?.message ?? bookingsQuery.error?.message ?? sessionsQuery.error?.message;
+    userQuery.error?.message ??
+    packagesQuery.error?.message ??
+    bookingsQuery.error?.message ??
+    sessionsQuery.error?.message;
 
   const isPageLoading =
-    userQuery.isLoading || bookingsQuery.isLoading || sessionsQuery.isLoading;
+    userQuery.isLoading ||
+    packagesQuery.isLoading ||
+    bookingsQuery.isLoading ||
+    sessionsQuery.isLoading;
 
   if (isPageLoading) {
     return (
@@ -139,7 +183,7 @@ export default function PackagesPage() {
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={entry.image}
+                src={entry.coverImage}
                 alt={entry.title}
                 className="h-44 w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.04] md:h-48"
               />
@@ -155,9 +199,9 @@ export default function PackagesPage() {
               ) : null}
             </div>
 
-            <div className="space-y-4 p-5 md:space-y-5 md:p-6">
+            <div className="space-y-4 p-5 md:space-y-5 md:p-6 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary/45">
-                {entry.sessions}
+                {entry.sessionsLabel}
               </p>
               <h2 className="font-display text-[2rem] font-semibold leading-tight text-text-primary">
                 {entry.title}
@@ -172,11 +216,11 @@ export default function PackagesPage() {
                 <div>
                   {entry.originalPrice ? (
                     <p className="text-xs font-semibold text-text-primary/40 line-through">
-                      {entry.originalPrice}
+                      {formatCurrency(entry.originalPrice)}
                     </p>
                   ) : null}
                   <p className="font-display text-4xl font-semibold text-text-primary">
-                    {entry.currentPrice}
+                    {formatCurrency(entry.price)}
                   </p>
                 </div>
 
@@ -184,7 +228,7 @@ export default function PackagesPage() {
                   href={`/dashboard/packages/${entry.id}`}
                   className="rounded-full bg-[#e8ded2] px-5 py-2.5 text-sm font-semibold text-text-primary transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#dfd3c5]"
                 >
-                  {entry.ctaLabel}
+                  View Bundle
                 </Link>
               </div>
             </div>

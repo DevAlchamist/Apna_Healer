@@ -43,6 +43,52 @@ export async function middleware(request: NextRequest) {
     if (!role || !DASHBOARD_ROLES.has(role)) {
       return NextResponse.redirect(new URL("/", request.url));
     }
+
+    // Role-specific sub-path guards
+    if (role === "THERAPIST") {
+      const blocked = [
+        "/dashboard/wallet",
+        "/dashboard/packages",
+        "/dashboard/my-sessions",
+        "/dashboard/listener-inbox",
+        "/dashboard/support-requests",
+        "/dashboard/impact",
+        "/dashboard/training-center",
+      ];
+      if (blocked.some((prefix) => pathname.startsWith(prefix))) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
+    if (role === "LISTENER") {
+      const blocked = [
+        "/dashboard/wallet",
+        "/dashboard/packages",
+        "/dashboard/my-sessions",
+        "/dashboard/consultations",
+        "/dashboard/patients",
+        "/dashboard/analytics",
+      ];
+      if (blocked.some((prefix) => pathname.startsWith(prefix))) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
+    if (role === "USER") {
+      const blocked = [
+        "/dashboard/listener-inbox",
+        "/dashboard/consultations",
+        "/dashboard/earnings",
+        "/dashboard/patients",
+        "/dashboard/analytics",
+        "/dashboard/support-requests",
+        "/dashboard/impact",
+        "/dashboard/training-center",
+      ];
+      if (blocked.some((prefix) => pathname.startsWith(prefix))) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
   }
 
   return NextResponse.next();

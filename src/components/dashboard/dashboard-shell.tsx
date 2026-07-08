@@ -560,13 +560,15 @@ function DashboardShellContent({ children }: DashboardShellProps) {
           ) : null}
 
           <div className="mt-auto space-y-5">
-            <button
-              type="button"
-              onClick={() => openBookSession()}
-              className="w-full rounded-full bg-text-secondary px-5 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-300 ease-(--ease-calm) hover:shadow-soft-hover"
-            >
-              Book Session
-            </button>
+            {role === "USER" ? (
+              <button
+                type="button"
+                onClick={() => openBookSession()}
+                className="w-full rounded-full bg-text-secondary px-5 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-300 ease-(--ease-calm) hover:shadow-soft-hover"
+              >
+                Book Session
+              </button>
+            ) : null}
 
             <button
               type="button"

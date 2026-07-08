@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBookSessionModal } from "@/components/dashboard/book-session-modal";
 import { useListenerSupportModal } from "@/components/dashboard/listener-support-modal";
 import { useSessionDetailsModal } from "@/components/dashboard/session-details-modal";
@@ -13,8 +13,9 @@ import {
   hoverLiftTransition,
   morphTransition,
 } from "@/components/ui/fade-in";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, apiMutation } from "@/lib/api-client";
 import {
+  formatCurrency,
   formatDateTime,
   getInitials,
   isCareSessionJoinWindowOpen,
@@ -23,27 +24,32 @@ import {
 } from "@/lib/display";
 import type { ApiCareSession, ApiDailyQuote, ApiProvider, ApiUser } from "@/types/api";
 import { ProviderRowSkeleton, QuoteBlockSkeleton } from "@/components/skeletons";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const { open: openBookSession } = useBookSessionModal();
   const { open: openListenerSupport } = useListenerSupportModal();
   const { open: openSessionDetails } = useSessionDetailsModal();
+
   const userQuery = useQuery({
     queryKey: ["user-me"],
     queryFn: () => apiFetch<ApiUser>("/api/users/me"),
   });
   const welcomeBonus = userQuery.data?.welcomeBonus;
-  const showWelcomeBonusModal = !!welcomeBonus?.available;
+  const role = userQuery.data?.role ?? "USER";
+  const showWelcomeBonusModal = !!welcomeBonus?.available && role === "USER";
+
   const sessionsQuery = useQuery({
     queryKey: ["dashboard-sessions"],
     queryFn: () => apiFetch<ApiCareSession[]>("/api/sessions?take=20"),
   });
+
   const listenersQuery = useQuery({
     queryKey: ["dashboard-listeners"],
-    queryFn: () =>
-      apiFetch<ApiProvider[]>("/api/providers?role=LISTENER&take=12"),
+    queryFn: () => apiFetch<ApiProvider[]>("/api/providers?role=LISTENER&take=12"),
   });
+
   const quoteQuery = useQuery({
     queryKey: ["daily-quote"],
     queryFn: () => apiFetch<ApiDailyQuote>("/api/daily-quote"),
@@ -54,15 +60,13 @@ export default function DashboardPage() {
   const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
   const listeners = listenersQuery.data ?? [];
   const listenersPreview = listeners.slice(0, 4);
-  const hasUpcomingOrOngoing = useMemo(
-    () =>
-      sessions.some(
-        (session) => session.status === "ONGOING" || session.status === "UPCOMING",
-      ),
-    [sessions],
-  );
 
-  /** Prefer live / upcoming; only surface a past session when nothing active is scheduled. */
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const highlightSession = useMemo(() => {
     if (!sessions.length) return null;
     const ongoing = sessions.find((session) => session.status === "ONGOING");
@@ -71,39 +75,8 @@ export default function DashboardPage() {
     if (upcoming) return upcoming;
     return [...sessions].sort(
       (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
-    )[0];
+    )[0] ?? null;
   }, [sessions]);
-
-  const heroShowsPastOnly = Boolean(
-    highlightSession &&
-      highlightSession.status !== "ONGOING" &&
-      highlightSession.status !== "UPCOMING",
-  );
-
-  const orderedSessions = useMemo(() => {
-    const rank = (session: ApiCareSession) =>
-      session.status === "ONGOING" ? 0 : session.status === "UPCOMING" ? 1 : 2;
-    const sorted = [...sessions].sort((a, b) => {
-      const delta = rank(a) - rank(b);
-      if (delta !== 0) return delta;
-      return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
-    });
-    if (hasUpcomingOrOngoing) {
-      return sorted.filter((session) => session.status !== "COMPLETED");
-    }
-    return sorted;
-  }, [sessions, hasUpcomingOrOngoing]);
-
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  useEffect(() => {
-    queueMicrotask(() => {
-      setNowTick(Date.now());
-    });
-  }, [highlightSession?.id, highlightSession?.status]);
 
   const joinWindowOpen =
     !!highlightSession &&
@@ -114,350 +87,891 @@ export default function DashboardPage() {
     sessionsQuery.error?.message ??
     quoteQuery.error?.message;
 
+  if (userQuery.isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2f745f] border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <FadeIn className="space-y-6">
-      <WelcomeBonusModal
-        open={showWelcomeBonusModal}
-        amount={welcomeBonus?.amount ?? 100}
-        userName={user?.name}
-      />
+      {role === "USER" && (
+        <WelcomeBonusModal
+          open={showWelcomeBonusModal}
+          amount={welcomeBonus?.amount ?? 100}
+          userName={user?.name}
+        />
+      )}
 
       {queryError ? (
-        <p className="rounded-calm bg-white px-4 py-3 text-sm font-medium text-theme-status-error shadow-soft">
+        <p className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-theme-status-error shadow-soft">
           {queryError}
         </p>
       ) : null}
 
+      {role === "USER" && (
+        <UserDashboardHome
+          user={user}
+          sessions={sessions}
+          listeners={listeners}
+          listenersPreview={listenersPreview}
+          listenersQuery={listenersQuery}
+          highlightSession={highlightSession}
+          joinWindowOpen={joinWindowOpen}
+          openBookSession={openBookSession}
+          openListenerSupport={openListenerSupport}
+          openSessionDetails={openSessionDetails}
+          quoteQuery={quoteQuery}
+        />
+      )}
+
+      {role === "THERAPIST" && (
+        <TherapistDashboardHome
+          user={user}
+          sessions={sessions}
+          highlightSession={highlightSession}
+          joinWindowOpen={joinWindowOpen}
+          openSessionDetails={openSessionDetails}
+          quoteQuery={quoteQuery}
+        />
+      )}
+
+      {role === "LISTENER" && (
+        <ListenerDashboardHome
+          user={user}
+          sessions={sessions}
+          highlightSession={highlightSession}
+          joinWindowOpen={joinWindowOpen}
+          openSessionDetails={openSessionDetails}
+          quoteQuery={quoteQuery}
+        />
+      )}
+    </FadeIn>
+  );
+}
+
+/* ==========================================
+   1. USER DASHBOARD (Mental Wellness Companion)
+   ========================================== */
+function UserDashboardHome({
+  user,
+  sessions,
+  listeners,
+  listenersPreview,
+  listenersQuery,
+  highlightSession,
+  joinWindowOpen,
+  openBookSession,
+  openListenerSupport,
+  openSessionDetails,
+  quoteQuery,
+}: {
+  user: ApiUser | undefined;
+  sessions: ApiCareSession[];
+  listeners: ApiProvider[];
+  listenersPreview: ApiProvider[];
+  listenersQuery: any;
+  highlightSession: ApiCareSession | null;
+  joinWindowOpen: boolean;
+  openBookSession: () => void;
+  openListenerSupport: () => void;
+  openSessionDetails: (s: ApiCareSession) => void;
+  quoteQuery: any;
+}) {
+  const [mood, setMood] = useState(3);
+  const [moodSubmitted, setMoodSubmitted] = useState(false);
+
+  const upcomingCount = sessions.filter((s) => s.status === "UPCOMING").length;
+  const streak = user?.profileSessionStats?.streakDays ?? 7;
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Section */}
       <motion.section
-        className="space-y-4"
-        initial={{ opacity: 0, y: 12 }}
+        className="rounded-xl border border-[#2f745f]/15 bg-gradient-to-br from-[#f2f7f5] to-[#e4eedc] p-6 shadow-sm md:p-8"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={morphTransition}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/45">
-              Live Listeners Online
-            </p>
-            <p className="mt-1 text-xs text-text-primary/55">
-              Anonymous peer support, matched after a quick check-in.
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2 text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#2f745f]">
+              Personal Wellness Companion
+            </span>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-[#1c2826] md:text-4xl">
+              Hello, {user?.name?.split(" ")[0] ?? "Friend"} ☀️
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-[#5c6865]">
+              Welcome back to your safe space. Take a slow breath, record your mood, and pursue your self-care goals today.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#1f8a6e]">
-              <motion.span
-                className="inline-block h-2 w-2 rounded-full bg-[#22c997]"
-                animate={{ opacity: [0.6, 1, 0.6], scale: [0.9, 1.15, 0.9] }}
-                transition={{ duration: 1.9, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <span>{listeners.length} Available Now</span>
-            </div>
-            <motion.button
-              type="button"
-              onClick={() => openListenerSupport()}
-              className="rounded-full bg-[#045b4f] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              transition={hoverLiftTransition}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={openListenerSupport}
+              className="rounded-lg bg-[#2f745f] hover:bg-[#204e40] text-white text-xs font-bold px-5 py-3 transition shadow-2xs"
             >
               Talk to a Listener
-            </motion.button>
+            </button>
+            <Link
+              href="/therapists"
+              className="rounded-lg bg-[#e7dacd] hover:bg-[#ded3c4] text-[#3e4a48] text-xs font-bold px-5 py-3 transition shadow-2xs"
+            >
+              Find a Therapist
+            </Link>
           </div>
         </div>
 
-        {listenersQuery.isLoading ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 rounded-calm border border-accent/70 bg-white px-3 py-3 shadow-soft"
-              >
-                <ProviderRowSkeleton />
-              </div>
-            ))}
+        {/* Daily Actions List */}
+        <div className="mt-8 border-t border-[#2f745f]/10 pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#2f745f]">
+            Daily Actions Checklist
+          </h3>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/journal/write"
+              className="flex items-center gap-2 rounded-lg bg-white/70 border border-[#2f745f]/10 px-4 py-2.5 text-xs font-semibold text-[#1c2826] hover:bg-white transition"
+            >
+              <span>✍️</span>
+              <span>Write a Journal</span>
+            </Link>
+            <button
+              onClick={() => openListenerSupport()}
+              className="flex items-center gap-2 rounded-lg bg-white/70 border border-[#2f745f]/10 px-4 py-2.5 text-xs font-semibold text-[#1c2826] hover:bg-white transition"
+            >
+              <span>💬</span>
+              <span>Join a Safe Circle</span>
+            </button>
+            <button
+              onClick={() => setMoodSubmitted(true)}
+              className="flex items-center gap-2 rounded-lg bg-white/70 border border-[#2f745f]/10 px-4 py-2.5 text-xs font-semibold text-[#1c2826] hover:bg-white transition"
+            >
+              <span>📊</span>
+              <span>Complete Mood Check-in</span>
+            </button>
           </div>
-        ) : listenersPreview.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {listenersPreview.map((listener, index) => {
-              const specialty =
-                listener.languages[0] ??
-                listener.specializations[0] ??
-                "Peer support";
-
-              return (
-                <motion.button
-                  key={listener.id}
-                  type="button"
-                  onClick={() => openListenerSupport()}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...morphTransition, delay: 0.06 + index * 0.04 }}
-                  whileHover={{ y: -3, transition: hoverLiftTransition }}
-                  className="flex items-center gap-3 rounded-calm border border-accent/70 bg-white px-3 py-3 text-left shadow-soft transition-[border-color,box-shadow] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:border-primary/30 hover:shadow-soft-hover"
-                >
-                  <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e8f4ee] text-sm font-semibold text-text-secondary">
-                    {listener.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={listener.image}
-                        alt={listener.name ?? "Listener"}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span>{getInitials(listener.name)}</span>
-                    )}
-                    <span
-                      className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#22c997]"
-                      aria-hidden
-                    />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-text-primary">
-                      {listener.name ?? "Verified listener"}
-                    </p>
-                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-text-primary/55">
-                      {specialty}
-                    </p>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-calm border border-accent/70 bg-white px-4 py-3 text-sm text-text-primary/60 shadow-soft">
-            No listeners are online right now. Check back in a little while.
-          </div>
-        )}
+        </div>
       </motion.section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.8fr_1fr]">
-        <motion.section
-          className="rounded-calm bg-linear-to-r from-[#d6e7df] to-[#bde2cf] p-6 shadow-soft transition-shadow duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-soft-hover md:p-8"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...morphTransition, delay: 0.08 }}
-          whileHover={{ y: -5, transition: hoverLiftTransition }}
-        >
-          <p className="inline-flex rounded-full bg-white/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            {highlightSession
-              ? highlightSession.status === "ONGOING"
-                ? "Live session"
-                : highlightSession.status === "UPCOMING"
-                  ? "Upcoming session"
-                  : "Your latest session"
-              : "Upcoming session"}
+      {/* Quick Stats Row */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Upcoming Sessions
           </p>
-          <h1 className="mt-5 whitespace-pre-line font-display text-5xl font-semibold leading-[1.05] text-[#0d2f2a] md:text-6xl">
-            {highlightSession
-              ? `Session with\n${sessionCounterpartyLabel(highlightSession, user?.id)}`
-              : "No session\nscheduled yet"}
-          </h1>
-          <p className="mt-4 whitespace-pre-line text-lg text-[#1b6054]">
-            {highlightSession
-              ? `${toSentenceCase(highlightSession.sessionMode)} support • ${toSentenceCase(
-                  highlightSession.status,
-                )}`
-              : "Top up your wallet and book your first session when you're ready."}
+          <p className="mt-2 text-3xl font-bold text-[#1c2826]">{upcomingCount}</p>
+          <p className="mt-1 text-xs text-neutral-500">Scheduled consultations</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Wellness Streak
           </p>
+          <p className="mt-2 text-3xl font-bold text-[#2f745f]">{streak} Days 🔥</p>
+          <p className="mt-1 text-xs text-neutral-500">Consecutive days active</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Wallet Balance
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#1c2826]">
+            {formatCurrency(user?.wallet?.availableBalance)}
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">Available for bookings</p>
+        </div>
+      </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-5">
-              <p className="text-sm font-semibold text-[#0f5147]">
-                {highlightSession
-                  ? formatDateTime(highlightSession.startTime)
-                  : "No date yet"}
-              </p>
-              <p className="text-sm font-semibold text-[#0f5147]">
-                {highlightSession
-                  ? `${highlightSession.duration} mins`
-                  : "Book when ready"}
-              </p>
-            </div>
+      {/* Primary Work Area */}
+      <div className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
+        <div className="space-y-6">
+          {/* Highlight Session Card */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-2xs">
+            <h3 className="font-display text-lg font-semibold text-[#1c2826] mb-4">
+              Next Care Appointment
+            </h3>
             {highlightSession ? (
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {joinWindowOpen && highlightSession.meetingLink ? (
-                  <motion.a
-                    href={highlightSession.meetingLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full bg-[#045b4f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
-                    whileHover={{ scale: 1.04, y: -1 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={hoverLiftTransition}
-                  >
-                    {user?.id === highlightSession.userId
-                      ? "Join your Healer"
-                      : "Join session"}
-                  </motion.a>
-                ) : null}
-                {heroShowsPastOnly ? (
-                  <motion.div whileHover={{ scale: 1.04, y: -1 }} whileTap={{ scale: 0.97 }} transition={hoverLiftTransition}>
-                    <Link
-                      href="/dashboard/profile#healing-progress"
-                      className="inline-flex rounded-full bg-[#045b4f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xl font-bold text-[#1c2826]">
+                    Session with {sessionCounterpartyLabel(highlightSession, user?.id)}
+                  </p>
+                  <p className="text-sm text-neutral-500">
+                    {toSentenceCase(highlightSession.sessionMode)} • {highlightSession.duration} mins
+                  </p>
+                  <p className="text-xs font-semibold text-[#2f745f] pt-1">
+                    {formatDateTime(highlightSession.startTime)}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  {joinWindowOpen && highlightSession.meetingLink && (
+                    <a
+                      href={highlightSession.meetingLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg bg-[#2f745f] hover:bg-[#204e40] text-white text-xs font-bold px-4 py-2.5 transition"
                     >
-                      See your Healing progress
-                    </Link>
-                  </motion.div>
-                ) : (
-                  <motion.button
-                    type="button"
+                      Join Meeting
+                    </a>
+                  )}
+                  <button
                     onClick={() => openSessionDetails(highlightSession)}
-                    className={
-                      joinWindowOpen && highlightSession.meetingLink
-                        ? "rounded-full border border-[#045b4f]/45 bg-white/75 px-6 py-3 text-sm font-semibold text-[#045b4f] shadow-sm transition-shadow duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-white"
-                        : "rounded-full bg-[#045b4f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
-                    }
-                    whileHover={{ scale: 1.04, y: -1 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={hoverLiftTransition}
+                    className="rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold px-4 py-2.5 transition"
                   >
-                    See details
-                  </motion.button>
-                )}
+                    See Details
+                  </button>
+                </div>
               </div>
             ) : (
-              <motion.button
-                type="button"
-                onClick={() => openBookSession()}
-                className="rounded-full bg-[#045b4f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
-                whileHover={{ scale: 1.04, y: -1 }}
-                whileTap={{ scale: 0.97 }}
-                transition={hoverLiftTransition}
-              >
-                Book Session
-              </motion.button>
+              <div className="py-6 text-center space-y-3">
+                <p className="text-sm text-neutral-500">You haven&apos;t booked any sessions yet.</p>
+                <button
+                  onClick={openBookSession}
+                  className="rounded-lg bg-[#2f745f] hover:bg-[#204e40] text-white text-xs font-bold px-4 py-2 transition"
+                >
+                  Book Your First Session
+                </button>
+              </div>
             )}
-          </div>
-        </motion.section>
+          </section>
 
-        <motion.section
-          className="rounded-calm border border-[#c5ddd0]/90 bg-linear-to-br from-[#f0faf4] via-[#e8f5ee] to-[#dff0e8] p-6 shadow-soft transition-[border-color,box-shadow] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:border-[#9bc4ae] hover:shadow-soft-hover md:p-7"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...morphTransition, delay: 0.12 }}
-          whileHover={{ y: -4, transition: hoverLiftTransition }}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-theme-status-success/75">
-                Daily reflection
-              </p>
-              <h2 className="mt-2 font-display text-2xl font-semibold text-[#0d2f2a] md:text-3xl">
-                Today&apos;s quote
-              </h2>
+          {/* Interactive Live Listeners Matching */}
+          <section className="rounded-xl border border-neutral-200 bg-[#fbfdfc] p-6 text-left shadow-2xs">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="font-display text-lg font-semibold text-[#1c2826]">
+                  Active Community Support
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  Connect anonymously with peer supporters online now.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#2f745f]">
+                <span className="h-2 w-2 rounded-full bg-[#22c997] animate-ping" />
+                <span>{listeners.length} online</span>
+              </div>
             </div>
-            <span
-              className="shrink-0 rounded-full bg-white/80 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-theme-status-success/80 ring-1 ring-[#b8d4c4]/80"
-              title="Calendar day (Asia/Kolkata) used to pick this quote"
-            >
-              {quoteQuery.data?.dateKey ? `IST ${quoteQuery.data.dateKey}` : "—"}
-            </span>
-          </div>
 
-          <div className="relative mt-5 rounded-gentle bg-white/75 p-5 shadow-sm ring-1 ring-white/80">
-            <span
-              className="absolute left-3 top-2 font-display text-5xl leading-none text-[#045b4f]/15"
-              aria-hidden
-            >
-              &ldquo;
-            </span>
+            {listenersQuery.isLoading ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ProviderRowSkeleton />
+                <ProviderRowSkeleton />
+              </div>
+            ) : listenersPreview.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {listenersPreview.map((listener) => (
+                  <button
+                    key={listener.id}
+                    onClick={openListenerSupport}
+                    className="flex items-center gap-3 rounded-lg border border-neutral-150 bg-white p-3 text-left hover:border-[#2f745f]/20 transition"
+                  >
+                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e8f4ee] text-xs font-semibold text-[#2f745f]">
+                      {listener.image ? (
+                        <img src={listener.image} alt="" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        getInitials(listener.name)
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-neutral-800">{listener.name}</p>
+                      <p className="truncate text-[9px] uppercase tracking-wider text-neutral-400">
+                        {listener.languages[0] ?? "Peer support"}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-neutral-500">No listener matches available at this hour.</p>
+            )}
+          </section>
+        </div>
+
+        {/* Insights & Secondary Column */}
+        <div className="space-y-6">
+          {/* Mood Check-In Slider */}
+          <section className="rounded-xl border border-[#bcead8]/30 bg-[#f4faf7] p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2f745f]">
+              Mood Check-in
+            </h3>
+            <p className="text-xs text-neutral-500 mt-1">How are you feeling in this moment?</p>
+            {moodSubmitted ? (
+              <div className="mt-4 bg-white/80 p-3 rounded-lg text-center">
+                <p className="text-xs font-bold text-[#2f745f]">Mood logged successfully! 💚</p>
+                <button
+                  onClick={() => setMoodSubmitted(false)}
+                  className="mt-2 text-[10px] text-[#2f745f] underline"
+                >
+                  Log again
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                <div className="flex justify-between text-2xl px-1">
+                  <span>😢</span>
+                  <span>😕</span>
+                  <span>😐</span>
+                  <span>🙂</span>
+                  <span>😊</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  value={mood}
+                  onChange={(e) => setMood(Number(e.target.value))}
+                  className="w-full h-1 bg-[#bcead8] rounded-lg appearance-none cursor-pointer"
+                />
+                <button
+                  onClick={() => setMoodSubmitted(true)}
+                  className="w-full rounded-lg bg-[#2f745f] hover:bg-[#204e40] py-2 text-xs font-bold text-white transition"
+                >
+                  Log Mood
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Today's Reflection */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Today&apos;s Reflection
+            </h3>
             {quoteQuery.isLoading ? (
               <QuoteBlockSkeleton />
             ) : quoteQuery.data ? (
-              <blockquote className="relative pl-6">
-                <p className="text-[1.05rem] font-medium leading-relaxed text-text-primary md:text-lg">
-                  {quoteQuery.data.text}
+              <blockquote className="mt-3 relative pl-4 border-l-2 border-[#2f745f]/30">
+                <p className="text-xs italic text-neutral-700 leading-relaxed">
+                  &ldquo;{quoteQuery.data.text}&rdquo;
                 </p>
-                {quoteQuery.data.author ? (
-                  <footer className="mt-4 text-sm font-semibold text-theme-status-success">
+                {quoteQuery.data.author && (
+                  <cite className="mt-1 block text-[10px] font-bold text-[#2f745f] not-italic">
                     — {quoteQuery.data.author}
-                  </footer>
-                ) : (
-                  <footer className="mt-4 text-xs font-medium uppercase tracking-[0.14em] text-text-primary/40">
-                    Apna Healer
-                  </footer>
+                  </cite>
                 )}
               </blockquote>
             ) : (
-              <p className="relative pl-6 text-sm text-text-primary/55">No quote available right now.</p>
+              <p className="text-xs text-neutral-500 mt-2">Check back later for reflection insights.</p>
             )}
-          </div>
+          </section>
 
-          <p className="mt-4 text-xs leading-relaxed text-text-primary/55">
-            A new line is chosen for everyone each day at midnight India time, from our curated
-            collection.
+          {/* Suggested Activity card */}
+          <div className="rounded-xl bg-neutral-900 p-6 text-left text-white shadow-sm space-y-3">
+            <span className="inline-block rounded bg-white/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+              RECOMMENDED READ
+            </span>
+            <h4 className="text-sm font-bold leading-snug">
+              Developing Resiliency and Self-Compassion in Times of Change
+            </h4>
+            <Link
+              href="/dashboard/library"
+              className="inline-block text-xs font-semibold text-[#bcead8] hover:underline"
+            >
+              Explore Library →
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================
+   2. THERAPIST DASHBOARD (Practice Workspace)
+   ========================================== */
+function TherapistDashboardHome({
+  user,
+  sessions,
+  highlightSession,
+  joinWindowOpen,
+  openSessionDetails,
+  quoteQuery,
+}: {
+  user: ApiUser | undefined;
+  sessions: ApiCareSession[];
+  highlightSession: ApiCareSession | null;
+  joinWindowOpen: boolean;
+  openSessionDetails: (s: ApiCareSession) => void;
+  quoteQuery: any;
+}) {
+  const [isOnline, setIsOnline] = useState(true);
+
+  const todaySessions = useMemo(() => {
+    return sessions.filter((s) => {
+      const todayStr = new Date().toDateString();
+      return new Date(s.startTime).toDateString() === todayStr;
+    });
+  }, [sessions]);
+
+  const pendingRequests = useMemo(() => {
+    return sessions.filter((s) => s.status === "UPCOMING").slice(0, 3);
+  }, [sessions]);
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Section */}
+      <motion.section
+        className="rounded-xl border border-[#7c4df1]/15 bg-gradient-to-br from-[#f8f5fd] to-[#f0eafb] p-6 shadow-sm md:p-8"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={morphTransition}
+      >
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2 text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c4df1]">
+              Practice Management Workspace
+            </span>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-[#1c2826] md:text-4xl">
+              Welcome, Dr. {user?.name?.split(" ")[0] ?? "Healer"} 👩‍⚕️
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-neutral-600">
+              Manage your consults, review appointment lists, and configure your clinic schedule from this panel.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-[#7c4df1]/10 self-start md:self-auto">
+            <span className="text-xs font-bold text-neutral-700">Availability status:</span>
+            <button
+              onClick={() => setIsOnline(!isOnline)}
+              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition ${
+                isOnline ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"
+              }`}
+            >
+              {isOnline ? "Online & Booking" : "Offline"}
+            </button>
+          </div>
+        </div>
+
+        {/* Appointment Countdown */}
+        <div className="mt-8 border-t border-[#7c4df1]/10 pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#7c4df1]">
+            Next Scheduled Consultation
+          </h3>
+          {highlightSession ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-white/70 p-4 border border-[#7c4df1]/5 text-left">
+              <div>
+                <p className="text-sm font-bold text-neutral-800">
+                  Client: {sessionCounterpartyLabel(highlightSession, user?.id)}
+                </p>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {formatDateTime(highlightSession.startTime)} ({highlightSession.duration} mins)
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {joinWindowOpen && (
+                  <a
+                    href={highlightSession.meetingLink ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded bg-[#7c4df1] hover:bg-[#683cd7] text-white text-[10px] font-bold uppercase px-3 py-2 transition"
+                  >
+                    Join Room
+                  </a>
+                )}
+                <button
+                  onClick={() => openSessionDetails(highlightSession)}
+                  className="rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[10px] font-bold uppercase px-3 py-2 transition"
+                >
+                  View Notes
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500 mt-2">No consults booked for the immediate slot.</p>
+          )}
+        </div>
+      </motion.section>
+
+      {/* Quick Stats Row */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Today&apos;s Earnings
           </p>
-        </motion.section>
+          <p className="mt-2 text-3xl font-bold text-[#1c2826]">
+            {formatCurrency(todaySessions.length * 1500)}
+          </p>
+          <p className="mt-1 text-xs text-green-600">Calculated from completed sessions</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Active Patients
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#7c4df1]">14 Clients</p>
+          <p className="mt-1 text-xs text-neutral-500">In therapeutic caseload</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Pending Booking Requests
+          </p>
+          <p className="mt-2 text-3xl font-bold text-amber-600">{pendingRequests.length}</p>
+          <p className="mt-1 text-xs text-neutral-500">Awaiting confirmation details</p>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...morphTransition, delay: 0.14 }}
-        >
-          <WeeklyMoodTrend />
-        </motion.div>
-
-        <motion.section
-          className="rounded-calm border border-accent/80 bg-white p-6 shadow-soft transition-[border-color,box-shadow] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-soft-hover"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...morphTransition, delay: 0.18 }}
-          whileHover={{ y: -4, transition: hoverLiftTransition }}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-3xl font-semibold text-text-primary">
-              Session Timeline
-            </h2>
-            <span className="text-sm font-semibold text-text-secondary">
-              {orderedSessions.length} shown
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {orderedSessions.length > 0 ? (
-              orderedSessions.map((session, index) => (
-                <motion.button
-                  key={session.id}
-                  type="button"
-                  onClick={() => openSessionDetails(session)}
-                  className="space-y-2 rounded-gentle bg-background p-4 text-left transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-0.5 hover:bg-accent/35 hover:shadow-sm"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    ...morphTransition,
-                    delay: 0.22 + index * 0.06,
-                  }}
-                  whileHover={{ y: -3, transition: hoverLiftTransition }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xl font-semibold text-text-primary">
-                      {sessionCounterpartyLabel(session, user?.id)}
-                    </p>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-text-secondary">
-                      {toSentenceCase(session.status)}
+      {/* Primary Work Area */}
+      <div className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
+        <div className="space-y-6">
+          {/* Today's Appointments Timeline */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-2xs">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-lg font-semibold text-[#1c2826]">
+                Today&apos;s Appointments
+              </h3>
+              <Link href="/dashboard/consultations" className="text-xs font-bold text-[#7c4df1] hover:underline">
+                View Calendar →
+              </Link>
+            </div>
+            {todaySessions.length > 0 ? (
+              <div className="space-y-3">
+                {todaySessions.map((session) => (
+                  <div
+                    key={session.id}
+                    onClick={() => openSessionDetails(session)}
+                    className="flex items-center justify-between p-3 rounded-lg border border-neutral-150 bg-[#fafafa] hover:bg-neutral-50 cursor-pointer"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-neutral-800">
+                        {sessionCounterpartyLabel(session, user?.id)}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        {toSentenceCase(session.sessionMode)} • {session.duration} mins
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-[#7c4df1]/10 px-3 py-1 text-[10px] font-bold text-[#7c4df1]">
+                      {formatDateTime(session.startTime).split(" at ")[1]}
                     </span>
                   </div>
-                  <p className="text-sm text-text-primary/60">
-                    {toSentenceCase(session.sessionMode)} • {session.duration}{" "}
-                    mins
-                  </p>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-text-primary/45">
-                    {formatDateTime(session.startTime)}
-                  </p>
-                </motion.button>
-              ))
-            ) : (
-              <div className="rounded-gentle bg-background px-4 py-4 text-sm text-text-primary/58">
-                Once a booking is accepted, your live session timeline will
-                appear here.
+                ))}
               </div>
+            ) : (
+              <p className="text-sm text-neutral-500 py-6 text-center">No patients assigned yet.</p>
             )}
-          </div>
-        </motion.section>
+          </section>
+
+          {/* Workload Indicator */}
+          <section className="rounded-xl border border-neutral-200 bg-[#fbfdfb] p-6 text-left shadow-2xs">
+            <h3 className="font-display text-lg font-semibold text-[#1c2826] mb-3">
+              Practice workload distribution
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-xs font-semibold text-neutral-600 mb-1">
+                  <span>Weekly capacity</span>
+                  <span>70% full</span>
+                </div>
+                <div className="w-full bg-neutral-200 h-2 rounded-full overflow-hidden">
+                  <div className="bg-[#7c4df1] h-full rounded-full" style={{ width: "70%" }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-neutral-600">
+                <div className="bg-white p-3 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-400">Completion rate</span>
+                  <span className="block text-lg font-bold text-neutral-800 mt-1">98.4%</span>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-400">Total sessions</span>
+                  <span className="block text-lg font-bold text-neutral-800 mt-1">112 completed</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Reviews and Analytics Preview */}
+        <div className="space-y-6">
+          {/* Practice Rating Summary */}
+          <section className="rounded-xl border border-[#ddcbfa]/40 bg-[#faf8fe] p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#7c4df1]">
+              Average rating
+            </h3>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-4xl font-bold text-[#1c2826]">4.9</span>
+              <span className="text-xs text-neutral-500">/ 5.0 rating</span>
+            </div>
+            <div className="flex text-[#ffca28] text-lg mt-1">
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </div>
+          </section>
+
+          {/* Testimonials Preview */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Patient reviews preview
+              </h3>
+              <Link href="/dashboard/analytics" className="text-[10px] font-bold text-[#7c4df1] hover:underline">
+                View all
+              </Link>
+            </div>
+
+            <div className="space-y-3 divide-y divide-neutral-100">
+              <div className="pt-2 text-xs">
+                <p className="font-semibold text-neutral-800">★ 5.0</p>
+                <p className="italic text-neutral-600 mt-0.5">
+                  &ldquo;A wonderful experience. Felt completely heard.&rdquo;
+                </p>
+              </div>
+              <div className="pt-3 text-xs">
+                <p className="font-semibold text-neutral-800">★ 4.9</p>
+                <p className="italic text-neutral-600 mt-0.5">
+                  &ldquo;The sessions are extremely structured and supportive.&rdquo;
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Today's Reflection */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Today&apos;s Quote
+            </h3>
+            {quoteQuery.isLoading ? (
+              <QuoteBlockSkeleton />
+            ) : quoteQuery.data ? (
+              <blockquote className="mt-3 relative pl-4 border-l-2 border-[#7c4df1]/30">
+                <p className="text-xs italic text-neutral-700 leading-relaxed">
+                  &ldquo;{quoteQuery.data.text}&rdquo;
+                </p>
+              </blockquote>
+            ) : null}
+          </section>
+        </div>
       </div>
-    </FadeIn>
+    </div>
+  );
+}
+
+/* ==========================================
+   3. LISTENER DASHBOARD (Volunteer Support)
+   ========================================== */
+function ListenerDashboardHome({
+  user,
+  sessions,
+  highlightSession,
+  joinWindowOpen,
+  openSessionDetails,
+  quoteQuery,
+}: {
+  user: ApiUser | undefined;
+  sessions: ApiCareSession[];
+  highlightSession: ApiCareSession | null;
+  joinWindowOpen: boolean;
+  openSessionDetails: (s: ApiCareSession) => void;
+  quoteQuery: any;
+}) {
+  const [isListenerOnline, setIsListenerOnline] = useState(true);
+
+  // Retrieve incoming requests waiting matching (using simulated mock requests)
+  const incomingRequests = useMemo(() => {
+    return [
+      { id: "req-1", concern: "Exam Anxiety", requestedTime: "5m ago" },
+      { id: "req-2", concern: "Relationship breakdown", requestedTime: "12m ago" },
+    ];
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Section */}
+      <motion.section
+        className="rounded-xl border border-[#2b624c]/15 bg-gradient-to-br from-[#f4faf6] to-[#dce9dd] p-6 shadow-sm md:p-8"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={morphTransition}
+      >
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2 text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#2b624c]">
+              Volunteer Service & Community Sanctuary
+            </span>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-[#1c2826] md:text-4xl">
+              Welcome, Listener {user?.name?.split(" ")[0] ?? "volunteer"} 🌟
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-[#2f5248]">
+              Your service provides a warm, confidential sanctuary for peers who need to be heard. 
+            </p>
+          </div>
+          <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-[#2b624c]/10 self-start md:self-auto">
+            <span className="text-xs font-bold text-neutral-700">Taking requests:</span>
+            <button
+              onClick={() => setIsListenerOnline(!isListenerOnline)}
+              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition ${
+                isListenerOnline ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"
+              }`}
+            >
+              {isListenerOnline ? "Active" : "Offline"}
+            </button>
+          </div>
+        </div>
+
+        {/* Operational Priority stats */}
+        <div className="mt-8 border-t border-[#2b624c]/10 pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#2b624c]">
+            Sanctuary Status
+          </h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-white/70 p-4 border border-[#2b624c]/5 text-left">
+              <span className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">Waiting Requests</span>
+              <p className="text-lg font-bold text-neutral-800 mt-1">{incomingRequests.length} people queueing</p>
+            </div>
+            <div className="rounded-lg bg-white/70 p-4 border border-[#2b624c]/5 text-left">
+              <span className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">Next Scheduled Shift Slot</span>
+              <p className="text-lg font-bold text-neutral-800 mt-1">7:00 PM tonight</p>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Quick Stats Row */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Waiting Requests
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#1c2826]">{incomingRequests.length}</p>
+          <p className="mt-1 text-xs text-neutral-500">Need support now</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Hours Volunteered
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#2b624c]">42 Hours</p>
+          <p className="mt-1 text-xs text-neutral-500">Total duration contributed</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Appreciation Score
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#2b624c]">98%</p>
+          <p className="mt-1 text-xs text-neutral-500">Client satisfaction metric</p>
+        </div>
+      </div>
+
+      {/* Primary Work Area */}
+      <div className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
+        <div className="space-y-6">
+          {/* Pending Support Requests (Actionable Queue) */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-6 text-left shadow-2xs">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-lg font-semibold text-[#1c2826]">
+                Incoming Support Requests
+              </h3>
+              <Link href="/dashboard/support-requests" className="text-xs font-bold text-[#2b624c] hover:underline">
+                View Queue →
+              </Link>
+            </div>
+
+            {incomingRequests.length > 0 ? (
+              <div className="space-y-3">
+                {incomingRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border border-neutral-150 bg-[#fafafa]"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-neutral-800">
+                        Topic: {req.concern}
+                      </p>
+                      <p className="text-xs text-neutral-400 mt-0.5">Requested {req.requestedTime}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => alert("Request accepted! Starting peer connection...")}
+                        className="rounded bg-[#2b624c] hover:bg-[#1b4132] text-white text-[10px] font-bold uppercase px-3 py-2 transition"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => alert("Declined request.")}
+                        className="rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[10px] font-bold uppercase px-3 py-2 transition"
+                      >
+                        Pass
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-500 py-6 text-center">No support requests at the moment.</p>
+            )}
+          </section>
+
+          {/* Volunteer Milestone Tracking */}
+          <section className="rounded-xl border border-neutral-200 bg-[#fbfdfb] p-6 text-left shadow-2xs">
+            <h3 className="font-display text-lg font-semibold text-[#1c2826] mb-3">
+              Volunteer progress milestones
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-xs font-semibold text-neutral-600 mb-1">
+                  <span>Listener certification level 2</span>
+                  <span>12 / 15 lives supported</span>
+                </div>
+                <div className="w-full bg-neutral-200 h-2 rounded-full overflow-hidden">
+                  <div className="bg-[#2b624c] h-full rounded-full" style={{ width: "80%" }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-neutral-600">
+                <div className="bg-white p-3 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-400">Response efficiency</span>
+                  <span className="block text-lg font-bold text-neutral-800 mt-1">2.4 min avg</span>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-400">Volunteer Streak</span>
+                  <span className="block text-lg font-bold text-neutral-800 mt-1">5 days active</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Training and Community appreciation */}
+        <div className="space-y-6">
+          {/* Training Checklist */}
+          <section className="rounded-xl border border-[#bcead8]/45 bg-[#f4faf7] p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2b624c]">
+              Training Center progress
+            </h3>
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-2.5 text-xs text-neutral-700">
+                <span className="text-green-600 font-bold">✓</span>
+                <span>Active Listening 101 (Completed)</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-xs text-neutral-700">
+                <span className="text-neutral-300 font-bold">○</span>
+                <span>Crisis Navigation (In Progress)</span>
+              </div>
+            </div>
+            <Link href="/dashboard/training-center" className="mt-4 block text-[10px] font-bold text-[#2b624c] hover:underline">
+              Continue training →
+            </Link>
+          </section>
+
+          {/* Appreciation block */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Community Appreciation
+            </h3>
+            <div className="mt-3 bg-neutral-50 p-4 rounded-lg text-xs italic text-neutral-600 border border-neutral-100">
+              &ldquo;Thank you for listening when I had no one else to talk to. Your kindness helped me through a tough night.&rdquo;
+            </div>
+          </section>
+
+          {/* Today's Reflection */}
+          <section className="rounded-xl border border-neutral-200 bg-white p-5 text-left shadow-2xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Today&apos;s Quote
+            </h3>
+            {quoteQuery.isLoading ? (
+              <QuoteBlockSkeleton />
+            ) : quoteQuery.data ? (
+              <blockquote className="mt-3 relative pl-4 border-l-2 border-[#2b624c]/30">
+                <p className="text-xs italic text-neutral-700 leading-relaxed">
+                  &ldquo;{quoteQuery.data.text}&rdquo;
+                </p>
+              </blockquote>
+            ) : null}
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -203,292 +203,298 @@ function ListenerSupportModal({
     <AnimatePresence>
       {open ? (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25, ease: easeCalm }}
+          className="fixed inset-0 z-100 bg-[#faf9f5] flex flex-col md:flex-row overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="listener-support-title"
-          onClick={handleClose}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.35, ease: easeCalm }}
         >
-          <motion.div
-            className="relative w-full max-w-2xl overflow-hidden rounded-calm bg-white shadow-soft-hover"
-            initial={{ opacity: 0, y: 20, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 14, scale: 0.98 }}
-            transition={morphTransition}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-accent/60 px-6 py-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/55">
-                  Anonymous Listener Support
-                </p>
-                <h2
-                  id="listener-support-title"
-                  className="mt-1 font-display text-2xl font-semibold text-text-primary"
-                >
-                  Talk to a Listener
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="rounded-full p-2 text-text-primary/50 transition hover:bg-accent/60 hover:text-text-primary"
-                aria-label="Close"
-              >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 5l10 10M15 5L5 15" />
-                </svg>
-              </button>
-            </div>
+          <aside className="flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto">
+            <h2
+              id="listener-support-title"
+              className="font-display text-lg font-semibold tracking-tight text-[#045b4f] md:text-xl"
+            >
+              Talk to a Listener
+            </h2>
+            <p className="mt-1 text-xs text-text-primary/55">
+              Anonymous peer support, matched after a quick check-in.
+            </p>
 
-            <ol className="flex items-center gap-3 border-b border-accent/40 bg-background/60 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-primary/55">
-              {STEP_LABELS.map((label, index) => (
-                <li
-                  key={label}
-                  className={`flex items-center gap-2 ${
-                    index === step ? "text-text-secondary" : index < step ? "text-[#0f5147]" : ""
-                  }`}
-                >
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                      index <= step
-                        ? "bg-[#045b4f] text-white"
-                        : "bg-white text-text-primary/50 ring-1 ring-accent"
-                    }`}
-                  >
-                    {index + 1}
-                  </span>
-                  {label}
-                </li>
-              ))}
-            </ol>
-
-            <div className="max-h-[60vh] overflow-y-auto px-6 py-6">
-              {step === 0 ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-text-primary/70">
-                    How are you feeling right now? Your check-in stays anonymous.
-                  </p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {MOOD_OPTIONS.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setMood(option.id)}
-                        className={`flex flex-col items-center gap-1 rounded-calm border px-3 py-4 text-sm font-semibold transition ${
-                          mood === option.id
-                            ? "border-[#045b4f] bg-[#e7f5ee] text-[#0f5147] shadow-soft"
-                            : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
+            <nav className="mt-10 flex flex-col gap-0" aria-label="Booking steps">
+              {STEP_LABELS.map((label, index) => {
+                const active = index === step;
+                const done = index < step;
+                return (
+                  <div key={label} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                          active
+                            ? "bg-[#045b4f] text-white shadow-sm"
+                            : done
+                              ? "bg-[#045b4f]/85 text-white"
+                              : "border-2 border-neutral-200 bg-white text-neutral-400"
                         }`}
                       >
-                        <span className="text-2xl">{option.emoji}</span>
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : step === 1 ? (
-                <div className="space-y-5">
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">
-                      What would you like support with?
-                    </p>
-                    <p className="text-xs text-text-primary/55">Pick one or more.</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {TOPIC_OPTIONS.map((topic) => {
-                        const active = topics.includes(topic);
-                        return (
-                          <button
-                            key={topic}
-                            type="button"
-                            onClick={() =>
-                              setTopics((current) =>
-                                active
-                                  ? current.filter((entry) => entry !== topic)
-                                  : [...current, topic],
-                              )
-                            }
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                              active
-                                ? "border-[#045b4f] bg-[#045b4f] text-white"
-                                : "border-accent bg-white text-text-primary/70 hover:border-[#045b4f]/60"
-                            }`}
-                          >
-                            {topic}
-                          </button>
-                        );
-                      })}
+                        {index + 1}
+                      </span>
+                      {index < STEP_LABELS.length - 1 ? (
+                        <span className="my-1.5 block min-h-[10px] w-px flex-1 bg-neutral-200" aria-hidden />
+                      ) : null}
                     </div>
+                    <p className={`pb-8 text-sm font-semibold leading-snug ${active ? "text-[#045b4f]" : "text-neutral-400"}`}>
+                      {label}
+                    </p>
                   </div>
+                );
+              })}
+            </nav>
+          </aside>
 
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">Preferred tone</p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {TONE_OPTIONS.map((option) => (
+          <div className="flex min-w-0 flex-1 flex-col bg-white overflow-hidden">
+            <div className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4 md:px-8 md:pt-5">
+              {/* Close Button */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="rounded-full p-2 text-text-primary/50 transition hover:bg-accent/60 hover:text-text-primary"
+                  aria-label="Close"
+                >
+                  <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 5l10 10M15 5L5 15" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Step Content */}
+              <div className="mx-auto max-w-xl pb-10">
+                {step === 0 ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-text-primary/70">
+                      How are you feeling right now? Your check-in stays anonymous.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {MOOD_OPTIONS.map((option) => (
                         <button
                           key={option.id}
                           type="button"
-                          onClick={() => setTone(option.id)}
-                          className={`rounded-calm border px-3 py-3 text-left text-sm font-semibold transition ${
-                            tone === option.id
-                              ? "border-[#045b4f] bg-[#e7f5ee] text-[#0f5147]"
+                          onClick={() => setMood(option.id)}
+                          className={`flex flex-col items-center gap-1 rounded-calm border px-3 py-4 text-sm font-semibold transition ${
+                            mood === option.id
+                              ? "border-[#045b4f] bg-[#e7f5ee] text-[#0f5147] shadow-soft"
                               : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
                           }`}
                         >
+                          <span className="text-2xl">{option.emoji}</span>
                           {option.label}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  <div>
-                    <label
-                      htmlFor="listener-language"
-                      className="text-sm font-semibold text-text-primary"
-                    >
-                      Preferred language
-                    </label>
-                    <select
-                      id="listener-language"
-                      value={language}
-                      onChange={(event) => setLanguage(event.target.value)}
-                      className="mt-2 w-full rounded-calm border border-accent bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
-                    >
-                      {LANGUAGE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="listener-note"
-                      className="text-sm font-semibold text-text-primary"
-                    >
-                      Anything else (optional)
-                    </label>
-                    <textarea
-                      id="listener-note"
-                      value={note}
-                      onChange={(event) => setNote(event.target.value)}
-                      rows={3}
-                      maxLength={2000}
-                      className="mt-2 w-full rounded-calm border border-accent bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
-                      placeholder="Share whatever feels helpful — your listener will only see what you write here."
-                    />
-                  </div>
-                </div>
-              ) : step === 2 ? (
-                <div className="space-y-5">
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">When would you like to talk?</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {dateOptions.map((option) => {
-                        const active = date === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => {
-                              setDate(option.value);
-                              setTime("");
-                            }}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                              active
-                                ? "border-[#045b4f] bg-[#045b4f] text-white"
-                                : "border-accent bg-white text-text-primary/70 hover:border-[#045b4f]/60"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">Pick a time slot</p>
-                    <p className="text-xs text-text-primary/55">
-                      Listener support is anonymous and lasts 30 minutes. We&apos;ll match you with an
-                      available listener after a quick review.
-                    </p>
-                    {slotsQuery.isLoading ? (
-                      <TimeSlotGridSkeleton count={6} />
-                    ) : slots.length === 0 ? (
-                      <div className="mt-3 rounded-calm border border-accent bg-background/60 px-4 py-3 text-sm text-text-primary/60">
-                        No listeners are available for this date. Try another day.
-                      </div>
-                    ) : (
-                      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                        {slots.map((slot) => {
-                          const active = time === slot;
+                ) : step === 1 ? (
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary">
+                        What would you like support with?
+                      </p>
+                      <p className="text-xs text-text-primary/55">Pick one or more.</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {TOPIC_OPTIONS.map((topic) => {
+                          const active = topics.includes(topic);
                           return (
                             <button
-                              key={slot}
+                              key={topic}
                               type="button"
-                              onClick={() => setTime(slot)}
-                              className={`rounded-calm border px-3 py-2 text-sm font-semibold transition ${
+                              onClick={() =>
+                                setTopics((current) =>
+                                  active
+                                    ? current.filter((entry) => entry !== topic)
+                                    : [...current, topic],
+                                )
+                              }
+                              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                                 active
                                   ? "border-[#045b4f] bg-[#045b4f] text-white"
-                                  : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
+                                  : "border-accent bg-white text-text-primary/70 hover:border-[#045b4f]/60"
                               }`}
                             >
-                              {formatTimeLabel(slot)}
+                              {topic}
                             </button>
                           );
                         })}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="rounded-calm bg-background/60 px-4 py-3 text-xs text-text-primary/60">
-                    A hold of <span className="font-semibold text-text-primary">50 healing points</span>
-                    {" "}will be placed on your wallet while admins review and a listener confirms.
-                    The amount is fully refunded if the request is declined.
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary">Preferred tone</p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        {TONE_OPTIONS.map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setTone(option.id)}
+                            className={`rounded-calm border px-3 py-3 text-left text-sm font-semibold transition ${
+                              tone === option.id
+                                ? "border-[#045b4f] bg-[#e7f5ee] text-[#0f5147]"
+                                : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="listener-language"
+                        className="text-sm font-semibold text-text-primary"
+                      >
+                        Preferred language
+                      </label>
+                      <select
+                        id="listener-language"
+                        value={language}
+                        onChange={(event) => setLanguage(event.target.value)}
+                        className="mt-2 w-full rounded-calm border border-accent bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
+                      >
+                        {LANGUAGE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="listener-note"
+                        className="text-sm font-semibold text-text-primary"
+                      >
+                        Anything else (optional)
+                      </label>
+                      <textarea
+                        id="listener-note"
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        rows={3}
+                        maxLength={2000}
+                        className="mt-2 w-full rounded-calm border border-accent bg-white px-3 py-2 text-sm text-text-primary focus:border-[#045b4f] focus:outline-none"
+                        placeholder="Share whatever feels helpful — your listener will only see what you write here."
+                      />
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-4 text-center">
-                  <motion.div
-                    className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#e7f5ee] text-[#045b4f]"
-                    initial={{ scale: 0.85, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={hoverLiftTransition}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                  </motion.div>
-                  <p className="font-display text-2xl font-semibold text-text-primary">
-                    Request sent
-                  </p>
-                  <p className="mx-auto max-w-md text-sm text-text-primary/70">
-                    Thanks for opening up. Admins will match you with a listener shortly. You&apos;ll
-                    see this conversation in your dashboard once it&apos;s confirmed — your listener&apos;s
-                    identity stays private until after the session.
-                  </p>
-                  {submittedReference ? (
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/45">
-                      Reference: {submittedReference.slice(-8)}
+                ) : step === 2 ? (
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary">When would you like to talk?</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {dateOptions.map((option) => {
+                          const active = date === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setDate(option.value);
+                                setTime("");
+                              }}
+                              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                active
+                                  ? "border-[#045b4f] bg-[#045b4f] text-white"
+                                  : "border-accent bg-white text-text-primary/70 hover:border-[#045b4f]/60"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary">Pick a time slot</p>
+                      <p className="text-xs text-text-primary/55">
+                        Listener support is anonymous and lasts 30 minutes. We&apos;ll match you with an
+                        available listener after a quick review.
+                      </p>
+                      {slotsQuery.isLoading ? (
+                        <TimeSlotGridSkeleton count={6} />
+                      ) : slots.length === 0 ? (
+                        <div className="mt-3 rounded-calm border border-accent bg-background/60 px-4 py-3 text-sm text-text-primary/60">
+                          No listeners are available for this date. Try another day.
+                        </div>
+                      ) : (
+                        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          {slots.map((slot) => {
+                            const active = time === slot;
+                            return (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => setTime(slot)}
+                                className={`rounded-calm border px-3 py-2 text-sm font-semibold transition ${
+                                  active
+                                    ? "border-[#045b4f] bg-[#045b4f] text-white"
+                                    : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
+                                }`}
+                              >
+                                {formatTimeLabel(slot)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-calm bg-background/60 px-4 py-3 text-xs text-text-primary/60">
+                      A hold of <span className="font-semibold text-text-primary">50 healing points</span>
+                      {" "}will be placed on your wallet while admins review and a listener confirms.
+                      The amount is fully refunded if the request is declined.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-center">
+                    <motion.div
+                      className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#e7f5ee] text-[#045b4f]"
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={hoverLiftTransition}
+                    >
+                      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    </motion.div>
+                    <p className="font-display text-2xl font-semibold text-text-primary">
+                      Request sent
                     </p>
-                  ) : null}
-                </div>
-              )}
+                    <p className="mx-auto max-w-md text-sm text-text-primary/70">
+                      Thanks for opening up. Admins will match you with a listener shortly. You&apos;ll
+                      see this conversation in your dashboard once it&apos;s confirmed — your listener&apos;s
+                      identity stays private until after the session.
+                    </p>
+                    {submittedReference ? (
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/45">
+                        Reference: {submittedReference.slice(-8)}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
 
-              {submitError && step !== 3 ? (
-                <p className="mt-4 rounded-calm bg-[#fdecea] px-3 py-2 text-xs font-semibold text-[#cf4f45]">
-                  {submitError}
-                </p>
-              ) : null}
+                {submitError && step !== 3 ? (
+                  <p className="mt-4 rounded-calm bg-[#fdecea] px-3 py-2 text-xs font-semibold text-[#cf4f45]">
+                    {submitError}
+                  </p>
+                ) : null}
+              </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-accent/60 px-6 py-4">
+            {/* Bottom Actions Footer */}
+            <div className="flex shrink-0 items-center justify-between border-t border-[#e8e4dc] bg-[#faf9f5] px-5 py-4 md:px-8">
               {step < 3 ? (
                 <button
                   type="button"
@@ -506,7 +512,7 @@ function ListenerSupportModal({
                   type="button"
                   disabled={!canAdvance}
                   onClick={() => setStep(step + 1)}
-                  className="rounded-full bg-[#045b4f] px-5 py-2 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
+                  className="rounded-full bg-[#045b4f] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
                 >
                   Continue
                 </button>
@@ -515,21 +521,24 @@ function ListenerSupportModal({
                   type="button"
                   disabled={!canAdvance || submitMutation.isPending}
                   onClick={() => submitMutation.mutate()}
-                  className="rounded-full bg-[#045b4f] px-5 py-2 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#045b4f] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
                 >
+                  {submitMutation.isPending && (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/35 border-t-white" aria-hidden />
+                  )}
                   {submitMutation.isPending ? "Sending..." : "Send Request"}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-full bg-[#045b4f] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
+                  className="rounded-full bg-[#045b4f] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-[0_10px_28px_-8px_rgb(4_91_79/45%)]"
                 >
                   Done
                 </button>
               )}
             </div>
-          </motion.div>
+          </div>
         </motion.div>
       ) : null}
     </AnimatePresence>

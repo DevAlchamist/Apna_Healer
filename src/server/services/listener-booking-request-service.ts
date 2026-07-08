@@ -103,6 +103,13 @@ export async function createListenerBookingRequest(
   }
 
   return prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new ApiError(404, "User not found.", "USER_NOT_FOUND");
+    }
+    if (user.role !== Role.USER) {
+      throw new ApiError(403, "Only users can create listener booking requests.", "FORBIDDEN");
+    }
     const wallet = await tx.wallet.findUnique({ where: { userId } });
     if (!wallet) {
       throw new ApiError(404, "Wallet was not found.", "WALLET_NOT_FOUND");

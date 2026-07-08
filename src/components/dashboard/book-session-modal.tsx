@@ -743,41 +743,23 @@ function BookSessionModal({
   return (
     <AnimatePresence>
       {open ? (
-        <div
-          className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-6"
+        <motion.div
+          className="fixed inset-0 z-100 bg-[#faf9f5] flex flex-col md:flex-row overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="book-session-title"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.35, ease: easeCalm }}
         >
-          <motion.button
-            type="button"
-            aria-label="Close dialog"
-            className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: easeCalm }}
-            onClick={handleClose}
-          />
-
-          <motion.div
-            className={`relative z-1 flex w-full overflow-hidden shadow-[0_24px_80px_-24px_rgb(43_43_43/35%)] ${
+          <aside
+            className={
               isListenerCheckIn
-                ? "max-w-[1040px] rounded-[22px] bg-white"
-                : "max-w-[980px] rounded-calm bg-white"
-            }`}
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.4, ease: easeCalm }}
+                ? "flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto"
+                : "flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
+            }
           >
-            <aside
-              className={
-                isListenerCheckIn
-                  ? "flex w-[min(100%,280px)] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:w-[300px] md:p-7"
-                  : "flex w-[min(100%,260px)] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-5 md:w-[280px] md:p-6"
-              }
-            >
               <h2
                 id="book-session-title"
                 className={
@@ -891,8 +873,8 @@ function BookSessionModal({
             <div
               className={
                 isListenerCheckIn
-                  ? "flex min-h-[min(74vh,640px)] min-w-0 flex-1 flex-col bg-white"
-                  : "flex min-h-[min(74vh,620px)] min-w-0 flex-1 flex-col"
+                  ? "flex min-w-0 flex-1 flex-col bg-white overflow-hidden"
+                  : "flex min-w-0 flex-1 flex-col bg-white overflow-hidden"
               }
             >
               <div className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4 md:px-8 md:pt-5">
@@ -1844,46 +1826,45 @@ function BookSessionModal({
                 )}
               </div>
             </div>
-          </motion.div>
 
-          {!isListenerCheckIn ? (
-            <motion.div
-              className="pointer-events-none fixed bottom-6 right-6 z-2 hidden max-w-[220px] rounded-gentle border border-accent/80 bg-white/95 p-3 text-xs text-text-primary/70 shadow-soft md:block"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...morphTransition, delay: 0.15 }}
-            >
-              <div className="flex items-start gap-2">
-                <span className="text-text-secondary" aria-hidden>
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  >
-                    <path
-                      d="M4 10v4a8 8 0 0012.5 6.5M8 8h.01M12 8h.01M16 8h.01"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M16 3l4 4-4 4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                <div>
-                  <p className="font-semibold text-text-secondary">Live flow</p>
-                  <p className="mt-0.5 leading-relaxed">
-                    Therapist bookings support wallet, QR, or card payment. Listener bookings
-                    always deduct from your wallet balance.
-                  </p>
+            {!isListenerCheckIn ? (
+              <motion.div
+                className="pointer-events-none absolute bottom-16 right-6 z-2 hidden max-w-[220px] rounded-gentle border border-accent/80 bg-white/95 p-3 text-xs text-text-primary/70 shadow-soft md:block"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...morphTransition, delay: 0.15 }}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary" aria-hidden>
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    >
+                      <path
+                        d="M4 10v4a8 8 0 0012.5 6.5M8 8h.01M12 8h.01M16 8h.01"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M16 3l4 4-4 4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="font-semibold text-text-secondary">Live flow</p>
+                    <p className="mt-0.5 leading-relaxed">
+                      Therapist bookings support wallet, QR, or card payment. Listener bookings
+                      always deduct from your wallet balance.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ) : null}
-        </div>
+              </motion.div>
+            ) : null}
+        </motion.div>
       ) : null}
     </AnimatePresence>
   );

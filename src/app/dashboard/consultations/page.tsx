@@ -653,6 +653,86 @@ export default function ConsultationsPage() {
             )}
           </motion.div>
         </div>
+
+        {/* Weekly Availability & Slots Planner */}
+        <section className="mt-8 border-t border-[#2D5A4C]/10 pt-8 text-left space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="font-display text-xl font-semibold tracking-tight" style={{ color: FOREST }}>
+                Weekly Availability & Slot Planner
+              </h2>
+              <p className="text-xs text-neutral-500 mt-1">
+                Configure your active patient consultation hours and select booking slot duration presets.
+              </p>
+            </div>
+            <button
+              onClick={() => alert("Clinic availability hours updated successfully!")}
+              className="rounded-full px-5 py-2.5 text-xs font-bold text-white transition shadow-sm hover:opacity-95"
+              style={{ backgroundColor: FOREST }}
+            >
+              Save Availability Settings
+            </button>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
+            {/* Slot Preset selection */}
+            <div className="bg-white border border-neutral-200 rounded-xl p-5 shadow-2xs space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#2D5A4C]">Slot Durations</h3>
+              <p className="text-[11px] text-neutral-400">Choose standard session length for patient booking slots.</p>
+              <div className="space-y-2 pt-2">
+                {[
+                  { label: "30-Minute Consults", desc: "Brief check-ins / intakes" },
+                  { label: "50-Minute Therapy", desc: "Standard clinical therapy hour" },
+                  { label: "60-Minute Double Session", desc: "Deep counseling / couples therapy" },
+                ].map((preset, idx) => (
+                  <label key={idx} className="flex items-start gap-3 rounded-lg border border-neutral-100 p-3 hover:bg-neutral-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="slot-preset"
+                      defaultChecked={idx === 1}
+                      className="mt-0.5 h-4 w-4 accent-[#2D5A4C]"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-neutral-800">{preset.label}</p>
+                      <p className="text-[10px] text-neutral-400 mt-0.5">{preset.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Time scheduling table */}
+            <div className="bg-white border border-neutral-200 rounded-xl p-5 shadow-2xs space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#2D5A4C]">Shift Schedule</h3>
+              <div className="space-y-3">
+                {[
+                  { day: "Monday", slots: ["09:00 AM - 12:00 PM", "02:00 PM - 05:00 PM"] },
+                  { day: "Tuesday", slots: ["09:00 AM - 12:00 PM", "02:00 PM - 05:00 PM"] },
+                  { day: "Wednesday", slots: ["09:00 AM - 12:00 PM"] },
+                  { day: "Thursday", slots: ["09:00 AM - 12:00 PM", "02:00 PM - 05:00 PM"] },
+                  { day: "Friday", slots: ["09:00 AM - 12:00 PM"] },
+                ].map((sched) => (
+                  <div key={sched.day} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
+                    <span className="text-xs font-bold text-neutral-700 w-24">{sched.day}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {sched.slots.map((s, i) => (
+                        <span key={i} className="rounded bg-[#2D5A4C]/10 px-2.5 py-1 text-[10px] font-bold text-[#2D5A4C]">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => alert(`Add new slot time window for ${sched.day}`)}
+                      className="text-[10px] font-bold text-[#2D5A4C] hover:underline shrink-0 text-left sm:text-right"
+                    >
+                      + Add slot window
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </FadeIn>
   );

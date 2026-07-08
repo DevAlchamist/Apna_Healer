@@ -6,12 +6,37 @@ import { prisma } from "@/lib/prisma";
 import { ensureUserBootstrap, syncUserProfileFromOAuth } from "@/server/services/auth-service";
 import { emitAuthLoginEmail } from "@/server/services/platform-events";
 
+import CredentialsProvider from "next-auth/providers/credentials";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    }),
+    CredentialsProvider({
+      name: "Development Credentials",
+      credentials: {
+        email: { label: "Email", type: "text", placeholder: "aanya@apnahealer.dev" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email) return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (user) {
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            role: user.role,
+            walletId: user.walletId,
+          };
+        }
+        return null;
+      },
     }),
   ],
   session: { strategy: "jwt" },
@@ -29,7 +54,7 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      if (typeof user?.id === "string") {
+      if (typeof user?.id === "string" && profile) {
         await syncUserProfileFromOAuth({
           userId: user.id,
           profile,

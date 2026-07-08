@@ -76,13 +76,15 @@ export function LandingAuthActions({ onJoinClick }: LandingAuthActionsProps) {
   return (
     <>
       <div className="flex items-center gap-2 sm:gap-3">
-        <Link
-          href="/dashboard/wallet"
-          className="hidden items-center rounded-full bg-[#e9e3da] px-4 py-2 text-sm font-semibold text-[#3e4b4a] transition-colors hover:bg-[#dfd7cc] sm:inline-flex"
-          aria-label="Wallet balance"
-        >
-          {walletBalance}
-        </Link>
+        {user?.role === "USER" ? (
+          <Link
+            href="/dashboard/wallet"
+            className="hidden items-center rounded-full bg-[#e9e3da] px-4 py-2 text-sm font-semibold text-[#3e4b4a] transition-colors hover:bg-[#dfd7cc] sm:inline-flex"
+            aria-label="Wallet balance"
+          >
+            {walletBalance}
+          </Link>
+        ) : null}
         <NotificationBell />
         <div className="relative" ref={menuRef}>
           <button
@@ -123,14 +125,16 @@ export function LandingAuthActions({ onJoinClick }: LandingAuthActionsProps) {
               >
                 Profile
               </Link>
-              <Link
-                href="/dashboard/wallet"
-                role="menuitem"
-                className="block px-4 py-2.5 text-sm font-medium text-[#3e4b4a] transition hover:bg-[#f4f2ed] sm:hidden"
-                onClick={() => setMenuOpen(false)}
-              >
-                Wallet · {walletBalance}
-              </Link>
+              {user?.role === "USER" ? (
+                <Link
+                  href="/dashboard/wallet"
+                  role="menuitem"
+                  className="block px-4 py-2.5 text-sm font-medium text-[#3e4b4a] transition hover:bg-[#f4f2ed] sm:hidden"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Wallet · {walletBalance}
+                </Link>
+              ) : null}
               <button
                 type="button"
                 role="menuitem"

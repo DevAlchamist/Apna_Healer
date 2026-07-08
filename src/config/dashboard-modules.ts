@@ -27,10 +27,12 @@ export type DashboardModule = {
   roles: readonly UserRole[];
 };
 
-const MEMBER_ROLES: readonly UserRole[] = ["USER", "THERAPIST", "LISTENER", "ADMIN"] as const;
-const LISTENER_ROLES: readonly UserRole[] = ["LISTENER", "ADMIN"] as const;
-const THERAPIST_ROLES: readonly UserRole[] = ["THERAPIST", "ADMIN"] as const;
+const MEMBER_ROLES: readonly UserRole[] = ["USER", "THERAPIST", "LISTENER"] as const;
+const LISTENER_ROLES: readonly UserRole[] = ["LISTENER"] as const;
+const THERAPIST_ROLES: readonly UserRole[] = ["THERAPIST"] as const;
 const ADMIN_ROLES: readonly UserRole[] = ["ADMIN"] as const;
+const CONSUMER_ROLES: readonly UserRole[] = ["USER"] as const;
+const PROVIDER_ROLES: readonly UserRole[] = ["THERAPIST", "LISTENER"] as const;
 
 export const dashboardModules: readonly DashboardModule[] = [
   // Member surface — top nav
@@ -101,16 +103,28 @@ export const dashboardModules: readonly DashboardModule[] = [
     roles: MEMBER_ROLES,
   },
 
-  // Listener-only sidebar entry — appears inside the member surface for listeners + admins.
+  // USER: My Sessions
   {
-    id: "dashboard.side.listener-inbox",
-    href: "/dashboard/listener-inbox",
-    label: "Listener Inbox",
+    id: "dashboard.side.my-sessions",
+    href: "/dashboard/my-sessions",
+    label: "My Sessions",
     surface: "dashboard",
     placement: "sidebar",
     group: "primary",
-    icon: "reports",
-    roles: LISTENER_ROLES,
+    icon: "plans",
+    roles: CONSUMER_ROLES,
+  },
+
+  // THERAPIST: Patients, Consultations & Analytics
+  {
+    id: "dashboard.side.patients",
+    href: "/dashboard/patients",
+    label: "Patients",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "circle",
+    roles: THERAPIST_ROLES,
   },
   {
     id: "dashboard.side.consultations",
@@ -121,6 +135,48 @@ export const dashboardModules: readonly DashboardModule[] = [
     group: "primary",
     icon: "plans",
     roles: THERAPIST_ROLES,
+  },
+  {
+    id: "dashboard.side.analytics",
+    href: "/dashboard/analytics",
+    label: "Analytics",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "reports",
+    roles: THERAPIST_ROLES,
+  },
+
+  // LISTENER: Support Requests, Impact & Training Center
+  {
+    id: "dashboard.side.support-requests",
+    href: "/dashboard/support-requests",
+    label: "Support Requests",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "reports",
+    roles: LISTENER_ROLES,
+  },
+  {
+    id: "dashboard.side.impact",
+    href: "/dashboard/impact",
+    label: "Impact",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "social",
+    roles: LISTENER_ROLES,
+  },
+  {
+    id: "dashboard.side.training-center",
+    href: "/dashboard/training-center",
+    label: "Training Center",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "primary",
+    icon: "settings",
+    roles: LISTENER_ROLES,
   },
 
   // Member surface — personal sidebar
@@ -142,7 +198,7 @@ export const dashboardModules: readonly DashboardModule[] = [
     placement: "sidebar",
     group: "personal",
     icon: "currency",
-    roles: MEMBER_ROLES,
+    roles: CONSUMER_ROLES,
   },
   {
     id: "dashboard.personal.packages",
@@ -152,6 +208,26 @@ export const dashboardModules: readonly DashboardModule[] = [
     placement: "sidebar",
     group: "personal",
     icon: "packages",
+    roles: CONSUMER_ROLES,
+  },
+  {
+    id: "dashboard.personal.earnings",
+    href: "/dashboard/earnings",
+    label: "Earnings",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "personal",
+    icon: "currency",
+    roles: PROVIDER_ROLES,
+  },
+  {
+    id: "dashboard.personal.library",
+    href: "/dashboard/library",
+    label: "Library",
+    surface: "dashboard",
+    placement: "sidebar",
+    group: "personal",
+    icon: "blog",
     roles: MEMBER_ROLES,
   },
 
@@ -256,6 +332,16 @@ export const dashboardModules: readonly DashboardModule[] = [
     placement: "sidebar",
     group: "primary",
     icon: "circle",
+    roles: ADMIN_ROLES,
+  },
+  {
+    id: "admin.side.packages",
+    href: "/admin/packages",
+    label: "Packages",
+    surface: "admin",
+    placement: "sidebar",
+    group: "primary",
+    icon: "packages",
     roles: ADMIN_ROLES,
   },
 

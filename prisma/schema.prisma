@@ -345,6 +345,7 @@ model User {
   blogReports            BlogReport[]          @relation("BlogReportReporter")
   blogReportsReviewed    BlogReport[]          @relation("BlogReportReviewer")
   blogModerationActions  BlogModerationAction[]
+  packagePurchases       PackagePurchase[]
 
   @@index([role, createdAt(sort: Desc)])
   @@map("users")
@@ -1241,4 +1242,124 @@ model BlogAnalyticsDaily {
   @@unique([blogId, date])
   @@index([date])
   @@map("blog_analytics_daily")
+}
+
+enum PackageDurationUnit {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum PackagePublicationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PackagePurchaseStatus {
+  ACTIVE
+  EXPIRED
+  COMPLETED
+  CANCELLED
+}
+
+model WellnessPackage {
+  id                 String                   @id @default(uuid())
+  title              String
+  subtitle           String
+  description        String                   @db.Text
+  coverImage         String
+  galleryImages      String[]                 // Gallery images
+  bannerImage        String?                  // Optional marketing banner image
+  price              Decimal                  @db.Decimal(10, 2)
+  discount           Decimal                  @default(0.0) @db.Decimal(5, 2)
+  category           String
+  displayOrder       Int                      @default(0)
+  isFeatured         Boolean                  @default(false)
+  publicationStatus  PackagePublicationStatus @default(DRAFT)
+  isVisible          Boolean                  @default(true)
+  
+  // Duration Configuration
+  durationValue      Int                      @default(1)
+  durationUnit       PackageDurationUnit      @default(MONTH)
+  
+  // Optional start/end dates and limits
+  startDate          DateTime?
+  endDate            DateTime?
+  maxPurchases       Int?
+  purchaseCount      Int                      @default(0)
+  
+  // Flexible content sections stored as JSON
+  sections           Json                     @default("[]")
+  facilitatorNote    String?                  @db.Text
+  
+  publishedAt        DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  allocations        PackageSessionAllocation[]
+  purchases          PackagePurchase[]
+
+  @@map("wellness_packages")
+}
+
+model PackageSessionAllocation {
+  id               String          @id @default(uuid())
+  packageId        String
+  role             Role            // THERAPIST or LISTENER
+  sessionCount     Int             @default(0)
+
+  package          WellnessPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, role])
+  @@map("package_session_allocations")
+}
+
+model PackagePurchase {
+  id              String                @id @default(uuid())
+  userId          String
+  packageId       String
+  purchaseDate    DateTime              @default(now())
+  expiryDate      DateTime?
+  pricePaid       Decimal               @db.Decimal(10, 2)
+  status          PackagePurchaseStatus @default(ACTIVE)
+  packageSnapshot Json
+  
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package         WellnessPackage       @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  allocations     PackagePurchaseAllocation[]
+  usages          PackageSessionUsage[]
+
+  @@index([userId])
+  @@map("package_purchases")
+}
+
+model PackagePurchaseAllocation {
+  id                String          @id @default(uuid())
+  purchaseId        String
+  role              Role
+  allocatedSessions Int
+  remainingSessions Int
+  usedSessions      Int             @default(0)
+
+  purchase          PackagePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@unique([purchaseId, role])
+  @@map("package_purchase_allocations")
+}
+
+model PackageSessionUsage {
+  id           String          @id @default(uuid())
+  purchaseId   String
+  sessionId    String
+  providerRole Role
+  usedAt       DateTime        @default(now())
+
+  purchase     PackagePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@map("package_session_usages")
 }
