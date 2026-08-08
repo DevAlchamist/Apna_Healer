@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { Role, WellnessEventStatus } from "@prisma/client";
+import { Role, EventStatus } from "@prisma/client";
 import { handleApiError, ok, created } from "@/lib/api-response";
 import { requireSessionUser } from "@/lib/session-auth";
 import { createEventSchema } from "@/lib/validators/event";
@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     await requireSessionUser([Role.ADMIN]);
     const statusParam = request.nextUrl.searchParams.get("status");
     const status =
-      statusParam && Object.values(WellnessEventStatus).includes(statusParam as WellnessEventStatus)
-        ? (statusParam as WellnessEventStatus)
+      statusParam && Object.values(EventStatus).includes(statusParam as EventStatus)
+        ? (statusParam as EventStatus)
         : undefined;
     const events = await listEventsAdmin({ status });
     return ok(events);

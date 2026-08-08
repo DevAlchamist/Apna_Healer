@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
@@ -81,11 +81,15 @@ function defaultDateRange() {
 }
 
 function formatRangeLabel(from: string, to: string) {
+  if (!from || !to) return "All Time";
   const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
   try {
-    return `${fmt.format(new Date(from))} — ${fmt.format(new Date(to))}`;
+    const dFrom = new Date(from);
+    const dTo = new Date(to);
+    if (isNaN(dFrom.getTime()) || isNaN(dTo.getTime())) return "All Time";
+    return `${fmt.format(dFrom)} — ${fmt.format(dTo)}`;
   } catch {
-    return "Date range";
+    return "All Time";
   }
 }
 
@@ -162,9 +166,8 @@ function SessionStatIcon({ icon }: { icon: "trend" | "pulse" | "bolt" | "clock" 
 export function AdminSessionsPage() {
   const queryClient = useQueryClient();
   const { open: openSessionDetails } = useSessionDetailsModal();
-  const initialRange = useMemo(() => defaultDateRange(), []);
-  const [dateFrom, setDateFrom] = useState(initialRange.from);
-  const [dateTo, setDateTo] = useState(initialRange.to);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState<OperationsStatusFilter>("");
   const [page, setPage] = useState(1);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -178,9 +181,9 @@ export function AdminSessionsPage() {
       const params = new URLSearchParams({
         page: String(page),
         take: "10",
-        from: dateFrom,
-        to: dateTo,
       });
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
       if (statusFilter) params.set("status", statusFilter);
       return apiFetch<AdminSessionsDashboard>(`/api/admin/sessions?${params}`);
     },
@@ -327,13 +330,27 @@ export function AdminSessionsPage() {
                     className="mt-1 w-full rounded-lg border border-[#e5dfd4] px-3 py-2 text-sm"
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setShowDatePicker(false)}
-                  className="mt-4 w-full rounded-full bg-[#3e725f] py-2 text-sm font-semibold text-white"
-                >
-                  Apply
-                </button>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                      setPage(1);
+                      setShowDatePicker(false);
+                    }}
+                    className="flex-1 rounded-full border border-[#e5dfd4] py-2 text-sm font-semibold text-text-primary/70 hover:bg-[#faf9f6]"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePicker(false)}
+                    className="flex-1 rounded-full bg-[#3e725f] py-2 text-sm font-semibold text-white hover:bg-[#2e5748]"
+                  >
+                    Apply
+                  </button>
+                </div>
               </motion.div>
             ) : null}
           </div>

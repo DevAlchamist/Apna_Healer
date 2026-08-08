@@ -1,5 +1,5 @@
 "use client";
-
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { EventLandingFields } from "@/components/events/event-landing-fields";
 import { apiFetch } from "@/lib/api-client";
@@ -16,7 +16,7 @@ const fieldLabel =
 const fieldInput =
   "mt-2 w-full rounded-xl border border-theme-muted bg-theme-surface-muted px-3.5 py-2.5 text-sm text-theme-heading outline-none transition placeholder:text-[#b1a89d] focus:border-[#2f6f5b] focus:bg-white focus:ring-2 focus:ring-[#2f6f5b]/12";
 
-const CATEGORIES = ["Workshop", "Meditation", "Healing", "Gathering", "Breathwork"];
+
 
 type Props = {
   form: EventFormState;
@@ -46,9 +46,42 @@ export function EventFormFields({
     queryFn: () => apiFetch<ApiEventFacilitatorOption[]>("/api/events/facilitator-options"),
   });
 
+  const categoriesQuery = useQuery({
+    queryKey: ["event-categories"],
+    queryFn: () => apiFetch<Array<{ id: string; name: string }>>("/api/admin/events/categories"),
+  });
+
   const facilitatorOptions = facilitatorsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
   const isClubEvent = forceClubEvent || isClubEventForm(form);
   const showCustomFacilitator = form.facilitatorChoice === FACILITATOR_CHOICE_OTHER;
+
+  const [newImage, setNewImage] = useState("");
+  const [newVideo, setNewVideo] = useState("");
+
+  const addImage = () => {
+    if (!newImage.trim()) return;
+    const current = form.completedImages || [];
+    onChange({ completedImages: [...current, newImage.trim()] });
+    setNewImage("");
+  };
+
+  const removeImage = (index: number) => {
+    const current = form.completedImages || [];
+    onChange({ completedImages: current.filter((_, i) => i !== index) });
+  };
+
+  const addVideo = () => {
+    if (!newVideo.trim()) return;
+    const current = form.completedVideos || [];
+    onChange({ completedVideos: [...current, newVideo.trim()] });
+    setNewVideo("");
+  };
+
+  const removeVideo = (index: number) => {
+    const current = form.completedVideos || [];
+    onChange({ completedVideos: current.filter((_, i) => i !== index) });
+  };
 
   const handleFacilitatorChoice = (choice: string) => {
     if (choice === FACILITATOR_CHOICE_OTHER) {
@@ -117,13 +150,14 @@ export function EventFormFields({
         <div>
           <label className={labelClassName}>Category</label>
           <select
-            value={form.category}
+            value={form.category || ""}
             onChange={(e) => onChange({ category: e.target.value })}
             className={inputClassName}
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="">Select a category</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
               </option>
             ))}
           </select>
@@ -200,6 +234,96 @@ export function EventFormFields({
           </div>
         ) : null}
       </div>
+
+      {form.status === "COMPLETED" && (
+        <div className="space-y-4 rounded-2xl border border-accent/60 bg-white p-5 text-left">
+          <h4 className="font-display text-lg font-bold text-text-primary">
+            Event Highlights (Completed Status)
+          </h4>
+          <p className="text-xs text-text-primary/60">
+            Provide pictures and video URLs of the event to display to users on the completed event showcase.
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <label className={labelClassName}>Add Photo URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://example.com/photo.jpg"
+                  value={newImage}
+                  onChange={(e) => setNewImage(e.target.value)}
+                  className={inputClassName}
+                />
+                <button
+                  type="button"
+                  onClick={addImage}
+                  className="rounded-xl bg-[#2D5A4C] px-4 text-xs font-semibold text-white hover:bg-[#204439]"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {form.completedImages && form.completedImages.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {form.completedImages.map((url, idx) => (
+                  <div key={idx} className="relative group aspect-video rounded-lg overflow-hidden bg-neutral-100 border border-neutral-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Highlight ${idx}`} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 h-5 w-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow hover:bg-red-700"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className={labelClassName}>Add Video URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://example.com/video.mp4"
+                  value={newVideo}
+                  onChange={(e) => setNewVideo(e.target.value)}
+                  className={inputClassName}
+                />
+                <button
+                  type="button"
+                  onClick={addVideo}
+                  className="rounded-xl bg-[#2D5A4C] px-4 text-xs font-semibold text-white hover:bg-[#204439]"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {form.completedVideos && form.completedVideos.length > 0 && (
+              <div className="space-y-1">
+                {form.completedVideos.map((url, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-3 bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs">
+                    <span className="truncate text-text-primary/70">{url}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeVideo(idx)}
+                      className="text-red-600 hover:text-red-800 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <label className={labelClassName}>Facilitator</label>

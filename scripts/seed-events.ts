@@ -2,9 +2,12 @@
  * Seed wellness events from src/data/events.ts.
  * Run: npx tsx scripts/seed-events.ts
  */
-import { Role, WellnessEventStatus } from "@prisma/client";
+import dotenv from "dotenv";
+dotenv.config();
+dotenv.config({ path: ".env.local" });
+
+import { Role, EventStatus } from "@prisma/client";
 import { eventDetails, featuredEvents } from "../src/data/events";
-import { prisma } from "../src/lib/prisma";
 
 const SEED_EVENTS = [
   {
@@ -47,6 +50,7 @@ const SEED_EVENTS = [
 ] as const;
 
 async function main() {
+  const { prisma } = await import("../src/lib/prisma");
   const admin = await prisma.user.findFirst({ where: { role: Role.ADMIN } });
   if (!admin) {
     console.error("No admin user found.");
@@ -57,7 +61,7 @@ async function main() {
 
   for (let i = 0; i < SEED_EVENTS.length; i++) {
     const seed = SEED_EVENTS[i]!;
-    const exists = await prisma.wellnessEvent.findUnique({ where: { slug: seed.slug } });
+    const exists = await prisma.event.findUnique({ where: { slug: seed.slug } });
     if (exists) {
       console.log(`Skip existing: ${seed.slug}`);
       continue;
@@ -71,7 +75,17 @@ async function main() {
     const heroImageUrl = detail?.heroImage ?? featured?.image ?? null;
     const clubId = i < 2 && clubs[i] ? clubs[i]!.id : null;
 
-    await prisma.wellnessEvent.create({
+    let categoryId: string | null = null;
+    if (seed.category) {
+      const cat = await prisma.eventCategory.upsert({
+        where: { name: seed.category },
+        update: {},
+        create: { name: seed.category },
+      });
+      categoryId = cat.id;
+    }
+
+    await prisma.event.create({
       data: {
         slug: seed.slug,
         clubId,
@@ -80,7 +94,7 @@ async function main() {
         title,
         subtitle,
         description: detail?.about.join("\n\n") ?? subtitle,
-        category: seed.category,
+        categoryId,
         heroImageUrl,
         startsAt: seed.startsAt,
         venue: detail?.venue ?? "Apna Healer Studio",
@@ -92,7 +106,7 @@ async function main() {
         guestPrice: "guestPrice" in seed ? seed.guestPrice : null,
         membersPay: "membersPay" in seed ? seed.membersPay : true,
         nonMembersPay: "nonMembersPay" in seed ? seed.nonMembersPay : true,
-        status: WellnessEventStatus.PUBLISHED,
+        status: EventStatus.PUBLISHED,
         facilitatorName: detail?.facilitatorName ?? featured?.host ?? null,
         facilitatorRole: detail?.facilitatorRole ?? null,
         facilitatorImage: detail?.facilitatorImage ?? null,
@@ -109,4 +123,7 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    const { prisma } = await import("../src/lib/prisma");
+    await prisma.$disconnect();
+  });

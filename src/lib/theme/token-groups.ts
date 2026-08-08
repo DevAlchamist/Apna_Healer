@@ -46,6 +46,10 @@ export const THEME_TOKEN_GROUPS: { title: string; keys: RoleThemeTokenKey[] }[] 
     title: "Admin shell",
     keys: ["bannerBg", "focusRing"],
   },
+  {
+    title: "Sidebar Console",
+    keys: ["sidebarBg", "sidebarText", "sidebarActiveBg", "sidebarActiveText"],
+  },
 ];
 
 export const TOKEN_LABELS: Record<RoleThemeTokenKey, string> = {
@@ -82,4 +86,8 @@ export const TOKEN_LABELS: Record<RoleThemeTokenKey, string> = {
   focusRing: "Focus ring",
   bannerBg: "Banner background",
   heading: "Heading",
+  sidebarBg: "Sidebar Background",
+  sidebarText: "Sidebar Text",
+  sidebarActiveBg: "Sidebar Item Active Background",
+  sidebarActiveText: "Sidebar Item Active Text",
 };

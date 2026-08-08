@@ -1,4 +1,4 @@
-import { CareSessionStatus, Role } from "@prisma/client";
+import { CareSessionStatus, Role, EventStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { featuredEvents, eventDetails, type EventDetail, type EventSummary } from "@/data/events";
 import { listPublicClubs } from "@/server/services/club-service";
@@ -90,9 +90,12 @@ export async function getPublicEvents(filters: {
   take?: number;
   filter?: string;
   category?: string;
+  status?: "PUBLISHED" | "COMPLETED";
 }): Promise<Array<EventSummary & { category: string }>> {
   const take = filters.take ?? 12;
-  const fromDb = await listPublicEvents(take * 2);
+  const statusValue =
+    filters.status === "COMPLETED" ? EventStatus.COMPLETED : EventStatus.PUBLISHED;
+  const fromDb = await listPublicEvents(take * 2, statusValue);
   if (fromDb.length > 0) {
     const filterKey = (filters.filter ?? filters.category ?? "all paths").toLowerCase();
     const predicate = EVENT_FILTER_MAP[filterKey] ?? EVENT_FILTER_MAP["all paths"];
@@ -144,6 +147,9 @@ function apiDetailToLegacy(event: ApiEventDetail): EventDetail {
     testimonialQuote: landing.testimonialQuote,
     testimonialAuthor: landing.testimonialAuthor,
     reflections: [],
+    completedImages: event.completedImages ?? [],
+    completedVideos: event.completedVideos ?? [],
+    status: event.status,
   };
 }
 

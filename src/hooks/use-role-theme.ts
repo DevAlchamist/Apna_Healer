@@ -14,7 +14,10 @@ export function roleThemeQueryKey(role: Role) {
 export function useRoleTheme(role: Role | undefined) {
   return useQuery({
     queryKey: roleThemeQueryKey(role ?? "USER"),
-    queryFn: () => apiFetch<ApiRoleTheme>("/api/themes/current"),
+    queryFn: () => {
+      const url = role ? `/api/themes/current?role=${role}` : "/api/themes/current";
+      return apiFetch<ApiRoleTheme>(url);
+    },
     enabled: Boolean(role),
     staleTime: 60_000,
   });

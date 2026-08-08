@@ -1,7 +1,7 @@
 import {
   BookingPaymentMethod,
   EventRegistrationStatus,
-  WellnessEventStatus,
+  EventStatus,
 } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +9,7 @@ const { prismaMock, getEventBySlugMock, isActiveClubMemberMock, chargeWalletMock
   () => ({
     prismaMock: {
       eventRegistration: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), upsert: vi.fn() },
-      wellnessEvent: { updateMany: vi.fn() },
+      event: { updateMany: vi.fn() },
       wallet: { findUnique: vi.fn() },
       $transaction: vi.fn(),
     },
@@ -48,7 +48,7 @@ function buildEvent(overrides?: Record<string, unknown>) {
   return {
     id: "evt_1",
     slug: "test-event",
-    status: WellnessEventStatus.PUBLISHED,
+    status: EventStatus.PUBLISHED,
     seatsRemaining: 5,
     clubId: null,
     basePrice: { toString: () => "200" },
@@ -78,7 +78,7 @@ describe("registerForEvent", () => {
 
     const reg = { id: "reg_1", status: EventRegistrationStatus.CONFIRMED, amountCharged: { toString: () => "0" } };
     prismaMock.$transaction.mockImplementation(async (fn: (tx: typeof prismaMock) => Promise<unknown>) => {
-      prismaMock.wellnessEvent.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.event.updateMany.mockResolvedValue({ count: 1 });
       prismaMock.eventRegistration.upsert.mockResolvedValue(reg);
       return fn(prismaMock);
     });

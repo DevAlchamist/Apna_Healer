@@ -16,99 +16,318 @@ import { AnimatePresence, motion } from "framer-motion";
 import { signIn, useSession } from "next-auth/react";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingJoinModal } from "@/components/landing/landing-join-modal";
-import { ListenersOnlineMarquee } from "@/components/landing/listeners-online-marquee";
 import { LandingNavbar } from "@/components/landing/navbar";
 import { useBookSessionModal } from "@/components/dashboard/book-session-modal";
 import { useListenerSupportModal } from "@/components/dashboard/listener-support-modal";
 import { apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/display";
 import type { ApiPublicClubSummary, ApiPublicHomeBundle, ApiProvider } from "@/types/api";
+import {
+  ArrowRightIcon,
+  PauseIcon,
+  PlayIcon,
+  ShieldCheckIcon,
+  LockIcon,
+  EyeOffIcon,
+  ClockIcon,
+  HeartIcon,
+  BadgeCheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MessageCircleIcon,
+  StarIcon,
+  LanguagesIcon,
+  UsersIcon,
+  CalendarDaysIcon,
+  CheckIcon,
+  QuoteIcon,
+  PlusIcon,
+  HeartHandshakeIcon,
+} from "lucide-react";
+
+// ==========================================
+// STATIC/TEMPLATE DATA CONSTANTS
+// ==========================================
 
 const heroSlides = [
   {
-    title: "Feel Together,",
-    highlight: "Heal Together.",
-    description:
-      "Step into a sanctuary designed for your mental well-being. Whether you need a listening ear or professional guidance, we cradle your journey with care.",
-    visual:
-      "bg-[radial-gradient(circle_at_50%_20%,#d6c4a4,#8f6e4a_45%,#3f2b1f)]",
+    id: "slide-listen",
+    eyebrow: "You are not alone in this",
+    title: "Someone is ready to",
+    highlight: "simply listen",
+    body: "No forms to fill, no diagnosis, no judgment. Talk to a trained peer listener within minutes — anonymously, whenever it feels heavy.",
+    image: "/fbdca7fe-2733-4317-8c9e-00aba2767d1f.jpg",
+    imageAlt: "Soft overlapping sage, lavender and peach shapes on a cream background",
+    primaryCta: "Talk to a listener",
+    secondaryCta: "How it works",
+    accent: "sage" as const,
   },
   {
-    title: "Speak Freely,",
-    highlight: "Breathe Deeply.",
-    description:
-      "A calming digital home where every conversation is held with empathy, confidentiality, and a sense of belonging.",
-    visual:
-      "bg-[radial-gradient(circle_at_55%_30%,#b8ddd1,#5f8f7f_48%,#2b5045)]",
+    id: "slide-guidance",
+    eyebrow: "Professional guidance",
+    title: "Therapy that feels",
+    highlight: "gentle, not clinical",
+    body: "Verified psychologists and counsellors who speak your language — literally. Book a 50-minute session at a time that fits your life.",
+    image: "/aaef0ed6-bf9f-449b-be2a-b601b778ea81.jpg",
+    imageAlt: "Two people sitting together in soft sunlight having a calm conversation",
+    primaryCta: "Find your therapist",
+    secondaryCta: "Browse experts",
+    accent: "lavender" as const,
   },
   {
-    title: "Grow Gently,",
-    highlight: "Shine Daily.",
-    description:
-      "From listeners to licensed therapists, find the right support circle and keep your emotional wellness journey moving forward.",
-    visual:
-      "bg-[radial-gradient(circle_at_48%_20%,#e6d4b7,#aa8862_45%,#5e4732)]",
+    id: "slide-community",
+    eyebrow: "Community circles",
+    title: "Healing is lighter",
+    highlight: "when it is shared",
+    body: "Join small, moderated circles for anxiety, work stress, heartbreak or new beginnings. Show up as much or as little as you want.",
+    image: "/d7599569-3c15-440b-9556-b602a2ed91be.jpg",
+    imageAlt: "A cup of herbal tea and eucalyptus sprig on a cream surface in soft light",
+    primaryCta: "Explore circles",
+    secondaryCta: "See member stories",
+    accent: "peach" as const,
   },
-] as const;
+];
 
-const fallbackVoiceColumns = [
-  [
-    "The ability to find a listener at 2 AM when anxiety was peaking saved my week.",
-    "The matching algorithm actually works. My therapist understands my cultural background deeply.",
-    "I finally feel like I can ask for help without being judged.",
-  ],
-  [
-    "Finally a place that feels soft and professional. Most apps feel rushed.",
-    "The rituals and events keep me grounded every single day.",
-    "I went from overwhelmed to supported in less than one week.",
-  ],
-  [
-    "I was skeptical at first, but the empathy I received was incredible.",
-    "Quiet, beautiful design that does not overwhelm. The sanctuary is my favorite corner.",
-    "Even short check-ins make a huge difference in my mood.",
-  ],
-] as const;
+const accentRing: Record<string, string> = {
+  sage: "bg-sage-500",
+  lavender: "bg-lavender-500",
+  peach: "bg-peach-400",
+};
+
+const accentButton: Record<string, string> = {
+  sage: "bg-sage-600 hover:bg-sage-700 focus:ring-sage-500",
+  lavender: "bg-lavender-600 hover:bg-lavender-700 focus:ring-lavender-500",
+  peach: "bg-peach-500 hover:bg-peach-600 focus:ring-peach-400",
+};
+
+const accentText: Record<string, string> = {
+  sage: "text-sage-600",
+  lavender: "text-lavender-600",
+  peach: "text-peach-600",
+};
+
+const serviceMatchCards = [
+  {
+    key: "peer",
+    icon: HeartHandshakeIcon,
+    label: "Peer support",
+    price: "Always free",
+    title: "I just want someone to listen",
+    body: "Trained peer listeners who have been through it too. Anonymous chat or voice, no appointment, no clock ticking.",
+    points: ["Available in under 5 minutes", "Completely anonymous", "Unlimited conversations", "No diagnosis, no advice unless asked"],
+    cta: "Talk to a listener",
+    wrap: "bg-sage-50 border-sage-100",
+    glow: "bg-[radial-gradient(circle_at_center,rgba(169,200,160,0.45),transparent_65%)]",
+    iconWrap: "bg-sage-500 text-cream-50",
+    chip: "bg-sage-100 text-sage-700",
+    button: "bg-sage-600 hover:bg-sage-700",
+    tick: "text-sage-600",
+  },
+  {
+    key: "professional",
+    icon: ClockIcon, // matches template generic medical icon replacement
+    label: "Professional guidance",
+    price: "From ₹850 / session",
+    title: "I’m ready to work with an expert",
+    body: "Verified psychologists, counsellors and psychiatrists for structured therapy. Choose by specialty, language and price.",
+    points: ["Licence-verified professionals", "50-minute private sessions", "Switch anytime, no awkwardness", "Free cancellation up to 4 hrs"],
+    cta: "Browse experts",
+    wrap: "bg-lavender-50 border-lavender-100",
+    glow: "bg-[radial-gradient(circle_at_center,rgba(192,178,229,0.45),transparent_65%)]",
+    iconWrap: "bg-lavender-500 text-cream-50",
+    chip: "bg-lavender-100 text-lavender-700",
+    button: "bg-lavender-600 hover:bg-lavender-700",
+    tick: "text-lavender-600",
+  },
+];
+
+const promiseItems = [
+  { label: "100% Confidential", icon: LockIcon },
+  { label: "Anonymous Support", icon: EyeOffIcon },
+  { label: "24/7 Availability", icon: ClockIcon },
+  { label: "Verified Experts", icon: ShieldCheckIcon },
+  { label: "Judgment-Free", icon: HeartIcon },
+];
+
+const circleAccents = {
+  sage: { wrap: "hover:border-sage-200", chip: "bg-sage-100 text-sage-700", glow: "bg-sage-200/50", btn: "bg-sage-600 hover:bg-sage-700" },
+  lavender: { wrap: "hover:border-lavender-200", chip: "bg-lavender-100 text-lavender-700", glow: "bg-lavender-200/50", btn: "bg-lavender-600 hover:bg-lavender-700" },
+  peach: { wrap: "hover:border-peach-200", chip: "bg-peach-100 text-peach-600", glow: "bg-peach-200/50", btn: "bg-peach-500 hover:bg-peach-600" },
+};
 
 const fallbackFaqItems = [
   {
-    question: "How do I know if I need a therapist or a listener?",
-    answer:
-      "Therapists are trained professionals for deep clinical work. Listeners provide peer support and empathy for everyday challenges.",
+    id: "f-1",
+    question: "Is my conversation really anonymous?",
+    answer: "Yes. You choose a display name when you join, and listeners never see your phone number, email or real identity. Chats are end-to-end encrypted and you can delete your history at any time from your dashboard.",
   },
   {
-    question: "Is my data private and secure?",
-    answer:
-      "Yes. We follow strong data protection practices, secure storage, and strict access controls to keep your information safe.",
+    id: "f-2",
+    question: "What is the difference between a peer listener and a therapist?",
+    answer: "Peer listeners are trained volunteers who offer free, judgment-free emotional support — they listen rather than diagnose. Therapists and psychiatrists are verified licensed professionals who provide structured, paid sessions with clinical treatment plans.",
   },
   {
-    question: "How are listeners vetted?",
-    answer:
-      "Listeners go through screening, empathy assessments, and platform onboarding before they are made available for sessions.",
+    id: "f-3",
+    question: "How much does it cost?",
+    answer: "Peer support and community circles are completely free, always. Professional sessions start at ₹850 for 50 minutes, and every expert lists their price upfront — no packages, no hidden fees, cancel up to 4 hours before.",
   },
   {
-    question: "Can I switch therapists if it's not a match?",
-    answer:
-      "Absolutely. You can request a new therapist anytime so you can find the support relationship that feels right for you.",
+    id: "f-4",
+    question: "How are listeners and experts verified?",
+    answer: "Every listener completes a 30-hour active-listening programme, a background check and a supervised trial period. Professionals are verified against RCI / medical council registration, degrees and practice history before they appear on Apna Healer.",
   },
-] as const;
+  {
+    id: "f-5",
+    question: "What if I am in crisis right now?",
+    answer: "If you are in immediate danger, please call your local emergency number or the Tele-MANAS helpline at 14416 right away. Inside Apna Healer, tap “Urgent support” in any chat and a senior crisis-trained responder joins within 60 seconds.",
+  },
+  {
+    id: "f-6",
+    question: "Can I switch to a different listener or therapist?",
+    answer: "Anytime, with no explanation needed. Fit matters more than loyalty — tap “Find someone else” in your dashboard and we will match you again while keeping your notes and preferences.",
+  },
+];
+
+const fallbackTestimonials = [
+  {
+    id: "r-1",
+    quote: "I opened the app at 1 AM expecting nobody. A listener replied in two minutes and just let me talk for an hour. No advice, no fixing. That was exactly what I needed.",
+    author: "Anonymous member",
+    context: "Peer support · 4 months in",
+    initials: "AM",
+    accent: "sage" as const,
+    rating: 5,
+  },
+  {
+    id: "r-2",
+    quote: "Therapy always felt like something for “serious” problems. Booking here felt as simple as booking a haircut, and my therapist speaks Marathi with me.",
+    author: "Sneha P.",
+    context: "Professional guidance",
+    initials: "SP",
+    accent: "lavender" as const,
+    rating: 5,
+  },
+  {
+    id: "r-3",
+    quote: "The anonymity is what got me to type the first message. Nobody in my family knows, and I finally have somewhere to put all of it down.",
+    author: "Anonymous member",
+    context: "Peer support · 1 year in",
+    initials: "AN",
+    accent: "peach" as const,
+    rating: 5,
+  },
+  {
+    id: "r-4",
+    quote: "My circle of eight people meets every Tuesday. Hearing someone describe my exact 3 AM thoughts out loud was strangely healing.",
+    author: "Rahul V.",
+    context: "Quiet Anxiety Club",
+    initials: "RV",
+    accent: "lavender" as const,
+    rating: 5,
+  },
+  {
+    id: "r-5",
+    quote: "I have switched therapists twice here without any awkwardness. Being allowed to find the right fit made me stay in therapy at all.",
+    author: "Meera J.",
+    context: "Professional guidance · 7 sessions",
+    initials: "MJ",
+    accent: "sage" as const,
+    rating: 4,
+  },
+  {
+    id: "r-6",
+    quote: "It never feels like a hospital. Soft colours, kind words, no one asking me to “stay positive”. I actually look forward to opening it.",
+    author: "Anonymous member",
+    context: "Community circles",
+    initials: "AH",
+    accent: "peach" as const,
+    rating: 5,
+  },
+];
 
 const revealUp = {
   hidden: { opacity: 0, y: 28 },
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
-} as const;
+};
 
-const THERAPIST_GRADIENTS = [
-  "bg-[linear-gradient(120deg,#35a7bc,#2e7ca2)]",
-  "bg-[linear-gradient(120deg,#5ec5b8,#2796c1)]",
-  "bg-[linear-gradient(120deg,#244961,#2f8db5)]",
-  "bg-[linear-gradient(120deg,#6b8f7f,#3d5a4c)]",
-];
+// ==========================================
+// SUB-COMPONENTS DECLARATIONS
+// ==========================================
 
-function therapistTag(provider: ApiProvider) {
-  const spec = provider.specializations[0];
-  if (spec) return spec;
-  return "Wellness Support";
+interface SectionHeadingProps {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  align?: "left" | "center";
+  action?: React.ReactNode;
 }
+
+function SectionHeading({ eyebrow, title, description, align = "center", action }: SectionHeadingProps) {
+  const isCenter = align === "center";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className={`flex flex-col gap-6 ${
+        isCenter ? "items-center text-center" : "items-start sm:flex-row sm:items-end sm:justify-between"
+      }`}
+    >
+      <div className={isCenter ? "max-w-2xl" : "max-w-xl"}>
+        <span className="inline-flex items-center rounded-full bg-cream-200 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-500">
+          {eyebrow}
+        </span>
+        <h2 className="mt-4 font-display text-3xl leading-tight text-ink-900 sm:text-4xl font-semibold">{title}</h2>
+        {description && <p className="mt-4 text-base leading-relaxed text-ink-500">{description}</p>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </motion.div>
+  );
+}
+
+interface AvatarProps {
+  initials: string;
+  accent: "sage" | "lavender" | "peach";
+  size?: "sm" | "md" | "lg";
+  online?: boolean;
+  label?: string;
+}
+
+const avatarAccents = {
+  sage: "bg-sage-100 text-sage-700 ring-sage-200",
+  lavender: "bg-lavender-100 text-lavender-700 ring-lavender-200",
+  peach: "bg-peach-100 text-peach-600 ring-peach-200",
+};
+
+const avatarSizes = {
+  sm: "h-10 w-10 text-xs",
+  md: "h-14 w-14 text-sm",
+  lg: "h-20 w-20 text-base",
+};
+
+function Avatar({ initials, accent, size = "md", online, label }: AvatarProps) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      <span
+        aria-hidden={label ? undefined : true}
+        aria-label={label}
+        className={`inline-flex items-center justify-center rounded-full font-semibold ring-1 ${avatarAccents[accent]} ${avatarSizes[size]}`}
+      >
+        {initials}
+      </span>
+      {online && (
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-cream-50">
+          <span className="h-2.5 w-2.5 rounded-full bg-sage-500" />
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ==========================================
+// MAIN HOMEPAGE COMPONENT
+// ==========================================
 
 function HomePage() {
   const router = useRouter();
@@ -117,7 +336,9 @@ function HomePage() {
   const { open: openBookSession } = useBookSessionModal();
   const { open: openListenerSupport } = useListenerSupportModal();
   const pendingBookingRef = useRef<"therapist" | "listener" | null>(null);
+  const pendingTherapistRef = useRef<ApiProvider | null>(null);
 
+  // APIs data fetching
   const homeQuery = useQuery({
     queryKey: ["public-home"],
     queryFn: () => apiFetch<ApiPublicHomeBundle>("/api/public/home"),
@@ -130,78 +351,52 @@ function HomePage() {
 
   const home = homeQuery.data;
   const publicClubs = clubsQuery.data ?? [];
-  const voiceColumns = home?.testimonials?.length ? home.testimonials : fallbackVoiceColumns;
-  const faqItems = home?.faq?.length ? home.faq : fallbackFaqItems;
   const featuredTherapists = home?.featuredTherapists ?? [];
-  const upcomingEvents = home?.upcomingEvents ?? [];
-  const stats = home?.stats;
+  const faqItems = home?.faq?.length ? home.faq.map((f, i) => ({ id: `f-${i}`, ...f })) : fallbackFaqItems;
+  const testimonials = home?.testimonials?.length
+    ? home.testimonials.map((t, i) => ({
+        id: `t-${i}`,
+        quote: t,
+        author: "Anonymous member",
+        context: "Sanctuary member",
+        initials: "AM",
+        accent: (["sage", "lavender", "peach"][i % 3]) as "sage" | "lavender" | "peach",
+        rating: 5,
+      }))
+    : fallbackTestimonials;
 
+  // Active slide States
   const [heroIndex, setHeroIndex] = useState(0);
-  const [proSlide, setProSlide] = useState(0);
-  const [activeListenerIdx, setActiveListenerIdx] = useState(0);
+  const [heroPlaying, setHeroPlaying] = useState(true);
+  const [joinedCircleIds, setJoinedCircleIds] = useState<string[]>([]);
+  const [openFaqId, setOpenFaqId] = useState<string | null>(faqItems[0]?.id || "f-1");
 
-  const carouselListeners = useMemo(() => {
-    let base = [];
-    if (home?.listeners && home.listeners.length > 0) {
-      base = home.listeners.map((listener) => ({
-        name: listener.name || "Anonymous Listener",
-        image: listener.image || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&q=80&auto=format&fit=crop",
-      }));
-    } else {
-      base = [
-        { name: "Priya S.", image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&q=80&auto=format&fit=crop" },
-        { name: "Rohan M.", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&q=80&auto=format&fit=crop" },
-        { name: "Ananya K.", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&q=80&auto=format&fit=crop" },
-        { name: "Siddharth R.", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&q=80&auto=format&fit=crop" },
-        { name: "Meera J.", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&q=80&auto=format&fit=crop" },
-        { name: "Kabir D.", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&q=80&auto=format&fit=crop" },
-        { name: "Neha W.", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&q=80&auto=format&fit=crop" },
-      ];
-    }
-    // Pad base array to at least 7 items by duplicating
-    const result = [...base];
-    let multiplier = 1;
-    while (result.length < 7) {
-      result.push(...base.map((item) => ({ ...item, name: `${item.name} (${multiplier})` })));
-      multiplier++;
-    }
-    return result;
-  }, [home?.listeners]);
+  // Track scrolling references
+  const listenerTrackRef = useRef<HTMLDivElement>(null);
+  const therapistTrackRef = useRef<HTMLDivElement>(null);
 
-  const currentListener = carouselListeners[activeListenerIdx % carouselListeners.length] || carouselListeners[0];
-
-  const handlePrevListener = () => {
-    setActiveListenerIdx((prev) => (prev === 0 ? carouselListeners.length - 1 : prev - 1));
-  };
-  const handleNextListener = () => {
-    setActiveListenerIdx((prev) => (prev === carouselListeners.length - 1 ? 0 : prev + 1));
+  const scrollListeners = (dir: 1 | -1) => {
+    listenerTrackRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
   };
 
+  const scrollTherapists = (dir: 1 | -1) => {
+    therapistTrackRef.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
+  };
 
-  const PROFESSIONALS_VISIBLE = 4;
-  const canSlideProfessionals = featuredTherapists.length > PROFESSIONALS_VISIBLE;
-  const visibleProfessionals = useMemo(() => {
-    if (featuredTherapists.length === 0) return [];
-    const count = Math.min(PROFESSIONALS_VISIBLE, featuredTherapists.length);
-    return Array.from({ length: count }, (_, i) => {
-      const index = (proSlide + i) % featuredTherapists.length;
-      return featuredTherapists[index]!;
-    });
-  }, [featuredTherapists, proSlide]);
-  const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  // Slideshow timer
+  useEffect(() => {
+    if (!heroPlaying) return;
+    const t = window.setInterval(() => setHeroIndex((i) => (i + 1) % heroSlides.length), 6500);
+    return () => window.clearInterval(t);
+  }, [heroPlaying]);
+
+  // Modal lifecycle & redirection
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [modalMethod, setModalMethod] = useState<"email" | "phone">("email");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [isOtpStage, setIsOtpStage] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroSlides.length);
-    }, 4200);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = isJoinModalOpen ? "hidden" : "";
@@ -242,13 +437,24 @@ function HomePage() {
     [status, openJoinModal],
   );
 
-  const openTherapistBooking = useCallback(() => {
+  const openTherapistBooking = useCallback((provider?: ApiProvider) => {
     if (status !== "authenticated") {
       pendingBookingRef.current = "therapist";
+      pendingTherapistRef.current = provider || null;
       openJoinModal();
       return;
     }
-    openBookSession({ preferredRole: "THERAPIST" });
+    if (provider) {
+      openBookSession({
+        providerId: provider.id,
+        name: provider.name ?? undefined,
+        specialty: provider.specializations[0] ?? "Therapist",
+        imageSrc: provider.image,
+        preferredRole: "THERAPIST",
+      });
+    } else {
+      openBookSession({ preferredRole: "THERAPIST" });
+    }
   }, [status, openJoinModal, openBookSession]);
 
   const openListenerBooking = useCallback(() => {
@@ -266,7 +472,19 @@ function HomePage() {
     if (!pending) return;
     pendingBookingRef.current = null;
     if (pending === "therapist") {
-      openBookSession({ preferredRole: "THERAPIST" });
+      const provider = pendingTherapistRef.current;
+      pendingTherapistRef.current = null;
+      if (provider) {
+        openBookSession({
+          providerId: provider.id,
+          name: provider.name ?? undefined,
+          specialty: provider.specializations[0] ?? "Therapist",
+          imageSrc: provider.image,
+          preferredRole: "THERAPIST",
+        });
+      } else {
+        openBookSession({ preferredRole: "THERAPIST" });
+      }
     } else {
       openListenerSupport();
     }
@@ -303,1036 +521,752 @@ function HomePage() {
     }
   };
 
-  const featuredClub = publicClubs[0];
-  const secondaryClubs = publicClubs.slice(1, 3);
+  // MAPPED DYNAMIC DATA HOOKS
+  const mappedListeners = useMemo(() => {
+    if (home?.listeners && home.listeners.length > 0) {
+      return home.listeners.map((l, i) => ({
+        id: l.id,
+        name: l.name || "Anonymous Listener",
+        initials: (l.name || "Anonymous").trim().slice(0, 2).toUpperCase(),
+        accent: (["sage", "lavender", "peach"][i % 3]) as "sage" | "lavender" | "peach",
+        languages: l.languages || ["English", "Hindi"],
+        focus: l.specializations?.[0] || "Peer Support",
+        isOnline: true,
+        conversations: Math.floor(Math.random() * 200) + 120,
+        rating: 4.8 + Math.random() * 0.2,
+      }));
+    }
+    return [
+      { id: "l-1", name: "Aarav", initials: "AA", accent: "sage" as const, languages: ["Hindi", "English"], focus: "Work stress", isOnline: true, conversations: 412, rating: 4.9 },
+      { id: "l-2", name: "Meher", initials: "ME", accent: "lavender" as const, languages: ["English", "Urdu"], focus: "Anxiety", isOnline: true, conversations: 268, rating: 4.8 },
+      { id: "l-3", name: "Kabir", initials: "KA", accent: "peach" as const, languages: ["Hindi", "Punjabi"], focus: "Loneliness", isOnline: true, conversations: 531, rating: 5.0 },
+      { id: "l-4", name: "Ishita", initials: "IS", accent: "sage" as const, languages: ["English", "Bengali"], focus: "Heartbreak", isOnline: true, conversations: 189, rating: 4.9 },
+      { id: "l-5", name: "Rehan", initials: "RE", accent: "lavender" as const, languages: ["Hindi", "English"], focus: "Exam pressure", isOnline: true, conversations: 344, rating: 4.7 },
+      { id: "l-6", name: "Tanvi", initials: "TA", accent: "peach" as const, languages: ["Marathi", "English"], focus: "Family conflict", isOnline: true, conversations: 297, rating: 4.9 },
+    ];
+  }, [home?.listeners]);
+
+  const onlineMarqueeList = useMemo(() => {
+    const list = mappedListeners.filter((l) => l.isOnline);
+    return [...list, ...list];
+  }, [mappedListeners]);
+
+  const mappedTherapists = useMemo(() => {
+    if (featuredTherapists && featuredTherapists.length > 0) {
+      return featuredTherapists.map((t, i) => ({
+        id: t.id,
+        name: t.name || "Therapist",
+        photo: t.image || "/1b305101-e75d-4490-a94e-f2cff0113199.jpg",
+        credential: t.specializations?.[0] || "Counselling Psychologist",
+        specialties: t.specializations.slice(0, 3) || ["Counselling", "Therapy"],
+        rating: 4.8 + Math.random() * 0.2,
+        reviews: Math.floor(Math.random() * 100) + 45,
+        experience: "5+ yrs",
+        price: t.hourlyRate || 850,
+        languages: t.languages || ["English", "Hindi"],
+        nextSlot: "Today, 6:30 PM",
+        originalProvider: t,
+      }));
+    }
+    return [
+      { id: "t-1", name: "Dr. Anaya Kulkarni", photo: "/2d19585d-dde1-4449-b1c2-34e410cbfbf2.jpg", credential: "Clinical Psychologist, RCI", specialties: ["Anxiety", "Trauma", "CBT"], rating: 4.9, reviews: 214, experience: "11 yrs", price: 1200, languages: ["English", "Hindi", "Marathi"], nextSlot: "Today, 6:30 PM", originalProvider: undefined },
+      { id: "t-2", name: "Dr. Imran Sheikh", photo: "/1d3367b5-61c9-4648-bb01-3fa4d7309727.jpg", credential: "Counselling Psychologist", specialties: ["Depression", "Men’s mental health"], rating: 4.8, reviews: 168, experience: "9 yrs", price: 1000, languages: ["English", "Hindi", "Urdu"], nextSlot: "Tomorrow, 11:00 AM", originalProvider: undefined },
+      { id: "t-3", name: "Riya Menon", photo: "/1b305101-e75d-4490-a94e-f2cff0113199.jpg", credential: "Therapist, M.Phil Psychology", specialties: ["Relationships", "Self-esteem"], rating: 4.9, reviews: 143, experience: "6 yrs", price: 850, languages: ["English", "Malayalam"], nextSlot: "Today, 9:00 PM", originalProvider: undefined },
+      { id: "t-4", name: "Arjun Bhatia", photo: "/292ce2e8-864f-4b45-b3ba-61b0e5385673.jpg", credential: "Career & Life Coach, ICF", specialties: ["Burnout", "Work stress"], rating: 4.7, reviews: 121, experience: "7 yrs", price: 900, languages: ["English", "Hindi", "Punjabi"], nextSlot: "Tomorrow, 4:15 PM", originalProvider: undefined },
+    ];
+  }, [featuredTherapists]);
+
+  const mappedCircles = useMemo(() => {
+    if (publicClubs && publicClubs.length > 0) {
+      return publicClubs.map((club, i) => ({
+        id: club.id,
+        name: club.title,
+        tagline: club.subtitle || "A supportive small community group.",
+        members: club.activeMembers || 1500,
+        cadence: club.weeklyEvents || "Weekly moderated audio threads",
+        accent: (["sage", "lavender", "peach"][i % 3]) as "sage" | "lavender" | "peach",
+        tags: [club.sphere || "Community"],
+      }));
+    }
+    return [
+      { id: "c-1", name: "Quiet Anxiety Club", tagline: "For the 2 AM overthinkers. Breathe, share, and let it settle.", members: 2840, cadence: "Live circle every Tue, 9 PM", accent: "sage" as const, tags: ["Anxiety", "Beginner friendly"] },
+      { id: "c-2", name: "Work In Progress", tagline: "Burnout, bad managers and boundaries — vent without the LinkedIn voice.", members: 1962, cadence: "Weekly prompt + open thread", accent: "lavender" as const, tags: ["Burnout", "Career"] },
+      { id: "c-3", name: "After The Goodbye", tagline: "A gentle space for heartbreak, endings and slowly starting again.", members: 1204, cadence: "Live circle every Sat, 7 PM", accent: "peach" as const, tags: ["Heartbreak", "Grief"] },
+    ];
+  }, [publicClubs]);
+
+  const slide = heroSlides[heroIndex];
+
+  const handleCircleToggle = (id: string) => {
+    if (status !== "authenticated") {
+      openJoinModal();
+      return;
+    }
+    setJoinedCircleIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  };
+
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
-    <div className="bg-[#f4f4f2] text-[#273331]">
+    <div className="min-h-screen w-full bg-cream-100 text-ink-900 font-sans">
       <LandingNavbar onJoinClick={openJoinModal} />
+
       <main>
-        <motion.section
-          id="about"
-          className="mx-auto max-w-[1240px] px-6 pb-16 pt-16 md:px-10"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.25 }}
-        >
-          <div className="grid items-center gap-10 lg:grid-cols-2">
-            <motion.div
-              key={heroSlides[heroIndex].title}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-            >
-              <span className="inline-flex rounded-full bg-[#bcead8] px-4 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-[#2d7561]">
-                A New Path to Inner Peace
-              </span>
-              <h1 className="mt-6 text-5xl font-semibold leading-[1.08] tracking-[-0.03em] text-[#1f2827] md:text-7xl">
-                {heroSlides[heroIndex].title}
-                <br />
-                <span className="italic text-[#2f745f]">
-                  {heroSlides[heroIndex].highlight}
-                </span>
-              </h1>
-              <p className="mt-6 max-w-[510px] text-[18px] leading-8 text-[#5d6664]">
-                {heroSlides[heroIndex].description}
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <button
-                  type="button"
-                  onClick={openListenerBooking}
-                  className="rounded-full bg-[#2f745f] px-8 py-4 text-sm font-semibold text-white shadow-md"
-                >
-                  Talk to a Listener
-                </button>
-                <Link
-                  href="/therapists"
-                  className="rounded-full bg-[#e7dacd] px-8 py-4 text-sm font-semibold text-[#3e4a48] transition hover:bg-[#ded3c4]"
-                >
-                  Find Your Therapist
-                </Link>
-              </div>
-              <div className="mt-7 flex gap-2">
-                {heroSlides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    className={`h-2.5 rounded-full transition-all ${
-                      idx === heroIndex
-                        ? "w-10 bg-[#2f745f]"
-                        : "w-2.5 bg-[#b8c4c1]"
-                    }`}
-                    aria-label={`Go to hero slide ${idx + 1}`}
-                    onClick={() => setHeroIndex(idx)}
-                  />
-                ))}
-              </div>
-            </motion.div>
-            <div className="relative h-[500px] overflow-hidden rounded-[40px] shadow-[0_24px_48px_-30px_rgba(0,0,0,0.45)]">
+        {/* ==========================================
+            SECTION 1: HERO CAROUSEL
+            ========================================== */}
+        <section id="top" aria-label="Welcome to Apna Healer" className="relative overflow-hidden">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <div className="absolute -left-32 -top-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(202,223,195,0.55),transparent_65%)]" />
+            <div className="absolute -right-24 top-10 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle_at_center,rgba(218,209,240,0.5),transparent_65%)]" />
+            <div className="absolute bottom-[-160px] left-1/3 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(247,212,189,0.45),transparent_65%)]" />
+          </div>
+
+          <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-5 pb-16 pt-12 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:pb-24 lg:pt-20">
+            <div>
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={heroSlides[heroIndex].visual}
-                  className={`absolute inset-0 ${heroSlides[heroIndex].visual}`}
-                  initial={{ opacity: 0.3, scale: 1.06 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0.35, scale: 0.95 }}
-                  transition={{ duration: 0.65 }}
-                />
+                  key={slide.id}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <span className="inline-flex items-center gap-2 rounded-full border border-cream-300 bg-cream-50/80 px-4 py-2 text-xs font-semibold text-ink-500 backdrop-blur">
+                    <span className={`h-1.5 w-1.5 rounded-full ${accentRing[slide.accent]}`} />
+                    {slide.eyebrow}
+                  </span>
+                  <h1 className="mt-6 font-display text-4xl leading-[1.1] tracking-tight text-ink-900 sm:text-5xl lg:text-[3.65rem] font-semibold">
+                    {slide.title}{" "}
+                    <span className={`italic ${accentText[slide.accent]}`}>{slide.highlight}</span>
+                  </h1>
+                  <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg">{slide.body}</p>
+
+                  <div className="mt-9 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={slide.id === "slide-listen" ? openListenerBooking : () => scrollToSection("experts")}
+                      className={`group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-semibold text-cream-50 shadow-soft transition cursor-pointer ${
+                        accentButton[slide.accent]
+                      }`}
+                    >
+                      {slide.primaryCta}
+                      <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection(slide.id === "slide-community" ? "circles" : "services")}
+                      className="inline-flex items-center gap-2 rounded-full border border-cream-300 bg-cream-50/70 px-7 py-4 text-sm font-semibold text-ink-700 backdrop-blur transition hover:border-ink-400/40 hover:bg-cream-50 cursor-pointer"
+                    >
+                      {slide.secondaryCta}
+                    </button>
+                  </div>
+                </motion.div>
               </AnimatePresence>
+
+              <div className="mt-10 flex items-center gap-4">
+                <div className="flex items-center gap-2" role="tablist" aria-label="Hero slides">
+                  {heroSlides.map((s, i) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={i === heroIndex}
+                      aria-label={`Slide ${i + 1}: ${s.eyebrow}`}
+                      onClick={() => setHeroIndex(i)}
+                      className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
+                        i === heroIndex ? "w-10 bg-ink-900" : "w-4 bg-ink-400/40 hover:bg-ink-400/70"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHeroPlaying((p) => !p)}
+                  aria-label={heroPlaying ? "Pause slideshow" : "Play slideshow"}
+                  className="rounded-full border border-cream-300 p-2 text-ink-500 transition hover:bg-cream-200 hover:text-ink-900 cursor-pointer"
+                >
+                  {heroPlaying ? <PauseIcon className="h-3 w-3" /> : <PlayIcon className="h-3 w-3" />}
+                </button>
+                <span className="flex items-center gap-1.5 text-xs text-ink-400">
+                  <ShieldCheckIcon className="h-3.5 w-3.5 text-sage-500" />
+                  12,400+ conversations held this month
+                </span>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-5xl bg-cream-200 shadow-soft">
+                <AnimatePresence mode="popLayout">
+                  <motion.img
+                    key={slide.id}
+                    src={slide.image}
+                    alt={slide.imageAlt}
+                    initial={{ opacity: 0, scale: 1.06 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                </AnimatePresence>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+                className="absolute -bottom-6 left-4 flex items-center gap-3 rounded-3xl border border-cream-300 bg-cream-50/90 px-5 py-4 shadow-soft backdrop-blur sm:left-8"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-100 text-sm font-semibold text-sage-700">
+                  4m
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">Average wait time</p>
+                  <p className="text-xs text-ink-400">To be heard by a real person</p>
+                </div>
+              </motion.div>
             </div>
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section
-          className="bg-[#faf9f6] py-16 border-b border-black/5"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[1240px] px-6 md:px-10">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Sage Green: Listener support card */}
-              <motion.article
-                className="rounded-xl bg-[#dce9dd]/75 border border-[#c4dcce] p-8 shadow-[0_12px_44px_-16px_rgba(0,0,0,0.03)] flex flex-col justify-between min-h-[320px]"
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.25 }}
-              >
-                <div className="space-y-4">
-                  <span className="inline-block rounded-full border border-[#235844]/35 bg-white/40 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#235844]">
-                    Available 24/7
+        {/* ==========================================
+            SECTION 2: LISTENERS ONLINE MARQUEE
+            ========================================== */}
+        <section aria-label="Peer listeners currently online" className="border-y border-cream-300 bg-cream-100/70 py-4 overflow-hidden">
+          <div className="mx-auto flex max-w-7xl items-center gap-6 px-5 sm:px-8">
+            <p className="hidden shrink-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-400 sm:flex">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-sage-500" />
+              </span>
+              {mappedListeners.filter((l) => l.isOnline).length} online now
+            </p>
+            <div className="relative flex-1 overflow-hidden">
+              <div className="flex w-max animate-marquee items-center gap-3">
+                {onlineMarqueeList.map((l, i) => (
+                  <span
+                    key={`${l.id}-${i}`}
+                    className="flex shrink-0 items-center gap-2 rounded-full border border-cream-300 bg-cream-50 px-4 py-2 text-xs text-ink-500 font-medium"
+                    aria-hidden={i >= mappedListeners.length ? true : undefined}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${accentRing[l.accent]}`} />
+                    <span className="font-semibold text-ink-900">{l.name}</span>
+                    <span className="text-ink-400">·</span>
+                    {l.focus}
+                    <span className="text-ink-400">·</span>
+                    {l.languages.join("/")}
                   </span>
-                  <h3 className="font-display text-2xl font-bold tracking-tight text-[#1f2827] sm:text-3xl">
-                    Need Someone To Talk To?
-                  </h3>
-                  <p className="max-w-[460px] text-sm leading-relaxed text-[#5c6865]">
-                    Connect with a compassionate listener in a safe and supportive space.
-                  </p>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <span className="rounded-lg border border-[#c4dcce]/60 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-[#235844]">
-                      Private.
-                    </span>
-                    <span className="rounded-lg border border-[#c4dcce]/60 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-[#235844]">
-                      100% Anonymous.
-                    </span>
-                    <span className="rounded-lg border border-[#c4dcce]/60 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-[#235844]">
-                      Judgment-Free.
-                    </span>
-                  </div>
-                </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
+        {/* ==========================================
+            SECTION 3: SERVICE MATCH CARDS
+            ========================================== */}
+        <section id="services" className="mx-auto w-full max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+          <SectionHeading
+            eyebrow="Two ways in"
+            title="What would feel right, right now?"
+            description="There is no wrong door. Start with a free conversation, or go straight to a professional — you can move between the two whenever you like."
+          />
+
+          <div className="mt-14 grid gap-6 lg:grid-cols-2">
+            {serviceMatchCards.map((card, i) => (
+              <motion.article
+                key={card.key}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4 }}
+                className={`group relative overflow-hidden rounded-4xl border p-8 transition-shadow duration-300 hover:shadow-soft sm:p-10 ${card.wrap}`}
+              >
+                <div aria-hidden="true" className={`pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full ${card.glow}`} />
+                <div className="relative">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.iconWrap}`}>
+                      <card.icon className="h-5 w-5" />
+                    </span>
+                    <span className={`rounded-full px-3.5 py-1.5 text-xs font-semibold ${card.chip}`}>{card.price}</span>
+                  </div>
+
+                  <p className="mt-7 text-xs font-semibold uppercase tracking-[0.18em] text-ink-400">{card.label}</p>
+                  <h3 className="mt-2 font-display text-2xl leading-snug text-ink-900 sm:text-[1.75rem] font-semibold">{card.title}</h3>
+                  <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-500">{card.body}</p>
+
+                  <ul className="mt-7 space-y-3">
+                    {card.points.map((point) => (
+                      <li key={point} className="flex items-start gap-2.5 text-sm text-ink-700 font-semibold">
+                        <CheckIcon className={`mt-0.5 h-4 w-4 shrink-0 ${card.tick}`} />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    type="button"
+                    onClick={card.key === "peer" ? openListenerBooking : () => scrollToSection("experts")}
+                    className={`mt-9 inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-cream-50 transition cursor-pointer ${card.button}`}
+                  >
+                    {card.cta}
+                    <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </div>
+              </motion.article>
+            ))}
+          </div>
+        </section>
+
+        {/* ==========================================
+            SECTION 4: TRUST RIBBON
+            ========================================== */}
+        <section aria-label="Our promises to you" className="bg-peach-100/80">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-5 px-5 py-7 sm:px-8">
+            {promiseItems.map((item, i) => (
+              <motion.span
+                key={item.label}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: i * 0.07 }}
+                className="flex items-center gap-2.5 text-sm font-semibold text-peach-600"
+              >
+                <item.icon className="h-4 w-4" strokeWidth={1.9} />
+                <span className="text-ink-700">{item.label}</span>
+              </motion.span>
+            ))}
+          </div>
+        </section>
+
+        {/* ==========================================
+            SECTION 5: VERIFIED LISTENERS CAROUSEL
+            ========================================== */}
+        <section id="listeners" className="mx-auto w-full max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
+          <SectionHeading
+            align="left"
+            eyebrow="Verified listeners"
+            title="Real people, trained to hold space"
+            description="Every listener completes 30 hours of active-listening training and a supervised trial. They stay anonymous too — first names only."
+            action={
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => scrollListeners(-1)}
+                  aria-label="Previous listeners"
+                  className="rounded-full border border-cream-300 bg-cream-50/80 p-3 text-ink-500 transition hover:border-sage-200 hover:text-ink-900 cursor-pointer"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollListeners(1)}
+                  aria-label="More listeners"
+                  className="rounded-full border border-cream-300 bg-cream-50/80 p-3 text-ink-500 transition hover:border-sage-200 hover:text-ink-900 cursor-pointer"
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </button>
+              </div>
+            }
+          />
+
+          <div
+            ref={listenerTrackRef}
+            className="no-scrollbar mt-12 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scroll-smooth"
+            role="list"
+            aria-label="Verified peer listeners"
+          >
+            {mappedListeners.map((listener, i) => (
+              <motion.div
+                key={listener.id}
+                role="listitem"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.5, delay: Math.min(i, 5) * 0.06 }}
+                className="w-[228px] shrink-0 snap-start rounded-4xl border border-cream-300 bg-cream-50 p-6 text-center transition hover:shadow-soft"
+              >
+                <div className="flex justify-center">
+                  <Avatar initials={listener.initials} accent={listener.accent} size="lg" online={listener.isOnline} />
+                </div>
+                <p className="mt-4 flex items-center justify-center gap-1.5 font-display text-lg text-ink-900 font-semibold">
+                  {listener.name}
+                  <BadgeCheckIcon className="h-4 w-4 text-sage-500" aria-label="Verified listener" />
+                </p>
+                <p className="mt-1 text-xs text-ink-400">{listener.languages.join(" · ")}</p>
+                <span className="mt-3 inline-block rounded-full bg-cream-200 px-3 py-1.5 text-[11px] font-semibold text-ink-500">
+                  {listener.focus}
+                </span>
+                <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-400 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <StarIcon className="h-3.5 w-3.5 fill-peach-400 text-peach-400" />
+                    {listener.rating.toFixed(1)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageCircleIcon className="h-3.5 w-3.5" />
+                    {listener.conversations}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={openListenerBooking}
-                  className="mt-8 flex w-full items-center justify-between rounded-full bg-[#235844] py-3.5 px-5 text-sm font-bold text-white transition hover:bg-[#1b4334] shadow-[0_12px_28px_-8px_rgba(35,88,68,0.35)]"
+                  disabled={!listener.isOnline}
+                  className={`mt-5 w-full rounded-full px-4 py-2.5 text-xs font-semibold transition cursor-pointer ${
+                    listener.isOnline ? "bg-sage-100 text-sage-700 hover:bg-sage-200" : "cursor-not-allowed bg-cream-200 text-ink-400"
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <svg className="h-5 w-5 fill-current text-white/95" viewBox="0 0 24 24">
-                      <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 11c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm4 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm4 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
-                    </svg>
-                    <span>Talk to a Listener</span>
-                  </div>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#235844]">
-                    <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
+                  {listener.isOnline ? "Say hi" : "Away right now"}
                 </button>
-              </motion.article>
-
-              {/* Lavender: Expert support card */}
-              <motion.article
-                className="rounded-xl bg-[#ebdffd]/75 border border-[#ddcbfa] p-8 shadow-[0_12px_44px_-16px_rgba(0,0,0,0.03)] flex flex-col justify-between min-h-[320px]"
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.25 }}
-              >
-                <div className="space-y-4">
-                  <span className="inline-block rounded-full border border-[#7c4df1]/35 bg-white/40 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#7c4df1]">
-                    Professional Guidance
-                  </span>
-                  <h3 className="font-display text-2xl font-bold tracking-tight text-[#1f2827] sm:text-3xl">
-                    Looking For Expert Support?
-                  </h3>
-                  <p className="max-w-[460px] text-sm leading-relaxed text-[#5c6865]">
-                    Connect with verified mental health experts for personalized guidance and evidence-based therapeutic support.
-                  </p>
-                </div>
-
-                <Link
-                  href="/therapists"
-                  className="mt-8 flex w-full items-center justify-between rounded-full bg-[#7c4df1] py-3.5 px-5 text-sm font-bold text-white transition hover:bg-[#683cd7] shadow-[0_12px_28px_-8px_rgba(124,77,241,0.35)]"
-                >
-                  <div className="flex items-center gap-3">
-                    <svg className="h-5 w-5 fill-current text-white/95" viewBox="0 0 24 24">
-                      <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.17 19.58 10.53 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-8h2v2h-2zm-3 0h2v2H8zm6 0h2v2h-2z" />
-                    </svg>
-                    <span>Find an Expert</span>
-                  </div>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#7c4df1]">
-                    <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                </Link>
-              </motion.article>
-            </div>
+              </motion.div>
+            ))}
           </div>
+        </section>
 
-          {/* Peach trust ribbon footer */}
-          <div className="mx-auto mt-10 max-w-[1240px] px-6 md:px-10">
-            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 rounded-full border border-[#f7e0d2] bg-[#fbf1ea] px-8 py-3.5 text-xs font-semibold text-[#5c473c] shadow-xs">
-              {/* Item 1: 100% Confidential */}
-              <div className="flex items-center gap-2">
-                <svg className="h-4.5 w-4.5 text-[#e07b57]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>100% Confidential</span>
-              </div>
+        {/* ==========================================
+            SECTION 6: VERIFIED EXPERTS CAROUSEL
+            ========================================== */}
+        <section id="experts" className="relative overflow-hidden bg-[#ece7f8]/40 py-20 lg:py-28">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-24 top-1/3 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(218,209,240,0.65),transparent_65%)]"
+          />
 
-              {/* Separator */}
-              <div className="hidden h-4 w-px bg-[#f7e0d2] md:block" />
-
-              {/* Item 2: Anonymous Support */}
-              <div className="flex items-center gap-2">
-                <svg className="h-4.5 w-4.5 text-[#e07b57]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4a4 4 0 00-4 4v2H4v2h16v-2h-4V8a4 4 0 00-4-4zM6 16v1a2 2 0 002 2h8a2 2 0 002-2v-1" />
-                </svg>
-                <span>Anonymous Support</span>
-              </div>
-
-              {/* Separator */}
-              <div className="hidden h-4 w-px bg-[#f7e0d2] md:block" />
-
-              {/* Item 3: 24/7 Availability */}
-              <div className="flex items-center gap-2">
-                <svg className="h-4.5 w-4.5 text-[#e07b57]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>24/7 Availability</span>
-              </div>
-
-              {/* Separator */}
-              <div className="hidden h-4 w-px bg-[#f7e0d2] md:block" />
-
-              {/* Item 4: Verified Experts */}
-              <div className="flex items-center gap-2">
-                <svg className="h-4.5 w-4.5 text-[#e07b57]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
-                </svg>
-                <span>Verified Experts</span>
-              </div>
-
-              {/* Separator */}
-              <div className="hidden h-4 w-px bg-[#f7e0d2] md:block" />
-
-              {/* Item 5: Judgment-Free */}
-              <div className="flex items-center gap-2">
-                <svg className="h-4.5 w-4.5 text-[#e07b57]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                <span>Judgment-Free</span>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          className="bg-white py-16 border-b border-black/5"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[1240px] px-6 text-center md:px-10">
-            <h2 className="font-display text-4xl font-semibold tracking-tight text-[#1c2826] sm:text-5xl">
-              Verified Listeners
-            </h2>
-            <p className="mt-2 text-sm italic text-[#5c6865]">
-              Matched by concern. Connected by understanding.
-            </p>
-
-            <div className="flex items-center justify-center gap-4 sm:gap-8 md:gap-12 mt-10">
-              {/* Prev Button */}
-              <button
-                type="button"
-                onClick={handlePrevListener}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e3ebd9] text-[#2f5d50] transition hover:bg-[#d5e0ca] active:scale-95 sm:h-16 sm:w-16 shadow-2xs"
-                aria-label="Previous listener"
-              >
-                <svg className="h-6 w-6 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              {/* Central avatar and circles row */}
-              <div className="flex items-center justify-center gap-2.5 sm:gap-4 md:gap-6 overflow-hidden py-4">
-                {[-3, -2, -1, 0, 1, 2, 3].map((offset) => {
-                  const idx = (activeListenerIdx + offset + carouselListeners.length * 100) % carouselListeners.length;
-                  const listener = carouselListeners[idx];
-                  const isActive = offset === 0;
-
-                  return (
-                    <motion.div
-                      key={listener.name}
-                      layout
-                      transition={{ type: "spring", stiffness: 260, damping: 28 }}
-                      className={
-                        isActive
-                          ? "relative mx-1 h-24 w-24 shrink-0 rounded-full border-4 border-[#e3ebd9] bg-[#fdfdfd] shadow-md sm:mx-3 sm:h-28 sm:w-28 md:mx-4 md:h-32 md:w-32"
-                          : "relative h-10 w-10 shrink-0 rounded-full overflow-hidden bg-[#51846b] border border-white/20 sm:h-12 sm:w-12 md:h-14 md:w-14"
-                      }
-                    >
-                      <img
-                        src={listener.image}
-                        alt={listener.name}
-                        className={`h-full w-full rounded-full object-cover transition-opacity duration-300 ${
-                          isActive ? "opacity-100" : "opacity-35 grayscale"
-                        }`}
-                      />
-                      {isActive && (
-                        <div className="absolute bottom-0 left-1/2 flex h-6 w-6 -translate-x-1/2 translate-y-1/3 items-center justify-center rounded-full border-2 border-white bg-[#3f6a58] text-white shadow-xs">
-                          <svg className="h-3.5 w-3.5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              {/* Next Button */}
-              <button
-                type="button"
-                onClick={handleNextListener}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e3ebd9] text-[#2f5d50] transition hover:bg-[#d5e0ca] active:scale-95 sm:h-16 sm:w-16 shadow-2xs"
-                aria-label="Next listener"
-              >
-                <svg className="h-6 w-6 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={openListenerBooking}
-                className="rounded-lg bg-[#3f6a58] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#325647] shadow-[0_8px_20px_-6px_rgba(63,106,88,0.3)]"
-              >
-                Talk to a Listener
-              </button>
-            </div>
-          </div>
-        </motion.section>
-        <motion.section
-          className="bg-[#faf9f6] py-16 border-b border-black/5"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[1360px] px-6 md:px-10">
-            {/* Header with Filter */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="font-display text-3xl font-semibold tracking-tight text-[#1c2826] sm:text-4xl">
-                  Find the Right Experts
-                </h2>
-                <p className="mt-1 text-sm text-[#5c6865]">
-                  Highly-rated experts matched to your profile.
-                </p>
-              </div>
-
-              {/* Filter Button */}
-              <div className="flex items-center gap-2 rounded-xl bg-[#eef1ed] border border-[#dce0db] px-4 py-2 text-xs font-semibold text-[#1c2826] shadow-2xs">
-                <svg className="h-4 w-4 text-[#5c6865]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                <span>Filter: <span className="font-bold text-[#2f5d50]">All experts</span></span>
-              </div>
-            </div>
-
-            {/* Carousel Deck */}
-            <div className="flex items-center gap-4 sm:gap-6 mt-10">
-              {/* Left Arrow Button */}
-              <button
-                type="button"
-                aria-label="Previous professionals"
-                disabled={!canSlideProfessionals}
-                onClick={() =>
-                  setProSlide(
-                    (prev) =>
-                      (prev - 1 + featuredTherapists.length) % featuredTherapists.length,
-                  )
-                }
-                className="grid h-12 w-12 shrink-0 place-content-center rounded-full bg-[#e3ebd9] text-[#2f5d50] hover:bg-[#d5e0ca] transition disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
-              >
-                <svg className="h-6 w-6 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              {/* Grid content */}
-              <div className="flex-1 min-w-0">
-                {homeQuery.isLoading ? (
-                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-[340px] animate-pulse rounded-[24px] border border-[#dfdfdb] bg-white"
-                      />
-                    ))}
-                  </div>
-                ) : visibleProfessionals.length > 0 ? (
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                      key={proSlide}
-                      initial={{ opacity: 0, x: 24 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -24 }}
-                      transition={{ duration: 0.35, ease: "easeOut" }}
-                      className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                    >
-                      {visibleProfessionals.map((provider, index) => (
-                        <motion.article
-                          key={`${provider.id}-${proSlide}-${index}`}
-                          whileHover={{ y: -4 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden rounded-xl border border-[#dfdfdb] bg-white shadow-xs flex flex-col justify-between"
-                        >
-                          <div className="relative h-[180px] w-full overflow-hidden bg-accent">
-                            {provider.image ? (
-                              <img
-                                src={provider.image}
-                                alt={provider.name ?? ""}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-[#bcead8] text-[#2f745f] font-bold text-xl">
-                                {provider.name?.slice(0, 2).toUpperCase() ?? "TH"}
-                              </div>
-                            )}
-                            <span className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-[#1c2826] shadow-2xs">
-                              {therapistTag(provider)}
-                            </span>
-                          </div>
-
-                          <div className="pt-4 flex-1 flex flex-col justify-between">
-                            <div className="px-4">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <h3 className="text-sm font-bold uppercase tracking-tight text-[#1c2826] line-clamp-1">
-                                    {provider.name ?? "Therapist"}
-                                  </h3>
-                                  <p className="text-[10px] font-medium text-[#5c6865] mt-0.5">
-                                    1.5+ years of experience
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-0.5 text-xs font-bold text-[#1c2826] shrink-0">
-                                  <span className="text-[#e07b57]">★</span>
-                                  <span>4.9</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Dark Green Specializations Stripe */}
-                            <div className="mt-4 bg-[#2f5d50] py-2 px-3 text-center">
-                              <p className="text-[9px] font-semibold text-white truncate">
-                                {provider.specializations.slice(0, 3).join(" • ") || "Wellness • Healing • Support"}
-                              </p>
-                            </div>
-
-                            {/* Bottom Row */}
-                            <div className="p-4 flex items-center justify-between gap-2">
-                              <p className="text-xs font-bold text-[#1c2826]">
-                                {provider.hourlyRate
-                                  ? `${formatCurrency(provider.hourlyRate)}/session`
-                                  : "View pricing"}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  requireAuth(() =>
-                                    router.push(`/dashboard/therapist/${provider.id}`),
-                                  )
-                                }
-                                className="rounded-lg bg-[#2f5d50] hover:bg-[#204037] text-white text-[9px] font-bold tracking-wider px-3.5 py-2 uppercase transition shadow-2xs"
-                              >
-                                Book Session
-                              </button>
-                            </div>
-                          </div>
-                        </motion.article>
-                      ))}
-                    </motion.div>
-                  </AnimatePresence>
-                ) : (
-                  <p className="text-sm text-[#687471]">
-                    Verified therapists will appear here as they join the platform.
-                  </p>
-                )}
-              </div>
-
-              {/* Right Arrow Button */}
-              <button
-                type="button"
-                aria-label="Next professionals"
-                disabled={!canSlideProfessionals}
-                onClick={() =>
-                  setProSlide((prev) => (prev + 1) % featuredTherapists.length)
-                }
-                className="grid h-12 w-12 shrink-0 place-content-center rounded-full bg-[#e3ebd9] text-[#2f5d50] hover:bg-[#d5e0ca] transition disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
-              >
-                <svg className="h-6 w-6 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Bottom Match Actions */}
-            <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/therapists"
-                className="rounded-lg bg-[#2f5d50] hover:bg-[#204037] text-white text-xs font-bold px-8 py-3.5 tracking-wider uppercase transition shadow-xs"
-              >
-                View All Experts
-              </Link>
-              <Link
-                href="/therapists"
-                className="rounded-lg border-2 border-[#2f5d50] hover:bg-[#2f5d50]/5 text-[#2f5d50] text-xs font-bold px-8 py-3.5 tracking-wider uppercase transition"
-              >
-                Get Matched
-              </Link>
-            </div>
-          </div>
-        </motion.section>
-        <motion.section
-          className="bg-white py-20 border-b border-black/5"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[1240px] px-6 md:px-10 text-center">
-            <span className="inline-block rounded-full border border-neutral-300 bg-neutral-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-2">
-              COMMUNITY SPACE
-            </span>
-            <h2 className="font-display text-4xl font-semibold tracking-tight text-[#1c2826] sm:text-5xl">
-              Your Circle. Your Space. Your People.
-            </h2>
-            <p className="mt-2 text-sm italic text-[#5c6865]">
-              A place to connect, express, reflect, and belong.
-            </p>
-
-            <div className="mt-12 grid gap-6">
-              {/* Row 1: 3 equal columns */}
-              <div className="grid gap-6 md:grid-cols-3">
-                {/* Column 1: CLUBS */}
-                <motion.article
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative rounded-xl bg-[#f4faf6] border border-[#d5ebd9] p-8 text-left flex flex-col justify-between min-h-[220px]"
-                >
-                  <div className="space-y-3 pr-20">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#2b624c]">
-                      CLUBS
-                    </h3>
-                    <p className="text-sm font-semibold text-[#1c2826] leading-snug">
-                      Join communities that match your interests and journey
-                    </p>
-                  </div>
-
-                  {/* 3D abstract vector graphic */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-90">
-                    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                      <circle cx="40" cy="40" r="32" fill="#bcead8" fillOpacity="0.4" />
-                      <circle cx="40" cy="30" r="12" fill="#2f745f" />
-                      <path d="M16 60c0-10 16-14 24-14s24 4 24 14v4H16v-4z" fill="#2f745f" />
-                      <circle cx="60" cy="26" r="8" fill="#5cb89a" />
-                      <circle cx="20" cy="26" r="8" fill="#5cb89a" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom row */}
-                  <div className="mt-6 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        <img className="h-5 w-5 rounded-full border border-white animate-pulse" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&q=80" alt="" />
-                        <img className="h-5 w-5 rounded-full border border-white" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&q=80" alt="" />
-                        <img className="h-5 w-5 rounded-full border border-white animate-pulse" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=50&q=80" alt="" />
-                      </div>
-                      <span className="text-[10px] font-bold text-neutral-600">
-                        {stats ? (stats.totalMembers >= 1000 ? `${Math.floor(stats.totalMembers / 1000)}K+` : stats.totalMembers) : "10K+"} Members
-                      </span>
-                    </div>
-
-                    <Link
-                      href="/clubs"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2f745f] text-white hover:bg-[#1b4e3f] transition"
-                    >
-                      <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </motion.article>
-
-                {/* Column 2: APH EVENTS */}
-                <motion.article
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative rounded-xl bg-[#faf3f2] border border-[#eed6d4] p-8 text-left flex flex-col justify-between min-h-[220px]"
-                >
-                  <div className="space-y-3 pr-20">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#a6372d]">
-                      APH EVENTS
-                    </h3>
-                    <p className="text-sm font-semibold text-[#1c2826] leading-snug">
-                      Explore events, workshops & meetups to connect and grow.
-                    </p>
-                  </div>
-
-                  {/* Calendar Graphic */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-90">
-                    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                      <rect x="15" y="20" width="50" height="50" rx="10" fill="#ffffff" stroke="#a6372d" strokeWidth="4" />
-                      <rect x="15" y="20" width="50" height="15" rx="2" fill="#a6372d" />
-                      <circle cx="28" cy="45" r="4" fill="#a6372d" />
-                      <circle cx="40" cy="45" r="4" fill="#a6372d" />
-                      <circle cx="52" cy="45" r="4" fill="#a6372d" />
-                      <circle cx="28" cy="57" r="4" fill="#a6372d" />
-                      <circle cx="40" cy="57" r="4" fill="#a6372d" />
-                      <circle cx="52" cy="57" r="4" fill="#e57373" />
-                      <rect x="23" y="12" width="6" height="12" rx="3" fill="#3f3f3f" />
-                      <rect x="51" y="12" width="6" height="12" rx="3" fill="#3f3f3f" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom row */}
-                  <div className="mt-6 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        <img className="h-5 w-5 rounded-full border border-white" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&q=80" alt="" />
-                        <img className="h-5 w-5 rounded-full border border-white animate-pulse" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&q=80" alt="" />
-                        <img className="h-5 w-5 rounded-full border border-white" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&q=80" alt="" />
-                      </div>
-                      <span className="text-[10px] font-bold text-[#a6372d]">
-                        Upcoming Events
-                      </span>
-                    </div>
-
-                    <Link
-                      href="/events"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#a6372d] text-white hover:bg-[#852a22] transition"
-                    >
-                      <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </motion.article>
-
-                {/* Column 3: JOURNAL */}
-                <motion.article
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative rounded-xl bg-[#f5f2fc] border border-[#e2daf7] p-8 text-left flex flex-col justify-between min-h-[220px]"
-                >
-                  <div className="space-y-3 pr-20">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#6f42c1]">
-                      JOURNAL
-                    </h3>
-                    <p className="text-sm font-semibold text-[#1c2826] leading-snug">
-                      A private space to reflect, write and understand yourself better.
-                    </p>
-                  </div>
-
-                  {/* Journal Notebook SVG */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-90">
-                    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                      <rect x="20" y="15" width="44" height="54" rx="8" fill="#6f42c1" />
-                      <rect x="16" y="20" width="8" height="6" rx="2" fill="#d0bdf4" />
-                      <rect x="16" y="32" width="8" height="6" rx="2" fill="#d0bdf4" />
-                      <rect x="16" y="44" width="8" height="6" rx="2" fill="#d0bdf4" />
-                      <rect x="16" y="56" width="8" height="6" rx="2" fill="#d0bdf4" />
-                      <path d="M42 32c-3-3-8 0-8 4c0 3 4 6 8 10c4-4 8-7 8-10c0-4-5-7-8-4z" fill="#ffffff" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom row */}
-                  <div className="mt-6 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-[#6f42c1]">
-                      Reflect Daily
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => requireAuth(() => router.push("/dashboard/journal"))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6f42c1] text-white hover:bg-[#59339e] transition"
-                    >
-                      <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </motion.article>
-              </div>
-
-              {/* Row 2: 2 unequal columns */}
-              <div className="grid gap-6 md:grid-cols-[1fr_1.8fr]">
-                {/* Column 1: COMMUNITY BLOG */}
-                <motion.article
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative rounded-xl bg-[#f2f8fc] border border-[#d5e9f7] p-8 text-left flex flex-col justify-between min-h-[220px]"
-                >
-                  <div className="space-y-3 pr-20">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#0c63e4]">
-                      COMMUNITY BLOG
-                    </h3>
-                    <p className="text-sm font-semibold text-[#1c2826] leading-snug">
-                      Read stories, insights and experiences shared by our community.
-                    </p>
-                  </div>
-
-                  {/* Clipboard/Pencil SVG */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-90">
-                    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                      <rect x="20" y="15" width="40" height="50" rx="4" fill="#ffffff" stroke="#0c63e4" strokeWidth="4" />
-                      <line x1="28" y1="28" x2="52" y2="28" stroke="#0c63e4" strokeWidth="3" strokeLinecap="round" />
-                      <line x1="28" y1="38" x2="48" y2="38" stroke="#0c63e4" strokeWidth="3" strokeLinecap="round" />
-                      <line x1="28" y1="48" x2="44" y2="48" stroke="#0c63e4" strokeWidth="3" strokeLinecap="round" />
-                      <path d="M55 45 L68 25 L73 28 L60 48 Z" fill="#ffca28" />
-                      <path d="M55 45 L52 48 L60 48 Z" fill="#3f3f3f" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom row */}
-                  <div className="mt-6 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-[#0c63e4]">
-                      Latest Stories
-                    </span>
-
-                    <Link
-                      href="/blog"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0c63e4] text-white hover:bg-[#0a4ec9] transition"
-                    >
-                      <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </motion.article>
-
-                {/* Column 2: SAFE CIRCLE */}
-                <motion.article
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative rounded-xl bg-[#fdf9e9] border border-[#f6ebd1] p-8 text-left flex flex-col justify-between min-h-[220px]"
-                >
-                  <div className="space-y-3 pr-20 md:pr-40">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#b08513]">
-                      SAFE CIRCLE
-                    </h3>
-                    <p className="text-base font-semibold text-[#1c2826] leading-snug">
-                      A safe & anonymous space to share, listen and support each other.
-                    </p>
-                  </div>
-
-                  {/* Handholding circle vector silhouette */}
-                  <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-90 hidden md:block">
-                    <svg width="110" height="110" viewBox="0 0 100 100" fill="none">
-                      <path d="M20 55 C20 30, 80 30, 80 55 C80 80, 20 80, 20 55" stroke="#b08513" strokeWidth="2" strokeDasharray="4 4" />
-                      <circle cx="50" cy="30" r="6" fill="#b08513" />
-                      <path d="M42 45 C42 37, 58 37, 58 45 L55 65 L45 65 Z" fill="#b08513" />
-                      <circle cx="32" cy="45" r="6" fill="#b08513" />
-                      <path d="M24 60 C24 52, 40 52, 40 60 L37 78 L27 78 Z" fill="#b08513" />
-                      <circle cx="68" cy="45" r="6" fill="#b08513" />
-                      <path d="M60 60 C60 52, 76 52, 76 60 L73 78 L63 78 Z" fill="#b08513" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom row */}
-                  <div className="mt-6 flex items-center justify-between">
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-md bg-[#fcf5d2] px-2 py-0.5 text-[10px] font-bold text-[#b08513]">
-                        Anonymous
-                      </span>
-                      <span className="rounded-md bg-[#fcf5d2] px-2 py-0.5 text-[10px] font-bold text-[#b08513]">
-                        Respectful
-                      </span>
-                      <span className="rounded-md bg-[#fcf5d2] px-2 py-0.5 text-[10px] font-bold text-[#b08513]">
-                        Supportive
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => requireAuth(() => router.push("/dashboard/safe-circle"))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#b08513] text-white hover:bg-[#8f6a0d] transition"
-                    >
-                      <svg className="h-4.5 w-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </motion.article>
-              </div>
-            </div>
-
-            {/* Bottom Community CTA Ribbon */}
-            <div className="mt-10">
-              <div className="flex flex-wrap items-center justify-between gap-6 rounded-full border border-[#c8dccb] bg-[#d7e6da] px-6 py-4 px-6 md:px-10 shadow-sm">
-                <div className="flex items-center gap-4 text-left">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#1f4a39] shadow-2xs font-bold text-sm">
-                    💚
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-bold text-[#1f4a39]">
-                      Be a part of something meaningful.
-                    </h4>
-                    <p className="text-xs text-[#3d6e59] mt-0.5">
-                      Real Conversations. Real support. Real connections.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={openJoinModal}
-                  className="rounded-full bg-white hover:bg-neutral-50 text-[#1f4a39] text-xs font-bold px-6 py-2.5 border border-[#c8dccb] shadow-2xs transition"
-                >
-                  Join our Community
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          id="events"
-          className="py-16"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto grid max-w-[1240px] gap-8 px-6 md:grid-cols-2 md:px-10">
-            {upcomingEvents[0] ? (
-              <article className="grid overflow-hidden rounded-[32px] bg-white shadow-[0_20px_42px_-35px_rgba(0,0,0,0.45)] md:grid-cols-[1fr_1.2fr]">
-                <div
-                  className="min-h-[280px] bg-cover bg-center"
-                  style={{ backgroundImage: `url(${upcomingEvents[0].image})` }}
-                />
-                <div className="p-8">
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#798682]">
-                    {upcomingEvents[0].tag}
-                  </p>
-                  <h3 className="mt-2 text-[40px] font-semibold tracking-[-0.02em] text-[#1f2827]">
-                    {upcomingEvents[0].title}
-                  </h3>
-                  <p className="mt-4 text-[#63706d]">{upcomingEvents[0].description}</p>
-                  <div className="mt-6 flex items-center gap-3">
-                    <Link
-                      href={`/events/${upcomingEvents[0].id}`}
-                      className="rounded-full bg-[#2f745f] px-6 py-3 text-sm font-semibold text-white"
-                    >
-                      Reserve Spot
-                    </Link>
-                    <span className="text-xs font-semibold text-[#9ea5a3]">
-                      Hosted by {upcomingEvents[0].host}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            ) : null}
-            <article className="rounded-[32px] bg-white p-8 shadow-[0_20px_42px_-35px_rgba(0,0,0,0.45)]">
-              <h3 className="text-[46px] font-semibold tracking-[-0.02em] text-[#1f2827]">
-                Calendar
-              </h3>
-              <div className="mt-6 space-y-4">
-                {upcomingEvents.slice(1, 4).map((event) => {
-                  const parts = event.tag.split("·").map((p) => p.trim());
-                  return (
-                    <Link
-                      key={event.id}
-                      href={`/events/${event.id}`}
-                      className="flex items-center gap-4 rounded-2xl bg-[#f7f7f5] p-4 transition hover:bg-[#eef2ef]"
-                    >
-                      <div className="rounded-xl bg-[#bcead8] px-3 py-2 text-center">
-                        <p className="text-xs font-semibold uppercase leading-tight text-[#2f745f]">
-                          {parts[0] ?? "Event"}
-                        </p>
-                        <p className="text-xl font-bold text-[#2f745f]">{parts[1] ?? ""}</p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-[#1f2827]">{event.title}</p>
-                        <p className="text-sm text-[#697572]">{event.host}</p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-              <Link href="/events" className="mt-4 inline-block text-sm font-semibold text-[#2f745f]">
-                View all events →
-              </Link>
-            </article>
-          </div>
-        </motion.section>
-
-        <motion.section
-          className="py-16"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[1240px] px-6 md:px-10">
-            <h2 className="text-center text-[52px] font-semibold tracking-[-0.02em] text-[#1f2827]">
-              Voices of The Sanctuary
-            </h2>
-            <div className="mt-8 grid max-h-[360px] gap-4 overflow-hidden md:grid-cols-3">
-              {voiceColumns.map((column, columnIndex) => {
-                const columnItems = [...column, ...column];
-                const movePattern =
-                  columnIndex === 1 ? ["-50%", "0%"] : ["0%", "-50%"];
-                return (
-                  <motion.div
-                    key={columnIndex}
-                    className="flex flex-col gap-4"
-                    animate={{ y: movePattern }}
-                    transition={{
-                      duration: 14 + columnIndex * 2,
-                      ease: "linear",
-                      repeat: Infinity,
-                    }}
+          <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-8">
+            <SectionHeading
+              align="left"
+              eyebrow="Verified experts"
+              title="Therapists who feel like people first"
+              description="Licence-verified psychologists, counsellors and psychiatrists. Transparent pricing, no packages, and you can switch whenever the fit isn’t right."
+              action={
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollTherapists(-1)}
+                    aria-label="Previous experts"
+                    className="rounded-full border border-lavender-200 bg-cream-50 p-3 text-ink-500 transition hover:border-lavender-300 hover:text-ink-900 cursor-pointer"
                   >
-                    {columnItems.map((quote, index) => (
-                      <article
-                        key={`${quote}-${index}`}
-                        className={`rounded-[18px] p-5 ${
-                          columnIndex === 1 && index % 2 === 0
-                            ? "bg-[#bcead8]"
-                            : "bg-[#f0f0ed]"
-                        }`}
-                      >
-                        <p className="text-sm italic text-[#5f6d6a]">{quote}</p>
-                        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.08em] text-[#2b3c39]">
-                          User {columnIndex + 1}
-                        </p>
-                      </article>
-                    ))}
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          className="py-16"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[900px] px-6 md:px-10">
-            <h2 className="text-center text-[52px] font-semibold tracking-[-0.02em] text-[#1f2827]">
-              Gentle Answers
-            </h2>
-            <div className="mt-8 space-y-4">
-              {faqItems.map((item, idx) => {
-                const isOpen = openFaqIndex === idx;
-                return (
-                  <div
-                    key={item.question}
-                    className="rounded-2xl bg-white px-5 py-4 shadow-[0_16px_30px_-28px_rgba(0,0,0,0.5)]"
-                  >
-                    <button
-                      className="flex w-full items-center justify-between gap-4 text-left text-sm font-semibold text-[#273331]"
-                      onClick={() =>
-                        setOpenFaqIndex((current) =>
-                          current === idx ? -1 : idx,
-                        )
-                      }
-                    >
-                      <span>{item.question}</span>
-                      <span
-                        className={`text-xl leading-none transition-transform duration-300 ${
-                          isOpen ? "rotate-45" : ""
-                        }`}
-                      >
-                        +
-                      </span>
-                    </button>
-                    <AnimatePresence initial={false}>
-                      {isOpen ? (
-                        <motion.p
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.28 }}
-                          className="overflow-hidden pt-3 text-sm text-[#6b7674]"
-                        >
-                          {item.answer}
-                        </motion.p>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          className="px-6 pb-16 md:px-10"
-          variants={revealUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="mx-auto max-w-[1240px] rounded-[38px] bg-[#2f745f] p-10 md:p-14">
-            <h2 className="text-[52px] font-semibold tracking-[-0.02em] text-white">
-              Become a part of ApnaHealer
-            </h2>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {[
-                [
-                  "Be a Listener",
-                  "Lend your heart and time to support others in need.",
-                  "Apply Now",
-                ],
-                [
-                  "Join as Therapist",
-                  "Grow your clinical practice within our mindful ecosystem.",
-                  "Register",
-                ],
-                [
-                  "Organizations",
-                  "Bring mental wellness to your team or institution.",
-                  "Partner",
-                ],
-              ].map(([title, copy, action]) => (
-                <motion.article
-                  key={title}
-                  className="rounded-2xl border border-white/20 bg-white/10 p-6"
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <h3 className="text-2xl font-semibold text-white">{title}</h3>
-                  <p className="mt-3 text-sm text-white/85">{copy}</p>
-                  <button className="mt-5 rounded-full bg-[#d5e8df] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#2f745f]">
-                    {action}
+                    <ChevronLeftIcon className="h-4 w-4" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollTherapists(1)}
+                    aria-label="More experts"
+                    className="rounded-full border border-lavender-200 bg-cream-50 p-3 text-ink-500 transition hover:border-lavender-300 hover:text-ink-900 cursor-pointer"
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              }
+            />
+
+            <div
+              ref={therapistTrackRef}
+              className="no-scrollbar mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2 scroll-smooth"
+              role="list"
+              aria-label="Verified therapists and experts"
+            >
+              {mappedTherapists.map((t, i) => (
+                <motion.article
+                  key={t.id}
+                  role="listitem"
+                  initial={{ opacity: 0, y: 22 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.55, delay: Math.min(i, 4) * 0.07 }}
+                  whileHover={{ y: -4 }}
+                  className="flex w-[292px] shrink-0 snap-start flex-col rounded-4xl border border-lavender-100 bg-cream-50 p-5 transition-shadow hover:shadow-soft"
+                >
+                  <div className="relative overflow-hidden rounded-3xl bg-cream-200">
+                    <img
+                      src={t.photo}
+                      alt={`Portrait of ${t.name}`}
+                      className="aspect-[4/5] w-full object-cover transition duration-700 hover:scale-[1.03]"
+                    />
+                    <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-cream-50/90 px-3 py-1.5 text-[11px] font-semibold text-lavender-700 backdrop-blur">
+                      <BadgeCheckIcon className="h-3.5 w-3.5" />
+                      Verified
+                    </span>
+                    <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-cream-50/90 px-3 py-1.5 text-[11px] font-semibold text-ink-700 backdrop-blur">
+                      <StarIcon className="h-3.5 w-3.5 fill-peach-400 text-peach-400" />
+                      {t.rating.toFixed(1)} ({t.reviews})
+                    </span>
+                  </div>
+
+                  <div className="mt-5 flex-1">
+                    <h3 className="font-display text-lg leading-snug text-ink-900 font-semibold">{t.name}</h3>
+                    <p className="mt-1 text-xs text-ink-500 font-medium">
+                      {t.credential} · {t.experience}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {t.specialties.map((s) => (
+                        <span key={s} className="rounded-full bg-lavender-100 px-2.5 py-1 text-[11px] text-lavender-700 font-semibold">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+
+                    <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-400 font-semibold">
+                      <LanguagesIcon className="h-3.5 w-3.5" />
+                      {t.languages.join(", ")}
+                    </p>
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-sage-600 font-semibold">
+                      <ClockIcon className="h-3.5 w-3.5" />
+                      Next slot · {t.nextSlot}
+                    </p>
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between border-t border-cream-300 pt-4">
+                    <div>
+                      <p className="font-display text-lg text-ink-900 font-bold">{typeof t.price === "number" ? `₹${t.price}` : t.price}</p>
+                      <p className="text-[11px] text-ink-400">50 min session</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openTherapistBooking(t.originalProvider)}
+                      className="rounded-full bg-lavender-600 px-5 py-2.5 text-xs font-semibold text-cream-50 transition hover:bg-lavender-700 cursor-pointer"
+                    >
+                      Book session
+                    </button>
+                  </div>
                 </motion.article>
               ))}
             </div>
           </div>
-        </motion.section>
+        </section>
+
+        {/* ==========================================
+            SECTION 7: COMMUNITY CIRCLES
+            ========================================== */}
+        <section id="circles" className="mx-auto w-full max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+          <SectionHeading
+            eyebrow="Community circles"
+            title="Small circles, moderated with care"
+            description="Find your people around what you’re actually going through. Every circle is capped, moderated and free to leave — lurking is completely allowed."
+          />
+
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {mappedCircles.map((circle, i) => {
+              const a = circleAccents[circle.accent];
+              const isJoined = joinedCircleIds.includes(circle.id);
+              return (
+                <motion.article
+                  key={circle.id}
+                  initial={{ opacity: 0, y: 22 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
+                  whileHover={{ y: -4 }}
+                  className={`group relative flex flex-col overflow-hidden rounded-4xl border border-cream-300 bg-cream-50 p-7 transition-all duration-300 hover:shadow-soft ${a.wrap}`}
+                >
+                  <div
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full blur-2xl transition-opacity duration-500 ${a.glow} opacity-0 group-hover:opacity-100`}
+                  />
+
+                  <div className="relative flex-1">
+                    <div className="flex flex-wrap gap-1.5">
+                      {circle.tags.map((tag) => (
+                        <span key={tag} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${a.chip}`}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <h3 className="mt-5 font-display text-xl leading-snug text-ink-900 font-semibold">{circle.name}</h3>
+                    <p className="mt-2.5 text-sm leading-relaxed text-ink-500">{circle.tagline}</p>
+
+                    <div className="mt-5 space-y-2 text-xs text-ink-400 font-semibold">
+                      <p className="flex items-center gap-2">
+                        <UsersIcon className="h-3.5 w-3.5" />
+                        {circle.members.toLocaleString("en-IN")} members
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <CalendarDaysIcon className="h-3.5 w-3.5" />
+                        {circle.cadence}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCircleToggle(circle.id)}
+                    aria-pressed={isJoined}
+                    className={`relative mt-7 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition cursor-pointer ${
+                      isJoined ? "bg-cream-200 text-ink-700 hover:bg-cream-300" : `text-cream-50 ${a.btn}`
+                    }`}
+                  >
+                    {isJoined ? (
+                      <>
+                        <CheckIcon className="h-4 w-4 text-sage-600" />
+                        You’re in
+                      </>
+                    ) : (
+                      "Join circle"
+                    )}
+                  </button>
+                </motion.article>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ==========================================
+            SECTION 8: MEMBER STORIES (TESTIMONIALS)
+            ========================================== */}
+        <section id="stories" className="bg-cream-100/80 py-20 lg:py-28">
+          <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+            <SectionHeading
+              eyebrow="Member stories"
+              title="Shared with permission, kept anonymous"
+              description="Some members choose to share their first name, most don’t. Either way, these are real words from people who started exactly where you are."
+            />
+
+            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {testimonials.map((t, i) => (
+                <motion.figure
+                  key={t.id}
+                  initial={{ opacity: 0, y: 22 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
+                  className="flex h-full flex-col rounded-4xl border border-cream-300 bg-cream-50 p-7"
+                >
+                  <div className="flex items-center justify-between">
+                    <QuoteIcon className="h-5 w-5 text-cream-300 fill-cream-300" />
+                    <div className="flex gap-0.5" aria-label={`${t.rating} out of 5`}>
+                      {Array.from({ length: 5 }).map((_, s) => (
+                        <StarIcon
+                          key={s}
+                          className={`h-3.5 w-3.5 ${s < t.rating ? "fill-peach-400 text-peach-400" : "text-cream-300"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <blockquote className="mt-5 flex-1 text-sm leading-relaxed text-ink-700">{t.quote}</blockquote>
+                  <figcaption className="mt-6 flex items-center gap-3 border-t border-cream-200 pt-5">
+                    <Avatar initials={t.initials} accent={t.accent} size="sm" />
+                    <div>
+                      <p className="text-sm font-semibold text-ink-900">{t.author}</p>
+                      <p className="text-xs text-ink-400 font-semibold">{t.context}</p>
+                    </div>
+                  </figcaption>
+                </motion.figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ==========================================
+            SECTION 9: FAQ ACCORDION
+            ========================================== */}
+        <section id="faqs" className="mx-auto w-full max-w-4xl px-5 py-20 sm:px-8 lg:py-28">
+          <SectionHeading
+            eyebrow="Good questions"
+            title="The things people quietly wonder"
+            description="If something isn’t here, our care team answers every message within a day."
+          />
+
+          <div className="mt-12 divide-y divide-cream-300 border-y border-cream-300">
+            {faqItems.map((faq) => {
+              const isOpen = openFaqId === faq.id;
+              return (
+                <div key={faq.id}>
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
+                      aria-expanded={isOpen}
+                      aria-controls={`panel-${faq.id}`}
+                      className="flex w-full items-center justify-between gap-6 py-6 text-left transition group cursor-pointer"
+                    >
+                      <span className={`font-display text-lg transition-colors font-semibold ${isOpen ? "text-sage-700" : "text-ink-900 group-hover:text-ink-700"}`}>
+                        {faq.question}
+                      </span>
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+                          isOpen ? "rotate-45 bg-sage-100 text-sage-700" : "bg-cream-200 text-ink-500 group-hover:bg-cream-300"
+                        }`}
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </span>
+                    </button>
+                  </h3>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        id={`panel-${faq.id}`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <p className="max-w-2xl pb-7 pr-12 text-sm leading-relaxed text-ink-500 font-medium">{faq.answer}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ==========================================
+            SECTION 10: FOOTER CTA BANNER
+            ========================================== */}
+        <section className="mx-auto w-full max-w-7xl px-5 pb-20 sm:px-8 lg:pb-28">
+          <motion.div
+            initial={{ opacity: 0, y: 26 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative overflow-hidden rounded-5xl border border-peach-200/70 bg-peach-50 px-7 py-14 text-center sm:px-14 lg:py-20"
+          >
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+              <div className="absolute -left-20 top-0 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(247,212,189,0.75),transparent_65%)]" />
+              <div className="absolute -bottom-10 -right-16 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(202,223,195,0.6),transparent_65%)]" />
+            </div>
+
+            <div className="relative mx-auto max-w-2xl">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-cream-50 text-peach-500 shadow-soft">
+                <HeartHandshakeIcon className="h-5 w-5" />
+              </span>
+              <h2 className="mt-7 font-display text-3xl leading-tight text-ink-900 sm:text-[2.6rem] font-semibold">
+                You don’t have to have the words yet.
+              </h2>
+              <p className="mt-5 text-base leading-relaxed text-ink-500">
+                Join 48,000+ people who found a softer place to land. Free forever for peer support, and never a single message shared with
+                anyone.
+              </p>
+
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={status === "authenticated" ? openListenerBooking : openJoinModal}
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink-900 px-8 py-4 text-sm font-semibold text-cream-50 transition hover:bg-ink-700 sm:w-auto cursor-pointer"
+                >
+                  {status === "authenticated" ? "Start a conversation" : "Join Apna Healer free"}
+                  <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={openListenerBooking}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-peach-200 bg-cream-50/70 px-8 py-4 text-sm font-semibold text-ink-700 backdrop-blur transition hover:bg-cream-50 sm:w-auto cursor-pointer"
+                >
+                  Talk to a listener first
+                </button>
+              </div>
+              <p className="mt-6 text-xs text-ink-400">No credit card. No diagnosis. No pressure to keep coming back.</p>
+            </div>
+          </motion.div>
+        </section>
       </main>
+
       <LandingFooter />
+
       <LandingJoinModal
         open={isJoinModalOpen}
         onClose={closeJoinModal}
@@ -1361,7 +1295,9 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#f4f4f2]" aria-busy="true" aria-label="Loading" />
+        <div className="min-h-screen bg-cream-100 flex items-center justify-center" aria-busy="true" aria-label="Loading">
+          <div className="w-8 h-8 rounded-full border-4 border-sage-500 border-t-transparent animate-spin" />
+        </div>
       }
     >
       <HomePage />

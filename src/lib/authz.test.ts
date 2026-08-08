@@ -111,16 +111,16 @@ describe("authz resource gates", () => {
 });
 
 describe("authz scope helpers", () => {
-  it("defaults bookings to all for admin and requester otherwise", () => {
+  it("defaults bookings to all for admin and requester/provider otherwise", () => {
     expect(defaultBookingScope(Role.ADMIN)).toBe("all");
     expect(defaultBookingScope(Role.USER)).toBe("requester");
-    expect(defaultBookingScope(Role.THERAPIST)).toBe("requester");
+    expect(defaultBookingScope(Role.THERAPIST)).toBe("provider");
   });
 
-  it("defaults sessions to all for admin, both for providers, participant for members", () => {
+  it("defaults sessions to all for admin, provider for providers, participant for members", () => {
     expect(defaultSessionScope(Role.ADMIN)).toBe("all");
-    expect(defaultSessionScope(Role.LISTENER)).toBe("both");
-    expect(defaultSessionScope(Role.THERAPIST)).toBe("both");
+    expect(defaultSessionScope(Role.LISTENER)).toBe("provider");
+    expect(defaultSessionScope(Role.THERAPIST)).toBe("provider");
     expect(defaultSessionScope(Role.USER)).toBe("participant");
   });
 
@@ -135,8 +135,8 @@ describe("authz scope helpers", () => {
   it("assertSessionScope mirrors booking scope rules", () => {
     expect(() => assertSessionScope(Role.ADMIN, "all")).not.toThrow();
     expect(() => assertSessionScope(Role.LISTENER, "provider")).not.toThrow();
-    expect(() => assertSessionScope(Role.LISTENER, "both")).not.toThrow();
-    expect(() => assertSessionScope(Role.THERAPIST, "both")).not.toThrow();
+    expectForbidden(() => assertSessionScope(Role.LISTENER, "both"), "FORBIDDEN_SCOPE");
+    expectForbidden(() => assertSessionScope(Role.THERAPIST, "both"), "FORBIDDEN_SCOPE");
     expect(() => assertSessionScope(Role.USER, "participant")).not.toThrow();
     expectForbidden(() => assertSessionScope(Role.USER, "all"), "FORBIDDEN_SCOPE");
     expectForbidden(() => assertSessionScope(Role.USER, "provider"), "FORBIDDEN_SCOPE");

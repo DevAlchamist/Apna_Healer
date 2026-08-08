@@ -1,5 +1,6 @@
 import {
   BookingPaymentMethod,
+  BookingType,
   CareSessionStatus,
   Prisma,
   Role,
@@ -40,6 +41,7 @@ function buildSession(
     status: CareSessionStatus;
     startTime: Date;
     duration: number;
+    sessionMode: BookingType;
   }>,
 ) {
   return {
@@ -52,6 +54,7 @@ function buildSession(
     status: CareSessionStatus.UPCOMING,
     startTime: new Date("2026-05-14T10:00:00.000Z"),
     duration: 60,
+    sessionMode: BookingType.THERAPIST,
     ...overrides,
   };
 }
@@ -80,14 +83,14 @@ describe("session service", () => {
     });
   });
 
-  it("scopes session listings to participant or provider when using both scope", async () => {
+  it("scopes session listings to provider when using provider scope", async () => {
     prismaMock.careSession.findMany.mockResolvedValue([]);
 
-    await listSessions("therapist_1", Role.THERAPIST, { scope: "both" });
+    await listSessions("therapist_1", Role.THERAPIST, { scope: "provider" });
 
     expect(prismaMock.careSession.findMany).toHaveBeenCalledWith({
       where: {
-        OR: [{ userId: "therapist_1" }, { providerId: "therapist_1" }],
+        providerId: "therapist_1",
       },
       include: {
         booking: true,
@@ -99,14 +102,14 @@ describe("session service", () => {
     });
   });
 
-  it("defaults listeners and therapists to both-sided session listings", async () => {
+  it("defaults listeners and therapists to provider-sided session listings", async () => {
     prismaMock.careSession.findMany.mockResolvedValue([]);
 
     await listSessions("listener_1", Role.LISTENER, {});
 
     expect(prismaMock.careSession.findMany).toHaveBeenCalledWith({
       where: {
-        OR: [{ userId: "listener_1" }, { providerId: "listener_1" }],
+        providerId: "listener_1",
       },
       include: {
         booking: true,
@@ -237,6 +240,7 @@ describe("session service", () => {
       listenerRequestId: "lr_1",
       startTime,
       duration: 30,
+      sessionMode: BookingType.LISTENER,
     });
     const updatedSession = {
       ...session,

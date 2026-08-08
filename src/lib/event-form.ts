@@ -71,6 +71,8 @@ export type EventFormState = {
   facilitatorImage: string;
   facilitatorBio: string;
   status: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+  completedImages: string[];
+  completedVideos: string[];
 } & EventLandingFormFields;
 
 export function isClubEventForm(form: Pick<EventFormState, "clubId">) {
@@ -144,6 +146,8 @@ export const emptyEventForm = (): EventFormState => ({
   facilitatorImage: "",
   facilitatorBio: "",
   status: "PUBLISHED",
+  completedImages: [],
+  completedVideos: [],
   journeyPointsRaw: "",
   audienceText: "",
   testimonialQuote: "",
@@ -194,6 +198,8 @@ export function eventFormFromDetail(
     facilitatorImage: event.facilitatorImage ?? "",
     facilitatorBio: event.facilitatorBio ?? "",
     status: event.status,
+    completedImages: event.completedImages ?? [],
+    completedVideos: event.completedVideos ?? [],
     ...landing,
   };
 }
@@ -222,6 +228,8 @@ export function buildEventApiPayload(form: EventFormState) {
     facilitatorImage: facilitatorImage || null,
     facilitatorBio: form.facilitatorBio.trim() || null,
     status: form.status,
+    completedImages: form.completedImages ?? [],
+    completedVideos: form.completedVideos ?? [],
     ...landingFieldsToEventPayload(form),
   };
 }

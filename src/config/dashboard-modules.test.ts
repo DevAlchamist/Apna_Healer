@@ -37,6 +37,7 @@ describe("dashboard module registry", () => {
       "/dashboard/blog",
       "/dashboard/journal",
       "/dashboard/safe-circle",
+      "/dashboard/my-sessions",
     ]);
   });
 

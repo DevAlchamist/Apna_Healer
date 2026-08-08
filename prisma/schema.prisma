@@ -173,14 +173,14 @@ enum AuditAction {
   BLOG_REPORT_REVIEWED
 }
 
-enum WellnessEventStatus {
+enum EventStatus {
   DRAFT
   PUBLISHED
   CANCELLED
   COMPLETED
 }
 
-enum WellnessEventMode {
+enum EventMode {
   VIRTUAL
   IN_PERSON
 }
@@ -333,8 +333,8 @@ model User {
   clubCreationRequests   ClubCreationRequest[]
   clubJoinReviews        ClubJoinRequest[]      @relation("ClubJoinReviewedBy")
   clubCreationReviews    ClubCreationRequest[]  @relation("ClubCreationReviewedBy")
-  eventsCreated          WellnessEvent[]        @relation("EventCreatedBy")
-  eventsOrganized        WellnessEvent[]        @relation("EventOrganizedBy")
+  eventsCreated          Event[]                @relation("EventCreatedBy")
+  eventsOrganized        Event[]                @relation("EventOrganizedBy")
   eventRegistrations     EventRegistration[]
   roleThemesUpdated      RoleTheme[]           @relation("RoleThemeUpdatedBy")
   blogsAuthored          Blog[]                @relation("BlogAuthor")
@@ -821,7 +821,7 @@ model Club {
   memberships       ClubMembership[]
   joinRequests      ClubJoinRequest[]
   creationRequests  ClubCreationRequest[] @relation("ClubFromCreationRequest")
-  events            WellnessEvent[]
+  events            Event[]
 
   @@index([status, visibility])
   @@index([ownerUserId])
@@ -966,8 +966,18 @@ model ClubBillingAttempt {
   @@map("club_billing_attempts")
 }
 
+model EventCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events    Event[]
+
+  @@map("event_categories")
+}
+
 /// Club-linked or platform wellness gathering.
-model WellnessEvent {
+model Event {
   id                String              @id @default(cuid())
   slug              String              @unique
   clubId            String?
@@ -976,12 +986,12 @@ model WellnessEvent {
   title             String
   subtitle          String?             @db.Text
   description       String?             @db.Text
-  category          String?
+  categoryId        String?
   heroImageUrl      String?
   startsAt          DateTime
   endsAt            DateTime?
   venue             String?
-  mode              WellnessEventMode   @default(IN_PERSON)
+  mode              EventMode           @default(IN_PERSON)
   capacity          Int
   seatsRemaining    Int
   basePrice         Decimal             @default(0) @db.Decimal(12, 2)
@@ -989,7 +999,7 @@ model WellnessEvent {
   guestPrice        Decimal?            @db.Decimal(12, 2)
   membersPay        Boolean             @default(true)
   nonMembersPay     Boolean             @default(true)
-  status            WellnessEventStatus @default(DRAFT)
+  status            EventStatus         @default(DRAFT)
   facilitatorName   String?
   facilitatorRole   String?
   facilitatorImage  String?
@@ -998,12 +1008,15 @@ model WellnessEvent {
   audienceText      String?             @db.Text
   testimonialQuote  String?             @db.Text
   testimonialAuthor String?
+  completedImages   String[]            @default([])
+  completedVideos   String[]            @default([])
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
   club          Club?               @relation(fields: [clubId], references: [id], onDelete: SetNull)
   createdBy     User                @relation("EventCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   organizedBy   User                @relation("EventOrganizedBy", fields: [organizedByUserId], references: [id], onDelete: Restrict)
+  category      EventCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
 
   @@index([status, startsAt])
@@ -1024,7 +1037,7 @@ model EventRegistration {
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
 
-  event WellnessEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
@@ -1264,7 +1277,7 @@ enum PackagePurchaseStatus {
   CANCELLED
 }
 
-model WellnessPackage {
+model Package {
   id                 String                   @id @default(uuid())
   title              String
   subtitle           String
@@ -1301,7 +1314,7 @@ model WellnessPackage {
   allocations        PackageSessionAllocation[]
   purchases          PackagePurchase[]
 
-  @@map("wellness_packages")
+  @@map("packages")
 }
 
 model PackageSessionAllocation {
@@ -1310,7 +1323,7 @@ model PackageSessionAllocation {
   role             Role            // THERAPIST or LISTENER
   sessionCount     Int             @default(0)
 
-  package          WellnessPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  package          Package         @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
   @@unique([packageId, role])
   @@map("package_session_allocations")
@@ -1330,7 +1343,7 @@ model PackagePurchase {
   updatedAt       DateTime              @updatedAt
 
   user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package         WellnessPackage       @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  package         Package               @relation(fields: [packageId], references: [id], onDelete: Restrict)
   allocations     PackagePurchaseAllocation[]
   usages          PackageSessionUsage[]
 

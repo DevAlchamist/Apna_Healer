@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { AdminEditUserModal } from "@/components/admin/admin-edit-user-modal";
@@ -141,6 +141,7 @@ export function AdminUsersPage() {
   const [segment, setSegment] = useState<UserSegment>("All Users");
   const [search, setSearch] = useState("");
   const [editUser, setEditUser] = useState<ApiUser | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const usersQuery = useQuery({
     queryKey: ["admin-users"],
@@ -148,6 +149,10 @@ export function AdminUsersPage() {
   });
 
   const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+
+  const selectedUser = useMemo(() => {
+    return users.find((u) => u.id === selectedId) || null;
+  }, [users, selectedId]);
 
   const statCards = useMemo(
     () => [
@@ -380,85 +385,278 @@ export function AdminUsersPage() {
                       : "bg-linear-to-br from-[#d9ebe2] to-[#bbdaca] text-theme-status-success text-sm";
 
                 return (
-                <motion.tr
-                  key={row.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.36, delay: index * 0.06, ease: easeOut }}
-                  className="border-t border-[#f4f0ea] transition-colors hover:bg-[#fcfbf8]"
-                >
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-4">
-                      <UserAvatarCircle
-                        name={row.name}
-                        email={row.email}
-                        image={row.image}
-                        className="h-11 w-11"
-                        fallbackClassName={avatarFallback}
-                      />
-                      <div>
-                        <p className="text-[22px] font-semibold leading-6 tracking-[-0.02em] text-theme-heading">
-                          {row.name ?? "Unnamed user"}
-                        </p>
-                        <p className="mt-1 text-sm text-text-primary/48">{row.email}</p>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="px-6 py-5">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${getRoleClasses(
-                        roleTone,
-                      )}`}
-                    >
-                      {toSentenceCase(row.role)}
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-5">
-                    <span
-                      className={`inline-flex items-center gap-2 text-sm ${
-                        accessTone === "danger" ? "text-[#b93d37]" : "text-[#2e5f4f]"
+                  <Fragment key={row.id}>
+                    <motion.tr
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.36, delay: index * 0.06, ease: easeOut }}
+                      onClick={() => setSelectedId(selectedId === row.id ? null : row.id)}
+                      className={`border-t border-[#f4f0ea] transition-colors hover:bg-[#fcfbf8] cursor-pointer ${
+                        selectedId === row.id ? "bg-[#f0f7f4]" : ""
                       }`}
                     >
-                      <StatusDot tone={accessTone} />
-                      {accessState}
-                    </span>
-                  </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <UserAvatarCircle
+                            name={row.name}
+                            email={row.email}
+                            image={row.image}
+                            className="h-11 w-11"
+                            fallbackClassName={avatarFallback}
+                          />
+                          <div>
+                            <p className="text-[22px] font-semibold leading-6 tracking-[-0.02em] text-theme-heading">
+                              {row.name ?? "Unnamed user"}
+                            </p>
+                            <p className="mt-1 text-sm text-text-primary/48">{row.email}</p>
+                          </div>
+                        </div>
+                      </td>
 
-                  <td className="px-6 py-5">
-                    <span
-                      className={`inline-flex items-center gap-2 text-sm ${
-                        verificationTone === "danger"
-                          ? "text-[#b93d37]"
-                          : verificationTone === "pending"
-                            ? "text-[#a58d73]"
-                            : "text-[#2e5f4f]"
-                      }`}
-                    >
-                      <VerificationIcon tone={verificationTone} />
-                      {row.isVerified ? "Verified" : "Pending"}
-                    </span>
-                  </td>
+                      <td className="px-6 py-5">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${getRoleClasses(
+                            roleTone,
+                          )}`}
+                        >
+                          {toSentenceCase(row.role)}
+                        </span>
+                      </td>
 
-                  <td className="px-6 py-5 text-sm text-text-primary/62">
-                    {formatCurrency(row.wallet?.availableBalance)}
-                    <div className="mt-1 text-xs text-text-primary/38">
-                      Joined {formatShortDate(row.createdAt)}
-                    </div>
-                  </td>
+                      <td className="px-6 py-5">
+                        <span
+                          className={`inline-flex items-center gap-2 text-sm ${
+                            accessTone === "danger" ? "text-[#b93d37]" : "text-[#2e5f4f]"
+                          }`}
+                        >
+                          <StatusDot tone={accessTone} />
+                          {accessState}
+                        </span>
+                      </td>
 
-                  <td className="px-6 py-5">
-                    <button
-                      type="button"
-                      onClick={() => setEditUser(row)}
-                      className="rounded-full border border-[#2f745f]/25 bg-[#f4faf6] px-4 py-1.5 text-xs font-semibold text-theme-status-success transition hover:border-[#2f745f]/45 hover:bg-white"
-                    >
-                      Edit user
-                    </button>
-                  </td>
-                </motion.tr>
+                      <td className="px-6 py-5">
+                        <span
+                          className={`inline-flex items-center gap-2 text-sm ${
+                            verificationTone === "danger"
+                              ? "text-[#b93d37]"
+                              : verificationTone === "pending"
+                                ? "text-[#a58d73]"
+                                : "text-[#2e5f4f]"
+                          }`}
+                        >
+                          <VerificationIcon tone={verificationTone} />
+                          {row.isVerified ? "Verified" : "Pending"}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-5 text-sm text-text-primary/62">
+                        {formatCurrency(row.wallet?.availableBalance)}
+                        <div className="mt-1 text-xs text-text-primary/38">
+                          Joined {formatShortDate(row.createdAt)}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => setEditUser(row)}
+                          className="rounded-full border border-[#2f745f]/25 bg-[#f4faf6] px-4 py-1.5 text-xs font-semibold text-theme-status-success transition hover:border-[#2f745f]/45 hover:bg-white"
+                        >
+                          Edit user
+                        </button>
+                      </td>
+                    </motion.tr>
+
+                    {selectedId === row.id && (
+                      <tr>
+                        <td colSpan={6} className="bg-neutral-50/50 p-6 border-t border-b border-[#f4f0ea]">
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-100 pb-5">
+                              <div className="flex items-center gap-4">
+                                <UserAvatarCircle
+                                  name={row.name}
+                                  email={row.email}
+                                  image={row.image}
+                                  className="h-14 w-14"
+                                />
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                                    User Profile Information
+                                  </p>
+                                  <h2 className="mt-1 font-display text-2xl font-bold text-neutral-800">
+                                    {row.name ?? "Unnamed User"}
+                                  </h2>
+                                  <p className="text-xs text-neutral-500">{row.email}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedId(null);
+                                }}
+                                className="rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-700 text-xs px-3 py-1.5 font-semibold transition"
+                              >
+                                Close Detail
+                              </button>
+                            </div>
+
+                            <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                              {/* Core Info Block */}
+                              <div className="space-y-4 rounded-2xl bg-white p-5 border border-neutral-100 shadow-sm">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                                  Core Account Status
+                                </h3>
+                                <div className="space-y-2 text-xs text-neutral-600">
+                                  <div className="flex justify-between">
+                                    <span>Role:</span>
+                                    <span className="font-bold text-neutral-800 capitalize">{row.role.toLowerCase()}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Joined Date:</span>
+                                    <span className="font-semibold text-neutral-800">{new Date(row.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Verification:</span>
+                                    <span className={`font-bold ${row.isVerified ? "text-green-600" : "text-amber-600"}`}>
+                                      {row.isVerified ? "Verified" : "Pending"}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Available Balance:</span>
+                                    <span className="font-bold text-neutral-800">{formatCurrency(row.wallet?.availableBalance)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Role Specific details */}
+                              {row.role === "THERAPIST" && row.therapistProfile && (
+                                <div className="space-y-4 rounded-2xl bg-white p-5 border border-neutral-100 shadow-sm lg:col-span-2">
+                                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                                    Healer Provider Details
+                                  </h3>
+                                  <div className="grid gap-4 sm:grid-cols-2 text-xs text-neutral-600">
+                                    <div>
+                                      <span className="block opacity-75">Specialty / Specializations:</span>
+                                      <span className="font-bold text-neutral-800 text-sm">{row.therapistProfile.specializations?.join(", ") || "None"}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block opacity-75">Hourly Fee Rate:</span>
+                                      <span className="font-bold text-[#2f745f] text-sm">{formatCurrency(Number(row.therapistProfile.hourlyRate))}/hr</span>
+                                    </div>
+                                    <div>
+                                      <span className="block opacity-75">Experience:</span>
+                                      <span className="font-semibold text-neutral-800">{row.therapistProfile.experienceYears} Years</span>
+                                    </div>
+                                    <div>
+                                      <span className="block opacity-75">Average Review Rating:</span>
+                                      <span className="font-semibold text-neutral-800">⭐ {Number(row.therapistProfile.rating).toFixed(1)} / 5.0</span>
+                                    </div>
+                                    <div>
+                                      <span className="block opacity-75">Total Sessions:</span>
+                                      <span className="font-semibold text-neutral-800">{row.therapistProfile.totalSessions} sessions</span>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                      <span className="block opacity-75 mb-1">Certifications & Qualifications:</span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {row.therapistProfile.certifications && row.therapistProfile.certifications.length > 0 ? (
+                                          row.therapistProfile.certifications.map((q: string, idx: number) => (
+                                            <span key={idx} className="bg-[#eef5f1] border border-green-200 text-[#2f745f] rounded-lg px-2.5 py-1 text-[10px] font-bold">
+                                              {q}
+                                            </span>
+                                          ))
+                                        ) : (
+                                          <span className="text-neutral-400">No credentials entered</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                      <span className="block opacity-75 mb-1">About/Bio:</span>
+                                      <p className="leading-relaxed bg-[#fafafa] border border-neutral-100 rounded-xl p-3 text-neutral-700 font-medium">
+                                        {row.therapistProfile.bio || "No biography provided."}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {row.role === "LISTENER" && row.listenerProfile && (
+                                <div className="space-y-4 rounded-2xl bg-white p-5 border border-neutral-100 shadow-sm lg:col-span-2">
+                                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                                    Active Listener Profile Details
+                                  </h3>
+                                  <div className="grid gap-4 sm:grid-cols-2 text-xs text-neutral-600">
+                                    <div>
+                                      <span className="block opacity-75">Support Rating:</span>
+                                      <span className="font-bold text-neutral-800 text-sm">⭐ {Number(row.listenerProfile.rating).toFixed(1)} / 5.0</span>
+                                    </div>
+                                    <div>
+                                      <span className="block opacity-75">Languages:</span>
+                                      <span className="font-bold text-neutral-800 text-sm">{row.listenerProfile.languages?.join(", ") || "None"}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block opacity-75">Total Sessions Handled:</span>
+                                      <span className="font-semibold text-neutral-800">{row.listenerProfile.totalSessions} calls</span>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                      <span className="block opacity-75 mb-1">About/Bio:</span>
+                                      <p className="leading-relaxed bg-[#fafafa] border border-neutral-100 rounded-xl p-3 text-neutral-700 font-medium">
+                                        {row.listenerProfile.bio || "No biography provided."}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Standard User Info details */}
+                              {row.role === "USER" && (
+                                <div className="space-y-4 rounded-2xl bg-white p-5 border border-neutral-100 shadow-sm lg:col-span-2">
+                                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                                    Sanctuary Member Application & History
+                                  </h3>
+                                  <div className="text-xs text-neutral-600 space-y-4">
+                                    {row.applications && row.applications.length > 0 ? (
+                                      <div>
+                                        <p className="font-bold text-neutral-700 mb-2">Provider Onboarding Applications:</p>
+                                        <div className="space-y-2">
+                                          {row.applications.map((app: any) => (
+                                            <div key={app.id} className="bg-neutral-50 border border-neutral-100 rounded-xl p-3 flex items-center justify-between">
+                                              <div>
+                                                <p className="font-semibold text-neutral-800">Application for {toSentenceCase(app.type || "")}</p>
+                                                <p className="text-[10px] text-neutral-400 mt-0.5">Submitted {new Date(app.createdAt).toLocaleDateString()}</p>
+                                              </div>
+                                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                                                app.status === "APPROVED"
+                                                  ? "bg-green-100 text-green-700"
+                                                  : app.status === "PENDING"
+                                                  ? "bg-amber-100 text-amber-700"
+                                                  : "bg-red-100 text-red-700"
+                                              }`}>
+                                                {app.status}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="py-8 text-center text-neutral-400">
+                                        <p>This user operates as a regular member and has not applied for provider status.</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>

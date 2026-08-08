@@ -3,7 +3,7 @@ import {
   BookingType,
   EventRegistrationStatus,
   Role,
-  WellnessEventStatus,
+  EventStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
@@ -39,7 +39,7 @@ export async function registerForEvent(
 ) {
   const event = await getEventBySlug(slug);
 
-  if (event.status !== WellnessEventStatus.PUBLISHED) {
+  if (event.status !== EventStatus.PUBLISHED) {
     throw new ApiError(400, "This event is not open for registration.", "EVENT_NOT_PUBLISHED");
   }
 
@@ -61,7 +61,7 @@ export async function registerForEvent(
 
   if (amount === 0) {
     const reg = await prisma.$transaction(async (tx) => {
-      const updated = await tx.wellnessEvent.updateMany({
+      const updated = await tx.event.updateMany({
         where: { id: event.id, seatsRemaining: { gt: 0 } },
         data: { seatsRemaining: { decrement: 1 } },
       });
@@ -98,7 +98,7 @@ export async function registerForEvent(
   );
 
   const reg = await prisma.$transaction(async (tx) => {
-    const seatUpdate = await tx.wellnessEvent.updateMany({
+    const seatUpdate = await tx.event.updateMany({
       where: { id: event.id, seatsRemaining: { gt: 0 } },
       data: { seatsRemaining: { decrement: 1 } },
     });
@@ -214,7 +214,7 @@ export async function cancelRegistration(
       data: { status: EventRegistrationStatus.CANCELLED },
     });
 
-    await tx.wellnessEvent.update({
+    await tx.event.update({
       where: { id: event.id },
       data: { seatsRemaining: { increment: 1 } },
     });

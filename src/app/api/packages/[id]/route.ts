@@ -44,7 +44,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
 
-    const pkg = await prisma.wellnessPackage.findUnique({
+    const pkg = await prisma.package.findUnique({
       where: { id },
       include: {
         allocations: true,
@@ -52,7 +52,7 @@ export async function GET(_request: Request, context: RouteContext) {
     });
 
     if (!pkg) {
-      return failure(404, "Wellness package not found.", "NOT_FOUND");
+      return failure(404, "Package not found.", "NOT_FOUND");
     }
 
     return ok(pkg);
@@ -72,12 +72,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const body = await request.json();
     const parsed = UpdatePackageSchema.parse(body);
 
-    const existing = await prisma.wellnessPackage.findUnique({
+    const existing = await prisma.package.findUnique({
       where: { id }
     });
 
     if (!existing) {
-      return failure(404, "Wellness package not found.", "NOT_FOUND");
+      return failure(404, "Package not found.", "NOT_FOUND");
     }
 
     const updateData: any = {};
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         });
       }
 
-      return tx.wellnessPackage.update({
+      return tx.package.update({
         where: { id },
         data: updateData,
         include: {
@@ -154,7 +154,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     const { id } = await context.params;
 
-    const existing = await prisma.wellnessPackage.findUnique({
+    const existing = await prisma.package.findUnique({
       where: { id },
       include: {
         purchases: { take: 1 }
@@ -162,7 +162,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     });
 
     if (!existing) {
-      return failure(404, "Wellness package not found.", "NOT_FOUND");
+      return failure(404, "Package not found.", "NOT_FOUND");
     }
 
     if (existing.purchases.length > 0) {
@@ -173,7 +173,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       );
     }
 
-    await prisma.wellnessPackage.delete({
+    await prisma.package.delete({
       where: { id }
     });
 

@@ -108,7 +108,7 @@ function getSessionCountdown(
 }
 
 function isListenerSupportSession(s: ApiCareSession): boolean {
-  return s.sessionMode === "LISTENER" && !s.bookingId;
+  return s.sessionMode === "LISTENER";
 }
 
 function toDateTimeLocalValue(d: Date): string {
@@ -619,24 +619,26 @@ function SessionDetailsModal({
                   {joinReady ? joinLabel : "Join room"}
                 </motion.button>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={!canRescheduleOrCancel || patchSession.isPending}
-                    onClick={() => {
-                      setShowCancelConfirm(false);
-                      setShowRescheduleForm((open) => !open);
-                      setLogisticsError(null);
-                    }}
-                    title={
-                      canRescheduleOrCancel
-                        ? "Move this session to a new date and time"
-                        : "Only upcoming or ongoing sessions can be rescheduled"
-                    }
-                    className="rounded-xl bg-[#e8dcc8]/90 py-2.5 text-center text-xs font-semibold text-[#5c4a32] transition hover:bg-[#e0d2bc] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {showRescheduleForm ? "Hide reschedule" : "Reschedule"}
-                  </button>
+                <div className={viewer?.role === "USER" ? "" : "grid grid-cols-2 gap-2"}>
+                  {viewer?.role !== "USER" && (
+                    <button
+                      type="button"
+                      disabled={!canRescheduleOrCancel || patchSession.isPending}
+                      onClick={() => {
+                        setShowCancelConfirm(false);
+                        setShowRescheduleForm((open) => !open);
+                        setLogisticsError(null);
+                      }}
+                      title={
+                        canRescheduleOrCancel
+                          ? "Move this session to a new date and time"
+                          : "Only upcoming or ongoing sessions can be rescheduled"
+                      }
+                      className="w-full rounded-xl bg-[#e8dcc8]/90 py-2.5 text-center text-xs font-semibold text-[#5c4a32] transition hover:bg-[#e0d2bc] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {showRescheduleForm ? "Hide reschedule" : "Reschedule"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={!canRescheduleOrCancel || patchSession.isPending}
@@ -650,13 +652,13 @@ function SessionDetailsModal({
                         ? "Cancel this session and release any held payment"
                         : "This session can no longer be cancelled"
                     }
-                    className="rounded-xl border border-[#cf4f45]/25 py-2.5 text-center text-xs font-semibold text-[#cf4f45] transition hover:bg-[#fff3f1] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-xl border border-[#cf4f45]/25 py-2.5 text-center text-xs font-semibold text-[#cf4f45] transition hover:bg-[#fff3f1] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Cancel session
                   </button>
                 </div>
 
-                {showRescheduleForm && canRescheduleOrCancel ? (
+                {showRescheduleForm && canRescheduleOrCancel && viewer?.role !== "USER" ? (
                   <div className="rounded-xl border border-[#e8dcc8]/90 bg-[#faf6ef] p-4 space-y-3">
                     <p className="text-xs font-semibold text-[#5c4a32]">Choose a new start time</p>
                     <label className="block text-xs font-semibold text-text-primary/65">

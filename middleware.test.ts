@@ -78,7 +78,7 @@ describe("middleware access control", () => {
     expect(therapistResponse?.headers.get("location")).toBeNull();
 
     getTokenMock.mockResolvedValue({ sub: "listener_1", role: Role.LISTENER });
-    const listenerResponse = await middleware(buildRequest("/dashboard/wallet"));
+    const listenerResponse = await middleware(buildRequest("/dashboard/support-requests"));
     expect(listenerResponse?.headers.get("location")).toBeNull();
   });
 });

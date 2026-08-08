@@ -24,6 +24,8 @@ export const createEventSchema = eventLandingFieldsSchema.extend({
   facilitatorRole: z.string().trim().max(120).optional().nullable(),
   facilitatorImage: z.string().url().max(2048).optional().nullable(),
   facilitatorBio: z.string().trim().max(2000).optional().nullable(),
+  completedImages: z.array(z.string().url()).optional(),
+  completedVideos: z.array(z.string().url()).optional(),
 });
 
 export const updateEventSchema = createEventSchema.partial();

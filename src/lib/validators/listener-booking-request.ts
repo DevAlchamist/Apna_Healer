@@ -40,6 +40,9 @@ export const adminListenerRequestPatchSchema = z.discriminatedUnion("action", [
 
 export const listenerResponseSchema = z.object({
   decision: z.enum(["accept", "decline"]),
+  meetingLink: z.union([z.string().url(), z.literal("")]).optional(),
+  notes: z.union([z.string().trim().max(2000), z.literal("")]).optional(),
+  description: z.union([z.string().trim().max(500), z.literal("")]).optional(),
 });
 
 export type CreateListenerBookingRequestInput = z.infer<typeof createListenerBookingRequestSchema>;

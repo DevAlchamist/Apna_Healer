@@ -31,8 +31,8 @@ function hasDailyQuoteDelegate(client: PrismaClient) {
   return typeof (client as unknown as { dailyQuote?: { findMany?: unknown } }).dailyQuote?.findMany === "function";
 }
 
-function hasWellnessEventDelegate(client: PrismaClient) {
-  return typeof (client as unknown as { wellnessEvent?: { findMany?: unknown } }).wellnessEvent
+function hasEventDelegate(client: PrismaClient) {
+  return typeof (client as unknown as { event?: { findMany?: unknown } }).event
     ?.findMany === "function";
 }
 
@@ -56,7 +56,7 @@ function generatedClientHasUserProfileColumns() {
 }
 
 function generatedClientHasEventLandingFields() {
-  return "journeyPoints" in Prisma.WellnessEventScalarFieldEnum;
+  return "journeyPoints" in Prisma.EventScalarFieldEnum;
 }
 
 function generatedClientHasClubLandingFields() {
@@ -67,7 +67,7 @@ function prismaClientMatchesCurrentSchema(client: PrismaClient) {
   return (
     hasProfessionalApplicationDelegate(client) &&
     hasDailyQuoteDelegate(client) &&
-    hasWellnessEventDelegate(client) &&
+    hasEventDelegate(client) &&
     hasClubOnboardingQuestionDelegate(client) &&
     hasRoleThemeDelegate(client) &&
     hasBlogDelegate(client) &&

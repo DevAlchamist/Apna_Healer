@@ -11,7 +11,11 @@ import {
 
 function parseStoredTokens(raw: unknown, role: Role): RoleThemeTokens {
   const defaults = getDefaultThemeTokensForRole(role);
-  const parsed = roleThemeTokensSchema.safeParse(raw);
+  const merged = {
+    ...defaults,
+    ...(typeof raw === "object" && raw !== null ? (raw as Record<string, string>) : {}),
+  };
+  const parsed = roleThemeTokensSchema.safeParse(merged);
   if (!parsed.success) {
     return defaults;
   }

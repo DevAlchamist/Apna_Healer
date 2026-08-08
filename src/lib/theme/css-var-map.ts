@@ -35,4 +35,8 @@ export const TOKEN_TO_CSS_VAR: Record<RoleThemeTokenKey, string> = {
   focusRing: "--theme-focus-ring",
   bannerBg: "--theme-banner-bg",
   heading: "--theme-heading",
+  sidebarBg: "--theme-sidebar-bg",
+  sidebarText: "--theme-sidebar-text",
+  sidebarActiveBg: "--theme-sidebar-active-bg",
+  sidebarActiveText: "--theme-sidebar-active-text",
 };

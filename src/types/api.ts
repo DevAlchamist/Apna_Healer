@@ -57,8 +57,8 @@ export type NotificationTypeValue =
   | "CLUB_ACTIVITY_DIGEST"
   | "MONTHLY_RECAP";
 
-export type WellnessEventStatusValue = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
-export type WellnessEventModeValue = "VIRTUAL" | "IN_PERSON";
+export type EventStatusValue = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+export type EventModeValue = "VIRTUAL" | "IN_PERSON";
 export type EventRegistrationStatusValue = "PENDING" | "CONFIRMED" | "CANCELLED" | "REFUNDED";
 
 export interface ApiEventRegistration {
@@ -84,14 +84,14 @@ export interface ApiEventSummary {
   dateLabel: string;
   timeLabel: string;
   venue: string | null;
-  mode: WellnessEventModeValue;
+  mode: EventModeValue;
   capacity: number;
   seatsRemaining: number;
   basePrice: string;
   priceForMe: number;
   membersPay: boolean;
   nonMembersPay: boolean;
-  status: WellnessEventStatusValue;
+  status: EventStatusValue;
   isRegistered: boolean;
   canManage: boolean;
 }
@@ -111,6 +111,8 @@ export interface ApiEventDetail extends ApiEventSummary {
   testimonialAuthor: string | null;
   organizedByUserId: string;
   myRegistration: ApiEventRegistration | null;
+  completedImages?: string[];
+  completedVideos?: string[];
 }
 
 export interface ApiEventFacilitatorOption {
@@ -720,6 +722,28 @@ export interface ApiUser {
   applications?: ApiApplication[];
   welcomeBonus?: ApiWelcomeBonusState;
   profileSessionStats?: ApiUserProfileSessionStats;
+  packagePurchases?: ApiPackagePurchase[];
+}
+
+export interface ApiPackagePurchaseAllocation {
+  id: string;
+  purchaseId: string;
+  role: string;
+  allocatedSessions: number;
+  remainingSessions: number;
+  usedSessions: number;
+}
+
+export interface ApiPackagePurchase {
+  id: string;
+  userId: string;
+  packageId: string;
+  purchaseDate: string;
+  expiryDate: string | null;
+  pricePaid: string;
+  status: string;
+  packageSnapshot: any;
+  allocations: ApiPackagePurchaseAllocation[];
 }
 
 export interface AdminSessionStats {

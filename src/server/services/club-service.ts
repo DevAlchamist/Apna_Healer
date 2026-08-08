@@ -5,7 +5,7 @@ import {
   ClubVisibility,
   Prisma,
   Role,
-  WellnessEventStatus,
+  EventStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
@@ -232,8 +232,8 @@ export async function getPublicClubDetailBySlug(
   weekAhead.setDate(weekAhead.getDate() + 7);
 
   const [events, weeklyCount] = await Promise.all([
-    prisma.wellnessEvent.findMany({
-      where: { clubId: club.id, status: WellnessEventStatus.PUBLISHED, startsAt: { gte: now } },
+    prisma.event.findMany({
+      where: { clubId: club.id, status: EventStatus.PUBLISHED, startsAt: { gte: now } },
       include: {
         organizedBy: { select: { name: true } },
         club: { select: { title: true } },
@@ -241,10 +241,10 @@ export async function getPublicClubDetailBySlug(
       orderBy: { startsAt: "asc" },
       take: 6,
     }),
-    prisma.wellnessEvent.count({
+    prisma.event.count({
       where: {
         clubId: club.id,
-        status: WellnessEventStatus.PUBLISHED,
+        status: EventStatus.PUBLISHED,
         startsAt: { gte: now, lte: weekAhead },
       },
     }),

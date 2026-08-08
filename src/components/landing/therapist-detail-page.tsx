@@ -124,12 +124,52 @@ export function TherapistDetailPage() {
 
   const beginJourney = useCallback(() => {
     if (!therapist) return;
+
+    let preselection = undefined;
+    if (selectedDateIdx !== null && selectedTimeSlot !== null) {
+      const targetDate = new Date(Date.now() + (selectedDateIdx + 1) * 24 * 60 * 60 * 1000);
+      const y = targetDate.getFullYear();
+      const m = (targetDate.getMonth() + 1).toString().padStart(2, "0");
+      const d = targetDate.getDate().toString().padStart(2, "0");
+      const dateYmd = `${y}-${m}-${d}`;
+
+      // parse time to HH:mm (e.g. "03:30 PM" -> "15:30")
+      const match = selectedTimeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      let startHHmm = selectedTimeSlot;
+      if (match) {
+        let hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        const ampm = match[3].toUpperCase();
+        if (ampm === "PM" && hours !== 12) {
+          hours += 12;
+        } else if (ampm === "AM" && hours === 12) {
+          hours = 0;
+        }
+        startHHmm = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+      }
+
+      // calculate end (50 minutes later)
+      const [h, min] = startHHmm.split(":").map(Number);
+      const startMinutes = h * 60 + min;
+      const endMinutes = startMinutes + 50;
+      const endHours = Math.floor(endMinutes / 60) % 24;
+      const endMins = endMinutes % 60;
+      const endHHmm = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+      preselection = {
+        dateYmd,
+        start: startHHmm,
+        end: endHHmm,
+      };
+    }
+
     const healer: BookSessionHealer = {
       providerId: therapist.id,
       name: therapist.name ?? "Therapist",
       preferredRole: "THERAPIST",
       imageSrc: therapist.image,
       specialty: therapist.specializations?.[0] ?? "Therapist",
+      preselection,
     };
     if (status !== "authenticated") {
       pendingBookingRef.current = { healer };
@@ -137,7 +177,7 @@ export function TherapistDetailPage() {
       return;
     }
     openBookSession(healer);
-  }, [therapist, status, openJoinModal, openBookSession]);
+  }, [therapist, status, selectedDateIdx, selectedTimeSlot, openJoinModal, openBookSession]);
 
   useEffect(() => {
     if (status === "authenticated" && pendingBookingRef.current) {

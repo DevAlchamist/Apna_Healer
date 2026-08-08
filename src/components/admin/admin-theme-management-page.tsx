@@ -27,7 +27,7 @@ const ROLES: { role: Role; label: string }[] = [
 function ThemePreviewPanel({ tokens }: { tokens: RoleThemeTokens }) {
   return (
     <div
-      className="rounded-[20px] border p-5"
+      className="rounded-[20px] border p-5 space-y-4"
       style={{
         backgroundColor: tokens.background,
         borderColor: tokens.border,
@@ -36,8 +36,46 @@ function ThemePreviewPanel({ tokens }: { tokens: RoleThemeTokens }) {
       <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: tokens.textMuted }}>
         Live preview
       </p>
+
+      {/* Sidebar Mockup */}
       <div
-        className="mt-3 rounded-xl px-3 py-2 text-center text-[10px] font-semibold tracking-wide text-white"
+        className="rounded-xl p-3 space-y-3"
+        style={{
+          backgroundColor: tokens.sidebarBg,
+        }}
+      >
+        <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: `${tokens.sidebarText}25` }}>
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: tokens.sidebarActiveText }}>
+            Mock Sidebar
+          </span>
+        </div>
+        <div className="space-y-1">
+          {/* Active Item */}
+          <div
+            className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold"
+            style={{
+              backgroundColor: tokens.sidebarActiveBg,
+              color: tokens.sidebarActiveText,
+            }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            Active Menu Item
+          </div>
+          {/* Inactive Item */}
+          <div
+            className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-medium"
+            style={{
+              color: tokens.sidebarText,
+            }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
+            Inactive Menu Item
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="rounded-xl px-3 py-2 text-center text-[10px] font-semibold tracking-wide text-white"
         style={{ backgroundColor: tokens.bannerBg }}
       >
         Console banner
@@ -111,7 +149,10 @@ export function AdminThemeManagementPage() {
   );
 
   const savedTokens = useMemo(
-    () => (savedTheme?.tokens as RoleThemeTokens | undefined) ?? getDefaultThemeTokensForRole(activeRole),
+    () => ({
+      ...getDefaultThemeTokensForRole(activeRole),
+      ...(savedTheme?.tokens as Record<string, string> | undefined),
+    }),
     [savedTheme, activeRole],
   );
 
@@ -122,9 +163,19 @@ export function AdminThemeManagementPage() {
   }, [activeRole, savedTokens]);
 
   useEffect(() => {
-    if (!draft) return;
-    themeContext?.applyPreview(draft);
-  }, [draft, themeContext]);
+    if (!draft || !themeContext) return;
+
+    // Only apply the live document-level preview if editing the logged-in user's role
+    if (activeRole === themeContext.role) {
+      themeContext.applyPreview(draft);
+    } else {
+      themeContext.clearPreview();
+    }
+
+    return () => {
+      themeContext.clearPreview();
+    };
+  }, [draft, activeRole, themeContext]);
 
   const updateToken = useCallback((key: RoleThemeTokenKey, value: string) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));

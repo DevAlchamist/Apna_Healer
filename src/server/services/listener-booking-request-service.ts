@@ -237,8 +237,16 @@ export async function listenerRespondToRequest(input: {
   requestId: string;
   listenerId: string;
   decision: "accept" | "decline";
+  meetingLink?: string;
+  notes?: string;
+  description?: string;
 }) {
-  return prisma.$transaction(async (tx) => {
+  const prior = await prisma.listenerBookingRequest.findUnique({
+    where: { id: input.requestId },
+    select: { status: true, userId: true, assignedListenerId: true },
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
     const request = await tx.listenerBookingRequest.findUnique({
       where: { id: input.requestId },
     });
@@ -275,9 +283,108 @@ export async function listenerRespondToRequest(input: {
       });
     }
 
+    const meetingLinkTrimmed = input.meetingLink?.trim();
+    const meetingLink = meetingLinkTrimmed && meetingLinkTrimmed.length > 0 ? meetingLinkTrimmed : null;
+
+    const existingSession = await tx.careSession.findFirst({
+      where: { listenerRequestId: request.id },
+    });
+    if (existingSession) {
+      throw new ApiError(400, "A session already exists for this request.", "SESSION_EXISTS");
+    }
+
+    const startTime = mergeDateAndTime(request.preferredDate, request.preferredTime);
+    const amount = toDecimal(request.amountHeld);
+
+    const tagDescription =
+      [
+        request.emotionalTags.length ? `Tags: ${request.emotionalTags.join(", ")}` : null,
+        request.preferredTone ? `Tone: ${request.preferredTone}` : null,
+        request.preferredLanguage ? `Language: ${request.preferredLanguage}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || null;
+
+    const sessionDescription =
+      input.description !== undefined && input.description !== null && input.description.trim().length > 0
+        ? input.description.trim()
+        : tagDescription;
+
+    const sessionNotes =
+      input.notes !== undefined && input.notes !== null && input.notes.trim().length > 0
+        ? input.notes.trim()
+        : request.note ?? null;
+
+    const wallet = await tx.wallet.findUnique({ where: { userId: request.userId } });
+    if (!wallet) {
+      throw new ApiError(404, "Wallet was not found.", "WALLET_NOT_FOUND");
+    }
+
+    const pendingPayment = await tx.transaction.findFirst({
+      where: {
+        referenceId: request.id,
+        type: TransactionType.SESSION_PAYMENT,
+        status: TransactionStatus.PENDING,
+      },
+    });
+
+    if (!pendingPayment) {
+      throw new ApiError(400, "Hold transaction was not found.", "HOLD_NOT_FOUND");
+    }
+
+    await tx.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        heldBalance: wallet.heldBalance.minus(amount),
+        totalSpent: wallet.totalSpent.plus(amount),
+      },
+    });
+
+    await tx.transaction.update({
+      where: { id: pendingPayment.id },
+      data: {
+        status: TransactionStatus.SUCCESS,
+        purpose: "LISTENER_REQUEST_CAPTURED",
+        metadata: {
+          listenerRequestId: request.id,
+          assignedListenerId: request.assignedListenerId,
+        },
+      },
+    });
+
+    const session = await tx.careSession.create({
+      data: {
+        bookingId: null,
+        listenerRequestId: request.id,
+        userId: request.userId,
+        providerId: request.assignedListenerId,
+        sessionMode: BookingType.LISTENER,
+        amount,
+        duration: request.duration,
+        startTime,
+        meetingLink,
+        notes: sessionNotes,
+        description: sessionDescription,
+      },
+    });
+
+    await tx.sessionLog.create({
+      data: {
+        sessionId: session.id,
+        event: SessionLogEvent.BOOKED,
+        metadata: { listenerRequestId: request.id },
+      },
+    });
+
     return tx.listenerBookingRequest.update({
       where: { id: request.id },
-      data: { listenerConfirmation: ListenerConfirmation.ACCEPTED },
+      data: {
+        status: ListenerRequestStatus.APPROVED,
+        captureTransactionId: pendingPayment.id,
+        reviewedBy: input.listenerId,
+        reviewedAt: new Date(),
+        listenerConfirmation: ListenerConfirmation.ACCEPTED,
+      },
       include: {
         user: { select: { id: true, name: true, email: true, image: true } },
         assignedListener: { select: { id: true, name: true, email: true, image: true } },
@@ -285,6 +392,20 @@ export async function listenerRespondToRequest(input: {
       },
     });
   });
+
+  if (prior && prior.status !== result.status) {
+    void emitListenerRequestUpdated({
+      adminId: input.listenerId,
+      requestId: result.id,
+      fromStatus: prior.status,
+      toStatus: result.status,
+      userId: result.userId,
+      assignedListenerId: result.assignedListenerId,
+      sessionId: result.session?.id ?? null,
+    }).catch((err) => console.error("[platform-events] listener request:", err));
+  }
+
+  return result;
 }
 
 export async function adminPatchListenerRequest(input: {

@@ -10,6 +10,7 @@ export const publicEventsQuerySchema = z.object({
   take: z.coerce.number().int().positive().max(50).optional(),
   category: z.string().trim().max(64).optional(),
   filter: z.string().trim().max(64).optional(),
+  status: z.enum(["PUBLISHED", "COMPLETED"]).optional(),
 });
 
 export const publicClubsQuerySchema = z.object({

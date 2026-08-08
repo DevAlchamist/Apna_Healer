@@ -87,12 +87,12 @@ export function AdminShell({ children }: AdminShellProps) {
       </div>
 
       <div className="grid w-full grid-cols-1 md:h-[calc(100vh-36px)] md:grid-cols-[300px_1fr] md:overflow-hidden">
-        <aside className="hidden border-r border-accent/70 bg-white/88 p-5 md:flex md:h-[calc(100vh-36px)] md:flex-col md:overflow-y-auto">
+        <aside className="hidden border-r border-accent/70 bg-sidebar-bg text-sidebar-text p-5 md:flex md:h-[calc(100vh-36px)] md:flex-col md:overflow-y-auto">
           <div>
-            <h2 className="font-display text-3xl font-semibold text-text-secondary">
+            <h2 className="font-display text-3xl font-semibold" style={{ color: "var(--theme-sidebar-active-text)" }}>
               Apna Healer
             </h2>
-            <p className="text-xs uppercase tracking-[0.22em] text-text-primary/50">
+            <p className="text-xs uppercase tracking-[0.22em] opacity-80">
               Heal Together Feel Together
             </p>
           </div>
@@ -112,7 +112,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
           {adminSystemItems.length > 0 ? (
             <div className="mt-8">
-              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary/40">
+              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
                 System
               </p>
               <div className="mt-3 grid gap-1">
@@ -121,7 +121,11 @@ export function AdminShell({ children }: AdminShellProps) {
                     <Link
                       key={item.id}
                       href={item.href}
-                      className="flex items-center gap-3 rounded-gentle px-4 py-3 text-sm text-text-primary/65 transition-colors duration-300 ease-(--ease-calm) hover:bg-accent/50"
+                      className={`flex items-center gap-3 rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
+                        pathname === item.href
+                          ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
+                          : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
+                      }`}
                     >
                       <SidebarIcon icon={item.icon} />
                       <span>{item.label}</span>

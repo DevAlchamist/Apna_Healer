@@ -4,7 +4,7 @@ import {
   ClubStatus,
   Prisma,
   Role,
-  WellnessEventStatus,
+  EventStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
@@ -32,7 +32,8 @@ type UpdateEventInput = z.infer<typeof updateEventSchema>;
 const eventInclude = {
   club: { select: { id: true, slug: true, title: true, ownerUserId: true } },
   organizedBy: { select: { id: true, name: true, email: true } },
-} satisfies Prisma.WellnessEventInclude;
+  category: { select: { id: true, name: true } },
+} satisfies Prisma.EventInclude;
 
 export async function isActiveClubMember(userId: string, clubId: string | null) {
   if (!clubId) return false;
@@ -66,7 +67,7 @@ export async function assertCanManageEvent(
 }
 
 function mapSummary(
-  event: Prisma.WellnessEventGetPayload<{ include: typeof eventInclude }>,
+  event: Prisma.EventGetPayload<{ include: typeof eventInclude }>,
   viewer?: {
     userId: string;
     isRegistered: boolean;
@@ -90,7 +91,7 @@ function mapSummary(
     host,
     excerpt: event.description?.slice(0, 220) ?? event.subtitle ?? "",
     heroImageUrl: event.heroImageUrl,
-    category: event.category ?? "Gathering",
+    category: event.category?.name ?? "Gathering",
     startsAt: event.startsAt.toISOString(),
     dateLabel: formatEventDateLabel(event.startsAt),
     timeLabel: formatEventTimeLabel(event.startsAt),
@@ -109,7 +110,7 @@ function mapSummary(
 }
 
 function mapDetail(
-  event: Prisma.WellnessEventGetPayload<{ include: typeof eventInclude }>,
+  event: Prisma.EventGetPayload<{ include: typeof eventInclude }>,
   viewer?: {
     userId: string;
     isRegistered: boolean;
@@ -134,11 +135,13 @@ function mapDetail(
     testimonialAuthor: event.testimonialAuthor,
     organizedByUserId: event.organizedByUserId,
     myRegistration: viewer?.myRegistration ?? null,
+    completedImages: event.completedImages ?? [],
+    completedVideos: event.completedVideos ?? [],
   };
 }
 
 export async function getEventBySlug(slug: string) {
-  const event = await prisma.wellnessEvent.findUnique({
+  const event = await prisma.event.findUnique({
     where: { slug },
     include: eventInclude,
   });
@@ -149,7 +152,7 @@ export async function getEventBySlug(slug: string) {
 }
 
 export async function getEventById(id: string) {
-  const event = await prisma.wellnessEvent.findUnique({
+  const event = await prisma.event.findUnique({
     where: { id },
     include: eventInclude,
   });
@@ -191,9 +194,12 @@ async function viewerContext(userId: string, actorRole: Role, event: Awaited<Ret
   };
 }
 
-export async function listPublicEvents(take = 12): Promise<ApiPublicEventSummary[]> {
-  const events = await prisma.wellnessEvent.findMany({
-    where: { status: WellnessEventStatus.PUBLISHED },
+export async function listPublicEvents(
+  take = 12,
+  status: EventStatus = EventStatus.PUBLISHED,
+): Promise<ApiPublicEventSummary[]> {
+  const events = await prisma.event.findMany({
+    where: { status },
     include: eventInclude,
     orderBy: { startsAt: "asc" },
     take,
@@ -206,13 +212,13 @@ export async function listPublicEvents(take = 12): Promise<ApiPublicEventSummary
     image: e.heroImageUrl ?? "",
     tag: formatEventDateLabel(e.startsAt),
     likes: 0,
-    category: e.category ?? "Gathering",
+    category: e.category?.name ?? "Gathering",
   }));
 }
 
 export async function getPublicEventBySlug(slug: string) {
-  const event = await prisma.wellnessEvent.findFirst({
-    where: { slug, status: WellnessEventStatus.PUBLISHED },
+  const event = await prisma.event.findFirst({
+    where: { slug, status: { in: [EventStatus.PUBLISHED, EventStatus.COMPLETED] } },
     include: eventInclude,
   });
   if (!event) return null;
@@ -230,8 +236,8 @@ export async function listEventsForUser(
   filters: { query?: string; clubId?: string; take?: number; cursor?: string },
 ) {
   const take = filters.take ?? 24;
-  const where: Prisma.WellnessEventWhereInput = {
-    status: WellnessEventStatus.PUBLISHED,
+  const where: Prisma.EventWhereInput = {
+    status: EventStatus.PUBLISHED,
   };
   if (filters.clubId) where.clubId = filters.clubId;
   if (filters.query?.trim()) {
@@ -239,11 +245,11 @@ export async function listEventsForUser(
     where.OR = [
       { title: { contains: q, mode: "insensitive" } },
       { subtitle: { contains: q, mode: "insensitive" } },
-      { category: { contains: q, mode: "insensitive" } },
+      { category: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
 
-  const items = await prisma.wellnessEvent.findMany({
+  const items = await prisma.event.findMany({
     where,
     include: eventInclude,
     orderBy: { startsAt: "asc" },
@@ -264,7 +270,7 @@ export async function listEventsForUser(
   return {
     items: enriched,
     meta: {
-      total: await prisma.wellnessEvent.count({ where }),
+      total: await prisma.event.count({ where }),
       take,
       nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
     },
@@ -273,7 +279,7 @@ export async function listEventsForUser(
 
 export async function getEventDetailForUser(slug: string, userId: string, actorRole: Role) {
   const event = await getEventBySlug(slug);
-  if (event.status !== WellnessEventStatus.PUBLISHED && actorRole !== Role.ADMIN) {
+  if (event.status !== EventStatus.PUBLISHED && actorRole !== Role.ADMIN) {
     const ctx = await viewerContext(userId, actorRole, event);
     if (!ctx.canManage) {
       throw new ApiError(404, "Event was not found.", "EVENT_NOT_FOUND");
@@ -284,7 +290,7 @@ export async function getEventDetailForUser(slug: string, userId: string, actorR
 }
 
 export async function listEventsForClub(clubId: string) {
-  const events = await prisma.wellnessEvent.findMany({
+  const events = await prisma.event.findMany({
     where: { clubId },
     include: eventInclude,
     orderBy: { startsAt: "desc" },
@@ -299,8 +305,8 @@ export async function listEventsForClub(clubId: string) {
   );
 }
 
-export async function listEventsAdmin(filters?: { status?: WellnessEventStatus }) {
-  const events = await prisma.wellnessEvent.findMany({
+export async function listEventsAdmin(filters?: { status?: EventStatus }) {
+  const events = await prisma.event.findMany({
     where: filters?.status ? { status: filters.status } : {},
     include: eventInclude,
     orderBy: { startsAt: "desc" },
@@ -326,13 +332,23 @@ export async function createEvent(
   }
 
   const slug = await uniqueEventSlug(input.title, async (s) => {
-    const row = await prisma.wellnessEvent.findUnique({ where: { slug: s } });
+    const row = await prisma.event.findUnique({ where: { slug: s } });
     return row != null;
   });
 
-  const status = input.status ?? WellnessEventStatus.PUBLISHED;
+  const status = input.status ?? EventStatus.PUBLISHED;
 
-  const event = await prisma.wellnessEvent.create({
+  let categoryId: string | null = null;
+  if (input.category) {
+    const cat = await prisma.eventCategory.upsert({
+      where: { name: input.category },
+      update: {},
+      create: { name: input.category },
+    });
+    categoryId = cat.id;
+  }
+
+  const event = await prisma.event.create({
     data: {
       slug,
       clubId: input.clubId ?? null,
@@ -341,7 +357,7 @@ export async function createEvent(
       title: input.title,
       subtitle: input.subtitle ?? null,
       description: input.description ?? null,
-      category: input.category ?? null,
+      categoryId,
       heroImageUrl: input.heroImageUrl ?? null,
       startsAt: input.startsAt,
       endsAt: input.endsAt ?? null,
@@ -391,13 +407,24 @@ export async function updateEvent(
   const seatsDelta =
     input.capacity != null ? input.capacity - existing.capacity : 0;
 
-  await prisma.wellnessEvent.update({
+  await prisma.event.update({
     where: { id: eventId },
     data: {
       ...(input.title != null ? { title: input.title } : {}),
       ...(input.subtitle !== undefined ? { subtitle: input.subtitle } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
-      ...(input.category !== undefined ? { category: input.category } : {}),
+      ...(input.category !== undefined
+        ? {
+            category: input.category
+              ? {
+                  connectOrCreate: {
+                    where: { name: input.category },
+                    create: { name: input.category },
+                  },
+                }
+              : { disconnect: true },
+          }
+        : {}),
       ...(input.heroImageUrl !== undefined ? { heroImageUrl: input.heroImageUrl } : {}),
       ...(input.startsAt != null ? { startsAt: input.startsAt } : {}),
       ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
@@ -418,8 +445,8 @@ export async function updateEvent(
       ...(input.facilitatorBio !== undefined ? { facilitatorBio: input.facilitatorBio } : {}),
       ...(input.journeyPoints !== undefined ? { journeyPoints: input.journeyPoints } : {}),
       ...(input.audienceText !== undefined ? { audienceText: input.audienceText } : {}),
-      ...(input.testimonialQuote !== undefined ? { testimonialQuote: input.testimonialQuote } : {}),
-      ...(input.testimonialAuthor !== undefined ? { testimonialAuthor: input.testimonialAuthor } : {}),
+      ...(input.completedImages !== undefined ? { completedImages: input.completedImages } : {}),
+      ...(input.completedVideos !== undefined ? { completedVideos: input.completedVideos } : {}),
     },
   });
 
@@ -472,8 +499,8 @@ export async function listEventFacilitatorOptions(): Promise<ApiEventFacilitator
     .map(([userId, row]) => {
       const clubsLabel =
         row.clubTitles.length === 1
-          ? row.clubTitles[0]
-          : `${row.clubTitles.slice(0, 2).join(", ")}${row.clubTitles.length > 2 ? "…" : ""}`;
+            ? row.clubTitles[0]
+            : `${row.clubTitles.slice(0, 2).join(", ")}${row.clubTitles.length > 2 ? "…" : ""}`;
       return {
         id: `owner:${userId}`,
         type: "club-owner" as const,

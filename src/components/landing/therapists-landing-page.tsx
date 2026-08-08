@@ -12,6 +12,31 @@ import { LandingJoinModal } from "@/components/landing/landing-join-modal";
 import { LandingNavbar } from "@/components/landing/navbar";
 import { apiFetch } from "@/lib/api-client";
 import type { ApiProvider } from "@/types/api";
+import { formatCurrency } from "@/lib/display";
+
+type PackageAllocation = {
+  role: string;
+  sessionCount: number;
+};
+
+type DbPackage = {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  coverImage: string;
+  galleryImages: string[];
+  price: string;
+  discount: number;
+  category: string;
+  displayOrder: number;
+  isFeatured: boolean;
+  publicationStatus: string;
+  isVisible: boolean;
+  durationValue: number;
+  durationUnit: string;
+  allocations: PackageAllocation[];
+};
 
 const SPECIALITY_OPTIONS = [
   { value: "all", label: "All Practices" },
@@ -157,7 +182,17 @@ export function TherapistsLandingPage() {
     queryFn: () => apiFetch<ApiProvider[]>("/api/public/providers?role=THERAPIST&take=24"),
   });
 
+  const packagesQuery = useQuery({
+    queryKey: ["public-packages-landing"],
+    queryFn: () => apiFetch<DbPackage[]>("/api/packages"),
+  });
+
   const therapists = providersQuery.data ?? [];
+  const allPackages = packagesQuery.data ?? [];
+
+  const featuredPackages = useMemo(() => {
+    return allPackages.filter((p) => p.isFeatured && p.publicationStatus === "PUBLISHED" && p.isVisible);
+  }, [allPackages]);
 
   const languageOptions = useMemo(() => {
     const set = new Set<string>();
@@ -558,111 +593,100 @@ export function TherapistsLandingPage() {
                 </div>
               </div>
 
-              {/* Section 6: Offers & Discounts (full width inline) */}
-              <div className="col-span-1 md:col-span-2 mt-4 mb-4">
-                <div className="flex justify-between items-center mb-5">
-                  <h3 className="text-lg font-bold text-[#1f2827]">Offers & Discounts</h3>
-                  <button
-                    onClick={() => alert("All promo offers are valid on final session checkouts.")}
-                    className="text-xs font-bold text-[#2f745f] tracking-wide hover:underline"
+              {/* Section 6: Featured Wellness Packages */}
+              <div className="col-span-1 md:col-span-2 mt-6 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#1f2827] tracking-tight">Featured Wellness Packages</h3>
+                    <p className="text-xs text-[#8a9592] mt-1">Curated therapeutic journeys designed for deep healing and growth.</p>
+                  </div>
+                  <Link
+                    href="/dashboard/packages"
+                    className="text-xs font-bold text-[#2f745f] tracking-wide hover:underline whitespace-nowrap"
                   >
-                    VIEW ALL &gt;
-                  </button>
+                    VIEW ALL BUNDLES &gt;
+                  </Link>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Coupon 1 */}
-                  <div className="flex flex-col justify-between p-5 bg-white border border-[#ebe8e2] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.01)] hover:shadow-md transition">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#1f2827]">NCR20</h4>
-                      <p className="text-[11px] text-[#8a9592] mt-1.5 leading-relaxed">
-                        We're offering a flat 20% off on your first 3 therapy sessions at our Delhi and Gurgaon Centres. <span className="text-[#2f745f] font-semibold cursor-pointer">Learn More...</span>
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <div className="border-t border-dashed border-[#ebe8e2] my-3.5" />
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-[#eef6eb] text-[#2f745f] font-mono text-[11px] font-bold">
-                        <span>NCR20</span>
-                        <button onClick={() => copyCouponCode("NCR20")} className="text-[9px] text-[#2f745f] font-sans hover:underline font-bold">COPY</button>
-                      </div>
-                      <button
-                        onClick={() => { setCentre("delhi"); alert("Delhi NCR filter applied!"); }}
-                        className="mt-3 w-full text-center text-xs font-bold text-[#2f745f] hover:underline"
-                      >
-                        APPLY FILTER
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Coupon 2 */}
-                  <div className="flex flex-col justify-between p-5 bg-white border border-[#ebe8e2] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.01)] hover:shadow-md transition">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#1f2827]">FIRSTSESSION20</h4>
-                      <p className="text-[11px] text-[#8a9592] mt-1.5 leading-relaxed">
-                        The code provides 20% off on all first session bookings at Bengaluru center. <span className="text-[#2f745f] font-semibold cursor-pointer">Learn More...</span>
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <div className="border-t border-dashed border-[#ebe8e2] my-3.5" />
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-[#eef6eb] text-[#2f745f] font-mono text-[11px] font-bold">
-                        <span>FIRSTSESSION20</span>
-                        <button onClick={() => copyCouponCode("FIRSTSESSION20")} className="text-[9px] text-[#2f745f] font-sans hover:underline font-bold">COPY</button>
-                      </div>
-                      <button
-                        onClick={() => { setCentre("bengaluru"); alert("Bengaluru filter applied!"); }}
-                        className="mt-3 w-full text-center text-xs font-bold text-[#2f745f] hover:underline"
-                      >
-                        APPLY FILTER
-                      </button>
-                    </div>
+                {packagesQuery.isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="h-64 animate-pulse rounded-3xl bg-[#eceae6]" />
+                    ))}
                   </div>
+                ) : featuredPackages.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-[#ebe8e2] bg-white p-8 text-center text-xs text-[#8a9592]">
+                    No featured packages available at the moment.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {featuredPackages.map((pkg) => {
+                      const originalPrice = Number(pkg.price);
+                      const discountPercent = Number(pkg.discount);
+                      const finalPrice = originalPrice - originalPrice * (discountPercent / 100);
+                      const totalSessions = pkg.allocations?.reduce((sum, a) => sum + a.sessionCount, 0) ?? 0;
+                      const sessionsLabel = `${totalSessions} Session${totalSessions === 1 ? "" : "s"}`;
+                      const badge = discountPercent > 0 ? `${discountPercent}% Off` : undefined;
 
-                  {/* Coupon 3 */}
-                  <div className="flex flex-col justify-between p-5 bg-white border border-[#ebe8e2] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.01)] hover:shadow-md transition">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#1f2827]">PREBOOK20</h4>
-                      <p className="text-[11px] text-[#8a9592] mt-1.5 leading-relaxed">
-                        Thank you for being proactive. Get 20% off on first session for pre-booking your session in advance. <span className="text-[#2f745f] font-semibold cursor-pointer">Learn More...</span>
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <div className="border-t border-dashed border-[#ebe8e2] my-3.5" />
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-[#eef6eb] text-[#2f745f] font-mono text-[11px] font-bold">
-                        <span>PREBOOK20</span>
-                        <button onClick={() => copyCouponCode("PREBOOK20")} className="text-[9px] text-[#2f745f] font-sans hover:underline font-bold">COPY</button>
-                      </div>
-                      <button
-                        onClick={() => alert("Pre-book code pre-loaded!")}
-                        className="mt-3 w-full text-center text-xs font-bold text-[#2f745f] hover:underline"
-                      >
-                        APPLY FILTER
-                      </button>
-                    </div>
-                  </div>
+                      return (
+                        <div
+                          key={pkg.id}
+                          className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-[#ebe8e2] bg-white transition-all shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_36px_-12px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
+                        >
+                          <div className="relative h-40 w-full overflow-hidden bg-[#e8ddd0]">
+                            {pkg.coverImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={pkg.coverImage}
+                                alt={pkg.title}
+                                className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.04]"
+                              />
+                            ) : null}
+                            {badge ? (
+                              <span className="absolute right-3 top-3 rounded-full bg-[#2f745f] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white">
+                                {badge}
+                              </span>
+                            ) : null}
+                          </div>
 
-                  {/* Coupon 4 */}
-                  <div className="flex flex-col justify-between p-5 bg-white border border-[#ebe8e2] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.01)] hover:shadow-md transition">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#1f2827]">FIRST15</h4>
-                      <p className="text-[11px] text-[#8a9592] mt-1.5 leading-relaxed">
-                        Recovery takes consistency. Get 15% off on your first 3 sessions pack to feel comfortable and supported. <span className="text-[#2f745f] font-semibold cursor-pointer">Learn More...</span>
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <div className="border-t border-dashed border-[#ebe8e2] my-3.5" />
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-[#eef6eb] text-[#2f745f] font-mono text-[11px] font-bold">
-                        <span>FIRST15</span>
-                        <button onClick={() => copyCouponCode("FIRST15")} className="text-[9px] text-[#2f745f] font-sans hover:underline font-bold">COPY</button>
-                      </div>
-                      <button
-                        onClick={() => alert("Consistency discount filter applied!")}
-                        className="mt-3 w-full text-center text-xs font-bold text-[#2f745f] hover:underline"
-                      >
-                        APPLY FILTER
-                      </button>
-                    </div>
+                          <div className="flex-1 p-5 flex flex-col justify-between text-left">
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#2f745f]">
+                                {sessionsLabel}
+                              </p>
+                              <h4 className="font-display text-lg font-bold text-[#1f2827] leading-tight">
+                                {pkg.title}
+                              </h4>
+                              <p className="text-xs text-[#8a9592] line-clamp-2 leading-relaxed">
+                                {pkg.description}
+                              </p>
+                            </div>
+
+                            <div className="mt-5 pt-3 border-t border-[#f4f3ef] flex items-end justify-between">
+                              <div>
+                                {discountPercent > 0 ? (
+                                  <p className="text-[10px] font-semibold text-neutral-400 line-through">
+                                    {formatCurrency(originalPrice)}
+                                  </p>
+                                ) : null}
+                                <p className="font-display text-xl font-bold text-[#1f2827]">
+                                  {formatCurrency(finalPrice)}
+                                </p>
+                              </div>
+
+                              <Link
+                                href={`/dashboard/packages/${pkg.id}`}
+                                className="rounded-xl bg-[#faf9f6] border border-[#ebe8e2] px-4 py-2 text-xs font-bold text-[#1f2827] transition hover:bg-[#2f745f] hover:text-white hover:border-[#2f745f]"
+                              >
+                                VIEW BUNDLE
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Render Row 2 & Remaining Cards (Index 2 onwards) */}

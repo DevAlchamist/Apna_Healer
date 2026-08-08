@@ -16,7 +16,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
     const { id } = await context.params;
 
-    const source = await prisma.wellnessPackage.findUnique({
+    const source = await prisma.package.findUnique({
       where: { id },
       include: {
         allocations: true
@@ -24,12 +24,12 @@ export async function POST(_request: Request, context: RouteContext) {
     });
 
     if (!source) {
-      return failure(404, "Source wellness package not found.", "NOT_FOUND");
+      return failure(404, "Source package not found.", "NOT_FOUND");
     }
 
     // Clone the package details and set status to DRAFT
     const duplicated = await prisma.$transaction(async (tx) => {
-      const clonedPackage = await tx.wellnessPackage.create({
+      const clonedPackage = await tx.package.create({
         data: {
           title: `Copy of ${source.title}`,
           subtitle: source.subtitle,

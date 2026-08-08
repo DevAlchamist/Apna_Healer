@@ -36,7 +36,7 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
-    const user = await requireSessionUser([...MEMBER_ROLES]);
+    const user = await requireSessionUser([Role.ADMIN]);
     const { slug } = await params;
     const clubId = await clubIdFromSlug(slug);
     const body = createEventSchema.parse(await request.json());

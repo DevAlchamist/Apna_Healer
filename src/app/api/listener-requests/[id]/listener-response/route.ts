@@ -18,6 +18,9 @@ export async function POST(
       requestId: id,
       listenerId: sessionUser.id,
       decision: body.decision,
+      meetingLink: body.meetingLink,
+      notes: body.notes,
+      description: body.description,
     });
     return ok(updated);
   } catch (error) {

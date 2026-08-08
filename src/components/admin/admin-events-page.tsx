@@ -191,6 +191,33 @@ export function AdminEventsPage() {
   const [providerFilter, setProviderFilter] = useState("ALL");
   const [occupancyFilter, setOccupancyFilter] = useState<OccupancyFilter>("ALL");
 
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const categoriesListQuery = useQuery({
+    queryKey: ["admin-categories"],
+    queryFn: () => apiFetch<Array<{ id: string; name: string }>>("/api/admin/events/categories"),
+  });
+  const categoriesList = categoriesListQuery.data ?? [];
+
+  const createCategoryMutation = useMutation({
+    mutationFn: (name: string) => apiMutation("/api/admin/events/categories", "POST", { name }),
+    onSuccess: () => {
+      setNewCategoryName("");
+      void queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      void queryClient.invalidateQueries({ queryKey: ["event-categories"] });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: string) => apiMutation(`/api/admin/events/categories?id=${id}`, "DELETE"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      void queryClient.invalidateQueries({ queryKey: ["event-categories"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-events"] });
+    },
+  });
+
   const eventsQuery = useQuery({
     queryKey: ["admin-events"],
     queryFn: () => apiFetch<ApiEventDetail[]>("/api/admin/events"),
@@ -199,9 +226,8 @@ export function AdminEventsPage() {
   const allEvents = eventsQuery.data ?? [];
 
   const categories = useMemo(() => {
-    const set = new Set(allEvents.map((e) => e.category).filter(Boolean));
-    return ["ALL", ...Array.from(set).sort()];
-  }, [allEvents]);
+    return ["ALL", ...categoriesList.map((c) => c.name).sort()];
+  }, [categoriesList]);
 
   const providers = useMemo(() => {
     const set = new Set(
@@ -305,6 +331,16 @@ export function AdminEventsPage() {
               />
             </svg>
             Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCategoriesModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-[#e4e8e6] bg-white px-5 py-2.5 text-sm font-semibold text-[#3d4543] transition hover:border-[#cfd4d2]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9M3 20v-8c0-2.2 1.8-4 4-4h10c2.2 0 4 1.8 4 4v8M3 12h18" />
+            </svg>
+            Categories
           </button>
           <button
             type="button"
@@ -615,6 +651,76 @@ export function AdminEventsPage() {
         event={editEvent}
         onClose={() => setEditEvent(null)}
       />
+
+      {isCategoriesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a2422]/40 px-4 py-8 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-3xl border border-theme-muted bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-theme-muted pb-4">
+              <h3 className="font-display text-xl font-semibold text-theme-heading">Event Categories</h3>
+              <button
+                type="button"
+                onClick={() => setIsCategoriesModalOpen(false)}
+                className="text-2xl hover:text-theme-muted transition"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="mt-4 space-y-4">
+              {/* Add New Category */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newCategoryName.trim()) return;
+                  createCategoryMutation.mutate(newCategoryName.trim());
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="text"
+                  placeholder="New category name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="flex-1 rounded-xl border border-theme-muted bg-theme-surface-muted px-3.5 py-2.5 text-sm text-theme-heading outline-none focus:border-[#2f6f5b]"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={createCategoryMutation.isPending}
+                  className="rounded-xl bg-[#2f6f5b] hover:bg-[#204a3d] px-4 py-2.5 text-xs font-bold text-white transition"
+                >
+                  {createCategoryMutation.isPending ? "Adding..." : "Add"}
+                </button>
+              </form>
+
+              {/* Categories list */}
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                {categoriesList.length === 0 ? (
+                  <p className="text-sm text-theme-muted text-center py-4">No categories configured yet.</p>
+                ) : (
+                  categoriesList.map((cat) => (
+                    <div key={cat.id} className="flex items-center justify-between rounded-xl bg-theme-surface-muted px-3 py-2.5 border border-theme-muted">
+                      <span className="text-sm font-medium text-theme-heading">{cat.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to delete "${cat.name}"?`)) {
+                            deleteCategoryMutation.mutate(cat.id);
+                          }
+                        }}
+                        disabled={deleteCategoryMutation.isPending}
+                        className="text-xs text-red-500 hover:text-red-700 transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

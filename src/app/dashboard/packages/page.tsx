@@ -87,6 +87,8 @@ export default function PackagesPage() {
 
   const packageCards = useMemo(() => {
     const list = packagesQuery.data ?? [];
+    const packagePurchases = user?.packagePurchases ?? [];
+
     return list.map((entry) => {
       // Calculate price and discounts
       const originalPrice = Number(entry.price);
@@ -100,20 +102,27 @@ export default function PackagesPage() {
 
       const totalSessions = entry.allocations.reduce((sum, a) => sum + a.sessionCount, 0);
 
+      const purchase = packagePurchases.find(
+        (p: any) => p.packageId === entry.id && p.status === "ACTIVE"
+      );
+      const isPurchased = !!purchase;
+
       return {
         ...entry,
         price,
         originalPrice: discountPercent > 0 ? originalPrice : null,
         affordability,
         sessionsLabel: `${totalSessions} Session${totalSessions === 1 ? "" : "s"}`,
-        badge: discountPercent > 0 ? `${discountPercent}% Off` : undefined,
-        recommended:
+        badge: isPurchased ? "Activated" : (discountPercent > 0 ? `${discountPercent}% Off` : undefined),
+        isPurchased,
+        recommended: !isPurchased && (
           (entry.id === "mindfulness-starter-pack" && completedSessions === 0) ||
           (entry.id === "self-care-essentials" && pendingBookings > 0) ||
-          (entry.id === "deep-healing-journey" && completedSessions >= 2),
+          (entry.id === "deep-healing-journey" && completedSessions >= 2)
+        ),
       };
     });
-  }, [packagesQuery.data, availableBalance, completedSessions, pendingBookings]);
+  }, [packagesQuery.data, user?.packagePurchases, availableBalance, completedSessions, pendingBookings]);
 
   const queryError =
     userQuery.error?.message ??
@@ -178,7 +187,11 @@ export default function PackagesPage() {
         {packageCards.map((entry) => (
           <article
             key={entry.id}
-            className="group overflow-hidden rounded-calm border border-accent/70 bg-white shadow-soft transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1 hover:border-primary/25 hover:shadow-soft-hover"
+            className={`group overflow-hidden rounded-calm bg-white shadow-soft transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1 hover:shadow-soft-hover ${
+              entry.isPurchased
+                ? "border-2 border-[#2D5A4C] ring-2 ring-[#2D5A4C]/10"
+                : "border border-accent/70 hover:border-primary/25"
+            }`}
           >
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -187,7 +200,11 @@ export default function PackagesPage() {
                 alt={entry.title}
                 className="h-44 w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.04] md:h-48"
               />
-              {entry.badge ? (
+              {entry.isPurchased ? (
+                <span className="absolute right-3 top-3 rounded-full bg-[#2D5A4C] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm border border-[#2D5A4C]/35">
+                  Activated
+                </span>
+              ) : entry.badge ? (
                 <span className="absolute right-3 top-3 rounded-full bg-primary/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
                   {entry.badge}
                 </span>
@@ -209,7 +226,7 @@ export default function PackagesPage() {
               <p className="text-sm leading-relaxed text-text-primary/68">{entry.description}</p>
 
               <div className="rounded-gentle bg-background px-4 py-3 text-sm text-text-primary/62">
-                {entry.affordability}
+                {entry.isPurchased ? "Active Care Path" : entry.affordability}
               </div>
 
               <div className="flex items-end justify-between gap-3 pt-3">
@@ -226,9 +243,13 @@ export default function PackagesPage() {
 
                 <Link
                   href={`/dashboard/packages/${entry.id}`}
-                  className="rounded-full bg-[#e8ded2] px-5 py-2.5 text-sm font-semibold text-text-primary transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#dfd3c5]"
+                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-[background-color,transform] duration-300 hover:-translate-y-0.5 ${
+                    entry.isPurchased
+                      ? "bg-[#2D5A4C] text-white hover:bg-[#204439]"
+                      : "bg-[#e8ded2] text-text-primary hover:bg-[#dfd3c5]"
+                  }`}
                 >
-                  View Bundle
+                  {entry.isPurchased ? "Manage Path" : "View Bundle"}
                 </Link>
               </div>
             </div>

@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       where.isFeatured = true;
     }
 
-    const packages = await prisma.wellnessPackage.findMany({
+    const packages = await prisma.package.findMany({
       where,
       include: {
         allocations: true,
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = CreatePackageSchema.parse(body);
 
-    const createdPackage = await prisma.wellnessPackage.create({
+    const createdPackage = await prisma.package.create({
       data: {
         title: parsed.title,
         subtitle: parsed.subtitle,

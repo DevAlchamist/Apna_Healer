@@ -32,6 +32,9 @@ export type EventDetail = {
     by: string;
     meta: string;
   }>;
+  completedImages?: string[];
+  completedVideos?: string[];
+  status?: string;
 };
 
 export type DashboardSuggestedEvent = {

@@ -69,10 +69,16 @@ export default function DashboardPage() {
 
   const highlightSession = useMemo(() => {
     if (!sessions.length) return null;
-    const ongoing = sessions.find((session) => session.status === "ONGOING");
-    if (ongoing) return ongoing;
-    const upcoming = sessions.find((session) => session.status === "UPCOMING");
-    if (upcoming) return upcoming;
+    const activeSessions = sessions.filter(
+      (s) => s.status === "ONGOING" || s.status === "UPCOMING",
+    );
+    if (activeSessions.length > 0) {
+      const sorted = [...activeSessions].sort(
+        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      );
+      const ongoing = sorted.find((s) => s.status === "ONGOING");
+      return ongoing ?? sorted[0];
+    }
     return [...sessions].sort(
       (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
     )[0] ?? null;

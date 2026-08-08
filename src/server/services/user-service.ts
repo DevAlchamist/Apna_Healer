@@ -84,6 +84,12 @@ export async function getUserMe(userId: string) {
       applications: {
         orderBy: { createdAt: "desc" },
       },
+      packagePurchases: {
+        include: {
+          allocations: true,
+        },
+        orderBy: { purchaseDate: "desc" },
+      },
     },
   });
 

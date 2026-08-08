@@ -56,8 +56,8 @@ const sessionInclude = {
 
 type SessionRow = Prisma.CareSessionGetPayload<{ include: typeof sessionInclude }>;
 
-function isListenerFlowSession(session: { listenerRequestId: string | null; bookingId: string | null }) {
-  return Boolean(session.listenerRequestId) && !session.bookingId;
+function isListenerFlowSession(session: { sessionMode: BookingType }) {
+  return session.sessionMode === BookingType.LISTENER;
 }
 
 function assertSessionIsMutable(session: { status: CareSessionStatus }, action: string) {
@@ -737,9 +737,7 @@ export async function updateSessionState(input: {
 
     if (completingNow && session.bookingId) {
       await settleTherapistSessionCompletion(tx, session);
-    }
-
-    if (completingNow && listenerFlow) {
+    } else if (completingNow && listenerFlow) {
       await settleListenerSessionPayout(tx, session);
     }
 
@@ -751,8 +749,7 @@ export async function updateSessionState(input: {
           where: { id: session.bookingId },
           data: { status: BookingStatus.CANCELLED },
         });
-      }
-      if (listenerFlow) {
+      } else if (listenerFlow) {
         await refundListenerSessionPayment(tx, session);
       }
     }

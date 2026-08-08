@@ -169,13 +169,13 @@ export const dashboardModules: readonly DashboardModule[] = [
     roles: LISTENER_ROLES,
   },
   {
-    id: "dashboard.side.training-center",
-    href: "/dashboard/training-center",
-    label: "Training Center",
+    id: "dashboard.side.listener-inbox",
+    href: "/dashboard/listener-inbox",
+    label: "Sessions",
     surface: "dashboard",
     placement: "sidebar",
     group: "primary",
-    icon: "settings",
+    icon: "plans",
     roles: LISTENER_ROLES,
   },
 
@@ -429,7 +429,12 @@ export function getDashboardModules(filter: ModuleFilter): DashboardModule[] {
     if (module.surface !== filter.surface) return false;
     if (module.placement !== filter.placement) return false;
     if (filter.group !== undefined && module.group !== filter.group) return false;
-    if (filter.role && !module.roles.includes(filter.role)) return false;
+    if (filter.role) {
+      if (filter.role === "ADMIN" && filter.surface === "dashboard") {
+        return true;
+      }
+      if (!module.roles.includes(filter.role)) return false;
+    }
     return true;
   });
 }

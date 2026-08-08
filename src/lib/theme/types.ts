@@ -35,7 +35,11 @@ export type RoleThemeTokenKey =
   | "statusInfo"
   | "focusRing"
   | "bannerBg"
-  | "heading";
+  | "heading"
+  | "sidebarBg"
+  | "sidebarText"
+  | "sidebarActiveBg"
+  | "sidebarActiveText";
 
 export type RoleThemeTokens = Record<RoleThemeTokenKey, string>;
 
@@ -82,4 +86,8 @@ export const ROLE_THEME_TOKEN_KEYS = [
   "focusRing",
   "bannerBg",
   "heading",
+  "sidebarBg",
+  "sidebarText",
+  "sidebarActiveBg",
+  "sidebarActiveText",
 ] as const satisfies readonly RoleThemeTokenKey[];

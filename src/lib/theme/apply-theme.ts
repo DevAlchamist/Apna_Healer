@@ -2,6 +2,7 @@ import type { Role } from "@prisma/client";
 import { TOKEN_TO_CSS_VAR } from "@/lib/theme/css-var-map";
 import type { RoleThemeTokenKey, RoleThemeTokens } from "@/lib/theme/types";
 import { ROLE_THEME_TOKEN_KEYS } from "@/lib/theme/types";
+import { getDefaultThemeTokensForRole } from "@/config/theme-defaults";
 
 export function applyThemeTokens(
   tokens: RoleThemeTokens,
@@ -43,7 +44,14 @@ export function readThemeFromStorage(role: Role): {
       if (!raw) continue;
       const parsed = JSON.parse(raw) as { tokens: RoleThemeTokens; version: number };
       if (parsed.tokens && typeof parsed.version === "number") {
-        return parsed;
+        const defaults = getDefaultThemeTokensForRole(role);
+        return {
+          tokens: {
+            ...defaults,
+            ...parsed.tokens,
+          },
+          version: parsed.version,
+        };
       }
     } catch {
       /* ignore corrupt cache */

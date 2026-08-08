@@ -42,12 +42,13 @@ const eventFilters = [
 export default function EventsPage() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState("All Paths");
+  const [statusFilter, setStatusFilter] = useState<"PUBLISHED" | "COMPLETED">("PUBLISHED");
 
   const eventsQuery = useQuery({
-    queryKey: ["public-events", activeFilter],
+    queryKey: ["public-events", activeFilter, statusFilter],
     queryFn: () =>
       apiFetch<ApiPublicEventSummary[]>(
-        `/api/public/events?filter=${encodeURIComponent(activeFilter)}&take=12`,
+        `/api/public/events?filter=${encodeURIComponent(activeFilter)}&status=${statusFilter}&take=12`,
       ),
   });
 
@@ -162,6 +163,32 @@ export default function EventsPage() {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="mx-auto max-w-[1240px] px-6 md:px-10">
+            {/* Status toggle selector */}
+            <div className="flex gap-6 border-b border-neutral-300 pb-4 mb-6">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("PUBLISHED")}
+                className={`text-xl font-bold pb-2 border-b-2 transition-colors ${
+                  statusFilter === "PUBLISHED"
+                    ? "border-[#2f745f] text-[#2f745f]"
+                    : "border-transparent text-[#77817f] hover:text-[#2f745f]"
+                }`}
+              >
+                Upcoming Gatherings
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("COMPLETED")}
+                className={`text-xl font-bold pb-2 border-b-2 transition-colors ${
+                  statusFilter === "COMPLETED"
+                    ? "border-[#2f745f] text-[#2f745f]"
+                    : "border-transparent text-[#77817f] hover:text-[#2f745f]"
+                }`}
+              >
+                Event Recaps (Completed)
+              </button>
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
               <span className="mr-2 text-sm text-[#8f9694]">Filter by Intent:</span>
               {eventFilters.map((filter) => (
@@ -226,12 +253,14 @@ export default function EventsPage() {
                       <Link
                         href={`/events/${event.id}`}
                         className={`mt-6 inline-block rounded-full px-6 py-2 text-sm font-semibold ${
-                          index % 2 === 0
-                            ? "border border-[#2f745f] text-[#2f745f]"
-                            : "bg-[#2f745f] text-white"
+                          statusFilter === "COMPLETED"
+                            ? "bg-[#2f745f] text-white"
+                            : (index % 2 === 0
+                              ? "border border-[#2f745f] text-[#2f745f]"
+                              : "bg-[#2f745f] text-white")
                         }`}
                       >
-                        {index % 2 === 0 ? "Reserve your place →" : "View Itinerary"}
+                        {statusFilter === "COMPLETED" ? "View Event Recap →" : (index % 2 === 0 ? "Reserve your place →" : "View Itinerary")}
                       </Link>
                     </article>
                   </div>

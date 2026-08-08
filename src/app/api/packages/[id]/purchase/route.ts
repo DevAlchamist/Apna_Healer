@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Fetch package details
-    const pkg = await prisma.wellnessPackage.findUnique({
+    const pkg = await prisma.package.findUnique({
       where: { id },
       include: {
         allocations: true
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     if (!pkg) {
-      return failure(404, "Wellness package not found.", "NOT_FOUND");
+      return failure(404, "Package not found.", "NOT_FOUND");
     }
 
     // 1. Validate publication status
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       });
 
       // Increment package purchase counter
-      await tx.wellnessPackage.update({
+      await tx.package.update({
         where: { id: pkg.id },
         data: {
           purchaseCount: { increment: 1 }

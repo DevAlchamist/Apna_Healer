@@ -1,4 +1,4 @@
-import type { WellnessEvent } from "@prisma/client";
+import type { Event } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/client";
 
 export function slugifyEventTitle(title: string): string {
@@ -48,7 +48,7 @@ export function formatEventTimeLabel(date: Date): string {
 }
 
 export type PriceableEvent = Pick<
-  WellnessEvent,
+  Event,
   "clubId" | "basePrice" | "memberPrice" | "guestPrice" | "membersPay" | "nonMembersPay"
 >;
 

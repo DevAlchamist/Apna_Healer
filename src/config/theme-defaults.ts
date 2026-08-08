@@ -36,6 +36,10 @@ export const MEMBER_THEME_DEFAULTS: RoleThemeTokens = {
   focusRing: "#2f6f5b",
   bannerBg: "#2f5d50",
   heading: "#2f5d50",
+  sidebarBg: "#2f5d50",
+  sidebarText: "#cde8df",
+  sidebarActiveBg: "#3a7061",
+  sidebarActiveText: "#ffffff",
 };
 
 /** Admin console palette (distinct from member dashboard). */
@@ -73,6 +77,10 @@ export const ADMIN_THEME_DEFAULTS: RoleThemeTokens = {
   focusRing: "#2f6f5b",
   bannerBg: "#1e3d36",
   heading: "#1f2827",
+  sidebarBg: "#1c2826",
+  sidebarText: "#96a2a0",
+  sidebarActiveBg: "#2d3c3a",
+  sidebarActiveText: "#ffffff",
 };
 
 export function getDefaultThemeTokensForRole(role: Role): RoleThemeTokens {

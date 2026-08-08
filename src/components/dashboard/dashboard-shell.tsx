@@ -242,8 +242,8 @@ export function SidebarItem({
       href={href}
       className={`flex items-center justify-between rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
         isActive
-          ? "bg-primary/15 font-semibold text-text-secondary"
-          : "text-text-primary/65 hover:bg-accent/50"
+          ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
+          : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
       }`}
     >
       <span className="flex items-center gap-3">
@@ -251,7 +251,7 @@ export function SidebarItem({
         {label}
       </span>
       {isActive ? (
-        <span className="h-6 w-1 rounded-full bg-primary" aria-hidden />
+        <span className="h-6 w-1 rounded-full bg-sidebar-active-text" aria-hidden />
       ) : null}
     </Link>
   );
@@ -286,8 +286,8 @@ function SidebarDropdown({
         aria-expanded={open}
         className={`flex w-full items-center justify-between rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
           isChildActive
-            ? "bg-primary/15 font-semibold text-text-secondary"
-            : "text-text-primary/65 hover:bg-accent/50"
+            ? "bg-sidebar-active-bg/40 font-semibold text-sidebar-active-text"
+            : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
         }`}
       >
         <span className="flex items-center gap-3">
@@ -296,11 +296,11 @@ function SidebarDropdown({
         </span>
         <span className="flex items-center gap-2">
           {isChildActive ? (
-            <span className="h-6 w-1 rounded-full bg-primary" aria-hidden />
+            <span className="h-6 w-1 rounded-full bg-sidebar-active-text" aria-hidden />
           ) : null}
           <svg
-            viewBox="0 0 20 20"
-            className={`h-4 w-4 text-text-primary/45 transition-transform ${open ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24"
+            className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -321,8 +321,8 @@ function SidebarDropdown({
                 href={item.href}
                 className={`flex items-center justify-between rounded-gentle px-4 py-2.5 text-sm transition-colors duration-300 ease-(--ease-calm) ${
                   isActive
-                    ? "bg-primary/10 font-semibold text-text-secondary"
-                    : "text-text-primary/60 hover:bg-accent/50"
+                    ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
+                    : "text-sidebar-text/80 hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
                 }`}
               >
                 <span className="flex items-center gap-3">
@@ -330,7 +330,7 @@ function SidebarDropdown({
                   {item.label}
                 </span>
                 {isActive ? (
-                  <span className="h-5 w-1 rounded-full bg-primary" aria-hidden />
+                  <span className="h-5 w-1 rounded-full bg-sidebar-active-text" aria-hidden />
                 ) : null}
               </Link>
             );
@@ -506,12 +506,12 @@ function DashboardShellContent({ children }: DashboardShellProps) {
       </div>
 
       <div className="grid w-full grid-cols-1 md:h-[calc(100vh-36px)] md:grid-cols-[300px_1fr] md:overflow-hidden">
-        <aside className="hidden border-r border-accent/70 bg-white/88 p-5 md:flex md:h-[calc(100vh-36px)] md:flex-col md:overflow-y-auto">
+        <aside className="hidden border-r border-accent/70 bg-sidebar-bg text-sidebar-text p-5 md:flex md:h-[calc(100vh-36px)] md:flex-col md:overflow-y-auto">
           <div>
-            <h2 className="font-display text-3xl font-semibold text-text-secondary">
+            <h2 className="font-display text-3xl font-semibold" style={{ color: "var(--theme-sidebar-active-text)" }}>
               Apna Healer
             </h2>
-            <p className="text-xs uppercase tracking-[0.22em] text-text-primary/50">
+            <p className="text-xs uppercase tracking-[0.22em] opacity-80">
               Feel Together, Heal Together
             </p>
           </div>
@@ -539,7 +539,7 @@ function DashboardShellContent({ children }: DashboardShellProps) {
 
           {personalNavItems.length > 0 ? (
             <div className="mt-8">
-              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary/40">
+              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
                 Personal
               </p>
               <div className="mt-3 grid gap-1">
@@ -548,7 +548,11 @@ function DashboardShellContent({ children }: DashboardShellProps) {
                     <Link
                       key={item.id}
                       href={item.href}
-                      className="flex items-center gap-3 rounded-gentle px-4 py-3 text-sm text-text-primary/65 transition-colors duration-300 ease-(--ease-calm) hover:bg-accent/50"
+                      className={`flex items-center gap-3 rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
+                        pathname === item.href
+                          ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
+                          : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
+                      }`}
                     >
                       <SidebarIcon icon={item.icon} />
                       <span>{item.label}</span>
