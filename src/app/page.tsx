@@ -51,40 +51,52 @@ import {
 
 const heroSlides = [
   {
-    id: "slide-listen",
-    eyebrow: "You are not alone in this",
-    title: "Someone is ready to",
-    highlight: "simply listen",
-    body: "No forms to fill, no diagnosis, no judgment. Talk to a trained peer listener within minutes — anonymously, whenever it feels heavy.",
+    id: "slide-matchmaking",
+    eyebrow: "Feel together, heal together.",
+    title: "India's 1st Emotion",
+    highlight: "Matchmaking Platform",
+    body: "Connecting individuals, corporates, and nonprofits to make emotional support more accessible, affordable, and human.",
     image: "/fbdca7fe-2733-4317-8c9e-00aba2767d1f.jpg",
     imageAlt: "Soft overlapping sage, lavender and peach shapes on a cream background",
-    primaryCta: "Talk to a listener",
+    primaryCta: "Find your support",
     secondaryCta: "How it works",
     accent: "sage" as const,
   },
   {
-    id: "slide-guidance",
-    eyebrow: "Professional guidance",
-    title: "Therapy that feels",
-    highlight: "gentle, not clinical",
-    body: "Verified psychologists and counsellors who speak your language — literally. Book a 50-minute session at a time that fits your life.",
+    id: "slide-vision",
+    eyebrow: "Help Should Be Easy to Find.",
+    title: "Our Vision: Mental",
+    highlight: "Health for Everyone",
+    body: "• Make support more affordable\n• Make help easier to access\n• Create more awareness around mental well-being",
     image: "/aaef0ed6-bf9f-449b-be2a-b601b778ea81.jpg",
     imageAlt: "Two people sitting together in soft sunlight having a calm conversation",
-    primaryCta: "Find your therapist",
+    primaryCta: "Explore vision",
     secondaryCta: "Browse experts",
     accent: "lavender" as const,
   },
   {
-    id: "slide-community",
-    eyebrow: "Community circles",
-    title: "Healing is lighter",
-    highlight: "when it is shared",
-    body: "Join small, moderated circles for anxiety, work stress, heartbreak or new beginnings. Show up as much or as little as you want.",
+    id: "slide-sessions",
+    eyebrow: "Talk to someone who listens.",
+    title: "1:1 Emotional Support",
+    highlight: "Sessions",
+    body: "• 100% Confidential\n• Fully Anonymous\n• Safe, judgment-free conversations",
     image: "/d7599569-3c15-440b-9556-b602a2ed91be.jpg",
     imageAlt: "A cup of herbal tea and eucalyptus sprig on a cream surface in soft light",
-    primaryCta: "Explore circles",
+    primaryCta: "Book a session",
     secondaryCta: "See member stories",
     accent: "peach" as const,
+  },
+  {
+    id: "slide-community",
+    eyebrow: "Join a Community That Gets You",
+    title: "Feeling stressed? Confused?",
+    highlight: "Overwhelmed? Lonely?",
+    body: "• Don't deal with everything alone.\n• Connect with people who relate to what you're going through and share perspectives that help.",
+    image: "/images/lodhi_garden1.jpeg",
+    imageAlt: "Community support illustration",
+    primaryCta: "Join community",
+    secondaryCta: "Explore circles",
+    accent: "sage" as const,
   },
 ];
 
@@ -270,9 +282,8 @@ function SectionHeading({ eyebrow, title, description, align = "center", action 
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex flex-col gap-6 ${
-        isCenter ? "items-center text-center" : "items-start sm:flex-row sm:items-end sm:justify-between"
-      }`}
+      className={`flex flex-col gap-6 ${isCenter ? "items-center text-center" : "items-start sm:flex-row sm:items-end sm:justify-between"
+        }`}
     >
       <div className={isCenter ? "max-w-2xl" : "max-w-xl"}>
         <span className="inline-flex items-center rounded-full bg-cream-200 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-500">
@@ -355,14 +366,14 @@ function HomePage() {
   const faqItems = home?.faq?.length ? home.faq.map((f, i) => ({ id: `f-${i}`, ...f })) : fallbackFaqItems;
   const testimonials = home?.testimonials?.length
     ? home.testimonials.map((t, i) => ({
-        id: `t-${i}`,
-        quote: t,
-        author: "Anonymous member",
-        context: "Sanctuary member",
-        initials: "AM",
-        accent: (["sage", "lavender", "peach"][i % 3]) as "sage" | "lavender" | "peach",
-        rating: 5,
-      }))
+      id: `t-${i}`,
+      quote: t,
+      author: "Anonymous member",
+      context: "Sanctuary member",
+      initials: "AM",
+      accent: (["sage", "lavender", "peach"][i % 3]) as "sage" | "lavender" | "peach",
+      rating: 5,
+    }))
     : fallbackTestimonials;
 
   // Active slide States
@@ -642,22 +653,46 @@ function HomePage() {
                     {slide.title}{" "}
                     <span className={`italic ${accentText[slide.accent]}`}>{slide.highlight}</span>
                   </h1>
-                  <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg">{slide.body}</p>
+                  {slide.body.includes("\n") ? (
+                    <ul className="mt-6 space-y-2 text-base text-ink-500 sm:text-lg list-none pl-0 text-left">
+                      {slide.body.split("\n").map((line, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5 leading-relaxed font-semibold">
+                          <span className={`mt-2 h-1.5 w-1.5 rounded-full shrink-0 ${accentRing[slide.accent]}`} />
+                          <span>{line.replace(/^[•\-\s]*/, "")}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg">{slide.body}</p>
+                  )}
 
                   <div className="mt-9 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      onClick={slide.id === "slide-listen" ? openListenerBooking : () => scrollToSection("experts")}
-                      className={`group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-semibold text-cream-50 shadow-soft transition cursor-pointer ${
-                        accentButton[slide.accent]
-                      }`}
+                      onClick={
+                        slide.id === "slide-sessions"
+                          ? openListenerBooking
+                          : slide.id === "slide-community"
+                            ? () => scrollToSection("circles")
+                            : () => scrollToSection("experts")
+                      }
+                      className={`group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-semibold text-cream-50 shadow-soft transition cursor-pointer ${accentButton[slide.accent]
+                        }`}
                     >
                       {slide.primaryCta}
                       <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => scrollToSection(slide.id === "slide-community" ? "circles" : "services")}
+                      onClick={() =>
+                        scrollToSection(
+                          slide.id === "slide-vision"
+                            ? "services"
+                            : slide.id === "slide-community"
+                              ? "circles"
+                              : "services"
+                        )
+                      }
                       className="inline-flex items-center gap-2 rounded-full border border-cream-300 bg-cream-50/70 px-7 py-4 text-sm font-semibold text-ink-700 backdrop-blur transition hover:border-ink-400/40 hover:bg-cream-50 cursor-pointer"
                     >
                       {slide.secondaryCta}
@@ -676,9 +711,8 @@ function HomePage() {
                       aria-selected={i === heroIndex}
                       aria-label={`Slide ${i + 1}: ${s.eyebrow}`}
                       onClick={() => setHeroIndex(i)}
-                      className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
-                        i === heroIndex ? "w-10 bg-ink-900" : "w-4 bg-ink-400/40 hover:bg-ink-400/70"
-                      }`}
+                      className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${i === heroIndex ? "w-10 bg-ink-900" : "w-4 bg-ink-400/40 hover:bg-ink-400/70"
+                        }`}
                     />
                   ))}
                 </div>
@@ -851,77 +885,76 @@ function HomePage() {
             eyebrow="Verified listeners"
             title="Real people, trained to hold space"
             description="Every listener completes 30 hours of active-listening training and a supervised trial. They stay anonymous too — first names only."
-            action={
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => scrollListeners(-1)}
-                  aria-label="Previous listeners"
-                  className="rounded-full border border-cream-300 bg-cream-50/80 p-3 text-ink-500 transition hover:border-sage-200 hover:text-ink-900 cursor-pointer"
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollListeners(1)}
-                  aria-label="More listeners"
-                  className="rounded-full border border-cream-300 bg-cream-50/80 p-3 text-ink-500 transition hover:border-sage-200 hover:text-ink-900 cursor-pointer"
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </button>
-              </div>
-            }
+            action={null}
           />
+
+          <style dangerouslySetInnerHTML={{
+            __html: `
+            @keyframes marquee-listeners {
+              0% {
+                transform: translate3d(0, 0, 0);
+              }
+              100% {
+                transform: translate3d(-50%, 0, 0);
+              }
+            }
+            .animate-marquee-listeners {
+              display: flex;
+              width: max-content;
+              gap: 16px;
+              animation: marquee-listeners 35s linear infinite;
+            }
+            .animate-marquee-listeners:hover {
+              animation-play-state: paused;
+            }
+          `}} />
 
           <div
             ref={listenerTrackRef}
-            className="no-scrollbar mt-12 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scroll-smooth"
+            className="overflow-hidden mt-12 w-full"
             role="list"
             aria-label="Verified peer listeners"
           >
-            {mappedListeners.map((listener, i) => (
-              <motion.div
-                key={listener.id}
-                role="listitem"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.5, delay: Math.min(i, 5) * 0.06 }}
-                className="w-[228px] shrink-0 snap-start rounded-4xl border border-cream-300 bg-cream-50 p-6 text-center transition hover:shadow-soft"
-              >
-                <div className="flex justify-center">
-                  <Avatar initials={listener.initials} accent={listener.accent} size="lg" online={listener.isOnline} />
-                </div>
-                <p className="mt-4 flex items-center justify-center gap-1.5 font-display text-lg text-ink-900 font-semibold">
-                  {listener.name}
-                  <BadgeCheckIcon className="h-4 w-4 text-sage-500" aria-label="Verified listener" />
-                </p>
-                <p className="mt-1 text-xs text-ink-400">{listener.languages.join(" · ")}</p>
-                <span className="mt-3 inline-block rounded-full bg-cream-200 px-3 py-1.5 text-[11px] font-semibold text-ink-500">
-                  {listener.focus}
-                </span>
-                <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-400 font-semibold">
-                  <span className="flex items-center gap-1">
-                    <StarIcon className="h-3.5 w-3.5 fill-peach-400 text-peach-400" />
-                    {listener.rating.toFixed(1)}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageCircleIcon className="h-3.5 w-3.5" />
-                    {listener.conversations}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={openListenerBooking}
-                  disabled={!listener.isOnline}
-                  className={`mt-5 w-full rounded-full px-4 py-2.5 text-xs font-semibold transition cursor-pointer ${
-                    listener.isOnline ? "bg-sage-100 text-sage-700 hover:bg-sage-200" : "cursor-not-allowed bg-cream-200 text-ink-400"
-                  }`}
+            <div className="animate-marquee-listeners">
+              {[...mappedListeners, ...mappedListeners].map((listener, i) => (
+                <div
+                  key={`${listener.id}-${i}`}
+                  role="listitem"
+                  className="w-[228px] shrink-0 rounded-4xl border border-cream-300 bg-cream-50 p-6 text-center transition hover:shadow-soft"
                 >
-                  {listener.isOnline ? "Say hi" : "Away right now"}
-                </button>
-              </motion.div>
-            ))}
+                  <div className="flex justify-center">
+                    <Avatar initials={listener.initials} accent={listener.accent} size="lg" online={listener.isOnline} />
+                  </div>
+                  <p className="mt-4 flex items-center justify-center gap-1.5 font-display text-lg text-ink-900 font-semibold">
+                    {listener.name}
+                    <BadgeCheckIcon className="h-4 w-4 text-sage-500" aria-label="Verified listener" />
+                  </p>
+                  <p className="mt-1 text-xs text-ink-400">{listener.languages.join(" · ")}</p>
+                  <span className="mt-3 inline-block rounded-full bg-cream-200 px-3 py-1.5 text-[11px] font-semibold text-ink-500">
+                    {listener.focus}
+                  </span>
+                  <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-400 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <StarIcon className="h-3.5 w-3.5 fill-peach-400 text-peach-400" />
+                      {listener.rating.toFixed(1)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageCircleIcon className="h-3.5 w-3.5" />
+                      {listener.conversations}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openListenerBooking}
+                    disabled={!listener.isOnline}
+                    className={`mt-5 w-full rounded-full px-4 py-2.5 text-xs font-semibold transition cursor-pointer ${listener.isOnline ? "bg-sage-100 text-sage-700 hover:bg-sage-200" : "cursor-not-allowed bg-cream-200 text-ink-400"
+                      }`}
+                  >
+                    {listener.isOnline ? "Say hi" : "Away right now"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -1094,9 +1127,8 @@ function HomePage() {
                     type="button"
                     onClick={() => handleCircleToggle(circle.id)}
                     aria-pressed={isJoined}
-                    className={`relative mt-7 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition cursor-pointer ${
-                      isJoined ? "bg-cream-200 text-ink-700 hover:bg-cream-300" : `text-cream-50 ${a.btn}`
-                    }`}
+                    className={`relative mt-7 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition cursor-pointer ${isJoined ? "bg-cream-200 text-ink-700 hover:bg-cream-300" : `text-cream-50 ${a.btn}`
+                      }`}
                   >
                     {isJoined ? (
                       <>
@@ -1186,9 +1218,8 @@ function HomePage() {
                         {faq.question}
                       </span>
                       <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
-                          isOpen ? "rotate-45 bg-sage-100 text-sage-700" : "bg-cream-200 text-ink-500 group-hover:bg-cream-300"
-                        }`}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${isOpen ? "rotate-45 bg-sage-100 text-sage-700" : "bg-cream-200 text-ink-500 group-hover:bg-cream-300"
+                          }`}
                       >
                         <PlusIcon className="h-4 w-4" />
                       </span>

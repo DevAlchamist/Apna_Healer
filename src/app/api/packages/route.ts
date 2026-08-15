@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get("category");
     const isFeatured = searchParams.get("isFeatured");
+    const providerId = searchParams.get("providerId");
 
     // Standard filter criteria for end users
     const where: any = {};
@@ -66,11 +67,20 @@ export async function GET(request: NextRequest) {
           ]
         }
       ];
+
+      if (providerId) {
+        where.providerId = providerId;
+      } else {
+        where.providerId = null;
+      }
     } else {
       // Admin filter options
       const statusParam = searchParams.get("status");
       if (statusParam) {
         where.publicationStatus = statusParam as PackagePublicationStatus;
+      }
+      if (providerId) {
+        where.providerId = providerId;
       }
     }
 
@@ -105,43 +115,60 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "ADMIN") {
-      return failure(403, "Forbidden. Administrator privileges required.", "FORBIDDEN");
+    if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "THERAPIST")) {
+      return failure(403, "Forbidden. Privileges required.", "FORBIDDEN");
     }
 
+    const isTherapist = session.user.role === "THERAPIST";
     const body = await request.json();
     const parsed = CreatePackageSchema.parse(body);
 
+    const data: any = {
+      title: parsed.title,
+      subtitle: parsed.subtitle,
+      description: parsed.description,
+      coverImage: parsed.coverImage,
+      galleryImages: parsed.galleryImages,
+      bannerImage: parsed.bannerImage,
+      price: new Intl.NumberFormat('en-US', { useGrouping: false }).format(parsed.price),
+      discount: parsed.discount,
+      category: parsed.category,
+      displayOrder: isTherapist ? 0 : parsed.displayOrder,
+      isFeatured: isTherapist ? false : parsed.isFeatured,
+      publicationStatus: parsed.publicationStatus,
+      isVisible: parsed.isVisible,
+      durationValue: parsed.durationValue,
+      durationUnit: parsed.durationUnit,
+      startDate: parsed.startDate ? new Date(parsed.startDate) : null,
+      endDate: parsed.endDate ? new Date(parsed.endDate) : null,
+      maxPurchases: parsed.maxPurchases,
+      sections: parsed.sections as any,
+      facilitatorNote: parsed.facilitatorNote,
+      publishedAt: parsed.publicationStatus === PackagePublicationStatus.PUBLISHED ? new Date() : null,
+    };
+
+    if (isTherapist) {
+      data.providerId = session.user.id;
+      // Enforce allocation to therapist's own role
+      data.allocations = {
+        create: [
+          {
+            role: Role.THERAPIST,
+            sessionCount: parsed.allocations.find(a => a.role === Role.THERAPIST)?.sessionCount ?? 1
+          }
+        ]
+      };
+    } else {
+      data.allocations = {
+        create: parsed.allocations.map(a => ({
+          role: a.role,
+          sessionCount: a.sessionCount
+        }))
+      };
+    }
+
     const createdPackage = await prisma.package.create({
-      data: {
-        title: parsed.title,
-        subtitle: parsed.subtitle,
-        description: parsed.description,
-        coverImage: parsed.coverImage,
-        galleryImages: parsed.galleryImages,
-        bannerImage: parsed.bannerImage,
-        price: new Intl.NumberFormat('en-US', { useGrouping: false }).format(parsed.price), // convert to string representation for Decimal
-        discount: parsed.discount,
-        category: parsed.category,
-        displayOrder: parsed.displayOrder,
-        isFeatured: parsed.isFeatured,
-        publicationStatus: parsed.publicationStatus,
-        isVisible: parsed.isVisible,
-        durationValue: parsed.durationValue,
-        durationUnit: parsed.durationUnit,
-        startDate: parsed.startDate ? new Date(parsed.startDate) : null,
-        endDate: parsed.endDate ? new Date(parsed.endDate) : null,
-        maxPurchases: parsed.maxPurchases,
-        sections: parsed.sections as any,
-        facilitatorNote: parsed.facilitatorNote,
-        publishedAt: parsed.publicationStatus === PackagePublicationStatus.PUBLISHED ? new Date() : null,
-        allocations: {
-          create: parsed.allocations.map(a => ({
-            role: a.role,
-            sessionCount: a.sessionCount
-          }))
-        }
-      },
+      data,
       include: {
         allocations: true
       }

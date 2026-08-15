@@ -64,8 +64,8 @@ export async function GET(_request: Request, context: RouteContext) {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "ADMIN") {
-      return failure(403, "Forbidden. Administrator privileges required.", "FORBIDDEN");
+    if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "THERAPIST")) {
+      return failure(403, "Forbidden. Privileges required.", "FORBIDDEN");
     }
 
     const { id } = await context.params;
@@ -78,6 +78,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     if (!existing) {
       return failure(404, "Package not found.", "NOT_FOUND");
+    }
+
+    if (existing.providerId && existing.providerId !== session.user.id && session.user.role !== "ADMIN") {
+      return failure(403, "Forbidden. You do not own this package.", "FORBIDDEN");
     }
 
     const updateData: any = {};
@@ -148,8 +152,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const session = await getServerSession(authOptions);
-    if (session?.user?.role !== "ADMIN") {
-      return failure(403, "Forbidden. Administrator privileges required.", "FORBIDDEN");
+    if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "THERAPIST")) {
+      return failure(403, "Forbidden. Privileges required.", "FORBIDDEN");
     }
 
     const { id } = await context.params;
@@ -163,6 +167,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     if (!existing) {
       return failure(404, "Package not found.", "NOT_FOUND");
+    }
+
+    if (existing.providerId && existing.providerId !== session.user.id && session.user.role !== "ADMIN") {
+      return failure(403, "Forbidden. You do not own this package.", "FORBIDDEN");
     }
 
     if (existing.purchases.length > 0) {

@@ -53,7 +53,21 @@ export function LandingJoinModal({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-center text-[34px] font-semibold text-[#2f745f]">ApnaHealer</p>
+              <div className="flex items-center">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl">
+                  <img
+                    src="/logo.svg"
+                    alt=""
+                    width={84}
+                    height={80}
+                    className="h-full w-full object-cover  object-center"
+                    draggable={false}
+                  />
+                </span>
+                <span className="font-display text-lg tracking-tight text-ink-900">
+                  Apna<span className="text-sage-600">Healer</span>
+                </span>
+              </div>
               <button
                 type="button"
                 aria-label="Close join modal"
@@ -161,11 +175,10 @@ export function LandingJoinModal({
                 type="button"
                 disabled={isSigningIn}
                 onClick={() => onModalMethodChange("email")}
-                className={`h-[52px] rounded-xl border text-[14px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                  modalMethod === "email"
-                    ? "border-[#2f745f] bg-[#dff2ea] text-[#2f745f]"
-                    : "border-transparent bg-[#f3f3f1] text-[#5d6664] hover:bg-[#ececea]"
-                }`}
+                className={`h-[52px] rounded-xl border text-[14px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${modalMethod === "email"
+                  ? "border-[#2f745f] bg-[#dff2ea] text-[#2f745f]"
+                  : "border-transparent bg-[#f3f3f1] text-[#5d6664] hover:bg-[#ececea]"
+                  }`}
               >
                 Email
               </button>
@@ -173,11 +186,10 @@ export function LandingJoinModal({
                 type="button"
                 disabled={isSigningIn}
                 onClick={() => onModalMethodChange("phone")}
-                className={`h-[52px] rounded-xl border text-[14px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                  modalMethod === "phone"
-                    ? "border-[#2f745f] bg-[#dff2ea] text-[#2f745f]"
-                    : "border-transparent bg-[#f3f3f1] text-[#5d6664] hover:bg-[#ececea]"
-                }`}
+                className={`h-[52px] rounded-xl border text-[14px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${modalMethod === "phone"
+                  ? "border-[#2f745f] bg-[#dff2ea] text-[#2f745f]"
+                  : "border-transparent bg-[#f3f3f1] text-[#5d6664] hover:bg-[#ececea]"
+                  }`}
               >
                 Phone
               </button>

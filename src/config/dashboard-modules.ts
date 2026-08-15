@@ -208,7 +208,7 @@ export const dashboardModules: readonly DashboardModule[] = [
     placement: "sidebar",
     group: "personal",
     icon: "packages",
-    roles: CONSUMER_ROLES,
+    roles: ["USER", "THERAPIST"] as const,
   },
   {
     id: "dashboard.personal.earnings",

@@ -14,7 +14,6 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireSessionUser();
     const { id } = await context.params;
     const params = therapistDynamicSlotsQuerySchema.parse(
       Object.fromEntries(request.nextUrl.searchParams),

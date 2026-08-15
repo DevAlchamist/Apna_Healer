@@ -723,6 +723,7 @@ export interface ApiUser {
   welcomeBonus?: ApiWelcomeBonusState;
   profileSessionStats?: ApiUserProfileSessionStats;
   packagePurchases?: ApiPackagePurchase[];
+  packagesCreated?: any[];
 }
 
 export interface ApiPackagePurchaseAllocation {
@@ -744,6 +745,7 @@ export interface ApiPackagePurchase {
   status: string;
   packageSnapshot: any;
   allocations: ApiPackagePurchaseAllocation[];
+  package?: any;
 }
 
 export interface AdminSessionStats {

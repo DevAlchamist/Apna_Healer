@@ -87,6 +87,7 @@ export async function getUserMe(userId: string) {
       packagePurchases: {
         include: {
           allocations: true,
+          package: true,
         },
         orderBy: { purchaseDate: "desc" },
       },

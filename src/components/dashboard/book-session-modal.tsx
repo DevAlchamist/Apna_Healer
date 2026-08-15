@@ -97,22 +97,12 @@ export type BookSessionHealer = {
   /** When set, schedule step opens with this slot already chosen. */
   preselection?: BookSessionPreselection;
   initialNote?: string;
+  initialBookingOption?: "SESSION" | "PACKAGE";
+  initialPackageId?: string;
 };
 
 const EMPTY_HEALER: BookSessionHealer = {};
-const STEP_LABELS_LOCKED = ["Your Mood", "Scheduling", "Checkout"] as const;
-const STEP_LABELS_THERAPIST_OPEN = [
-  "Select Therapist",
-  "Schedule",
-  "Intake",
-  "Confirm & Pay",
-] as const;
-const STEP_LABELS_THERAPIST_LOCKED = [
-  "Your Mood",
-  "Schedule",
-  "Intake",
-  "Confirm & Pay",
-] as const;
+const STEP_LABELS_LOCKED = ["Booking Type", "Your Mood", "Scheduling", "Checkout"] as const;
 
 function formatLocalYmd(date: Date): string {
   const y = date.getFullYear();
@@ -240,7 +230,6 @@ function BookSessionModal({
   const [selectedEndTime, setSelectedEndTime] = useState("");
 
   const isProviderLocked = !!requestedHealer.providerId;
-  /** Anonymous listener support is booked via `ListenerSupportModal`, not this modal. */
   const isListenerCheckIn = false;
 
   const [mood, setMood] = useState<MoodId | null>(null);
@@ -258,6 +247,12 @@ function BookSessionModal({
   const [therapistPaymentMethod, setTherapistPaymentMethod] =
     useState<BookingPaymentMethodValue>("WALLET");
   const [externalPaymentReady, setExternalPaymentReady] = useState(false);
+  const [usePackage, setUsePackage] = useState(false);
+
+  // Selector Option: "SESSION" | "PACKAGE"
+  const [selectedBookingOption, setSelectedBookingOption] = useState<"SESSION" | "PACKAGE" >("SESSION");
+  const [selectedPackageToBuy, setSelectedPackageToBuy] = useState<any | null>(null);
+  const [hasSetInitialPackage, setHasSetInitialPackage] = useState(false);
 
   const handleClose = useCallback(() => {
     setMood(null);
@@ -274,6 +269,9 @@ function BookSessionModal({
     setIntakeSafetyNote("");
     setTherapistPaymentMethod("WALLET");
     setExternalPaymentReady(false);
+    setUsePackage(false);
+    setSelectedBookingOption("SESSION");
+    setSelectedPackageToBuy(null);
     onClose();
   }, [onClose]);
 
@@ -340,30 +338,83 @@ function BookSessionModal({
     selectedProviderId,
   ]);
 
+  const therapistPackagesQuery = useQuery({
+    queryKey: ["booking-modal-therapist-packages", resolvedSelectedProviderId],
+    queryFn: () => apiFetch<any[]>(`/api/packages?providerId=${resolvedSelectedProviderId}`),
+    enabled: open && !!resolvedSelectedProviderId,
+  });
+
+  const adminPackagesQuery = useQuery({
+    queryKey: ["booking-modal-admin-packages"],
+    queryFn: () => apiFetch<any[]>(`/api/packages`),
+    enabled: open,
+  });
+
+  const packagePurchaseMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPackageToBuy) throw new Error("No package selected");
+      return apiMutation(`/api/packages/${selectedPackageToBuy.id}/purchase`, "POST");
+    },
+    onSuccess: async () => {
+      await invalidatePostBookingQueries();
+      handleClose();
+    },
+  });
+
   const skipSlotResetRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
+    setHasSetInitialPackage(false);
+
+    if (requestedHealer.initialBookingOption === "PACKAGE") {
+      setSelectedBookingOption("PACKAGE");
+      setStep(0);
+    } else if (requestedHealer.preselection) {
+      setSelectedBookingOption("SESSION");
+      setStep(2); // Go directly to Schedule slot page (step 2)
+      skipSlotResetRef.current = true;
+      setWeeklyDateKey(requestedHealer.preselection.dateYmd);
+      setSelectedTherapistSlot({
+        date: requestedHealer.preselection.dateYmd,
+        start: normalizeTimeToHHmm(requestedHealer.preselection.start),
+        end: normalizeTimeToHHmm(requestedHealer.preselection.end),
+      });
+    } else {
+      setSelectedBookingOption("SESSION");
+      setStep(0);
+    }
 
     if (requestedHealer.providerId) {
       setSelectedProviderId(requestedHealer.providerId);
-    }
-
-    const pre = requestedHealer.preselection;
-    if (pre) {
-      skipSlotResetRef.current = true;
-      setWeeklyDateKey(pre.dateYmd);
-      setSelectedTherapistSlot({
-        date: pre.dateYmd,
-        start: normalizeTimeToHHmm(pre.start),
-        end: normalizeTimeToHHmm(pre.end),
-      });
     }
 
     if (requestedHealer.initialNote?.trim()) {
       setNotes(requestedHealer.initialNote.trim());
     }
   }, [open, requestedHealer]);
+
+  useEffect(() => {
+    if (!open || !requestedHealer.initialPackageId || hasSetInitialPackage) return;
+
+    const allPkgs = [
+      ...(therapistPackagesQuery.data ?? []),
+      ...(adminPackagesQuery.data ?? []),
+    ];
+    const match = allPkgs.find((pkg) => pkg.id === requestedHealer.initialPackageId);
+    if (match) {
+      setSelectedPackageToBuy(match);
+      setSelectedBookingOption("PACKAGE");
+      setStep(2); // Go directly to Confirm & Pay for package
+      setHasSetInitialPackage(true);
+    }
+  }, [
+    open,
+    requestedHealer.initialPackageId,
+    therapistPackagesQuery.data,
+    adminPackagesQuery.data,
+    hasSetInitialPackage,
+  ]);
 
   useEffect(() => {
     if (!open || isListenerCheckIn) return;
@@ -425,7 +476,7 @@ function BookSessionModal({
       open &&
       !isListenerCheckIn &&
       !!resolvedSelectedProviderId &&
-      (step === 1 || !!requestedHealer.preselection),
+      (step === 2 || (step === 1 && !!requestedHealer.preselection)),
     staleTime: 15_000,
     refetchOnWindowFocus: true,
   });
@@ -479,7 +530,6 @@ function BookSessionModal({
 
   const MIN_SESSION_MINUTES = 15;
 
-  // Earliest start and latest end across all windows for the selected day.
   const dayBounds = useMemo(() => {
     if (availableWindows.length === 0) return null;
     let min = Number.POSITIVE_INFINITY;
@@ -538,7 +588,6 @@ function BookSessionModal({
     const end = parseTimeToMinutes(resolvedEnd);
     if (start === null || end === null) return { state: "no-time" };
     if (end - start < MIN_SESSION_MINUTES) return { state: "too-short" };
-    // The chosen [start, end] must fit fully inside ONE published window.
     const containingWindow = availableWindows.find((window) => {
       const ws = parseTimeToMinutes(window.start);
       const we = parseTimeToMinutes(window.end);
@@ -582,43 +631,75 @@ function BookSessionModal({
     [hourlyRateNumber, paymentDurationMinutes],
   );
 
+  const activePackage = useMemo(() => {
+    const purchases = userMeQuery.data?.packagePurchases ?? [];
+    return purchases.find((p: any) => {
+      const isExpired = p.expiryDate ? new Date(p.expiryDate) < new Date() : false;
+      const isActive = p.status === "ACTIVE";
+      const matchesProvider = p.package.providerId === resolvedSelectedProviderId || p.package.providerId === null;
+      const hasRemaining = p.allocations.some((a: any) => a.role === "THERAPIST" && a.remainingSessions > 0);
+      return isActive && !isExpired && matchesProvider && hasRemaining;
+    });
+  }, [userMeQuery.data?.packagePurchases, resolvedSelectedProviderId]);
+
+  // Sidebar Stepper labels dynamically map to the active choice pathway
   const stepLabels = useMemo((): readonly string[] => {
-    if (isListenerCheckIn) return STEP_LABELS_LOCKED;
-    if (effectiveProviderLocked) return STEP_LABELS_THERAPIST_LOCKED;
-    return STEP_LABELS_THERAPIST_OPEN;
-  }, [effectiveProviderLocked, isListenerCheckIn]);
+    if (selectedBookingOption === "PACKAGE") {
+      return ["Booking Type", "Select Package", "Confirm & Pay"];
+    }
+
+    if (isListenerCheckIn) {
+      return STEP_LABELS_LOCKED;
+    }
+    if (effectiveProviderLocked) {
+      return ["Booking Type", "Your Mood", "Schedule", "Intake", "Confirm & Pay"];
+    }
+    return ["Booking Type", "Select Therapist", "Schedule", "Intake", "Confirm & Pay"];
+  }, [selectedBookingOption, effectiveProviderLocked, isListenerCheckIn]);
 
   const canAdvance = useMemo(() => {
-    if (isListenerCheckIn) {
-      if (step === 0) {
-        return (
-          !!resolvedSelectedProviderId && (effectiveProviderLocked ? !!mood : true)
-        );
-      }
+    if (step === 0) {
+      return !!selectedBookingOption;
+    }
+
+    if (selectedBookingOption === "PACKAGE") {
       if (step === 1) {
-        return !!selectedAvailability && customTimeStatus.state === "valid";
+        return !!selectedPackageToBuy;
       }
       if (step === 2) {
+        const pricePaid = Number(selectedPackageToBuy?.price || 0) - Number(selectedPackageToBuy?.price || 0) * (Number(selectedPackageToBuy?.discount || 0) / 100);
+        return walletAvailable >= pricePaid;
+      }
+      return false;
+    }
+
+    // Single Session Flow Step Check
+    if (step === 1) {
+      return !!resolvedSelectedProviderId && (effectiveProviderLocked ? !!mood : true);
+    }
+    if (step === 2) {
+      if (isListenerCheckIn) {
+        return !!selectedAvailability && customTimeStatus.state === "valid";
+      }
+      return !!selectedTherapistSlot;
+    }
+    if (step === 3) {
+      if (isListenerCheckIn) {
         return (
           !!selectedProvider?.hourlyRate &&
           Number(selectedProvider.hourlyRate) > 0 &&
           sessionAmount > 0
         );
       }
-      return false;
+      return intakeChiefConcern.trim().length >= 2;
     }
-
-    if (step === 0) {
-      return !!resolvedSelectedProviderId && (effectiveProviderLocked ? !!mood : true);
-    }
-    if (step === 1) return !!selectedTherapistSlot;
-    if (step === 2) return intakeChiefConcern.trim().length >= 2;
-    if (step === 3) {
+    if (step === 4) {
       const priced =
-        !!selectedProvider?.hourlyRate &&
+        (!!selectedProvider?.hourlyRate &&
         Number(selectedProvider.hourlyRate) > 0 &&
-        sessionAmount > 0;
+        sessionAmount > 0) || usePackage;
       if (!priced) return false;
+      if (usePackage) return true;
       if (therapistPaymentMethod === "WALLET") {
         return walletAvailable >= sessionAmount;
       }
@@ -626,6 +707,10 @@ function BookSessionModal({
     }
     return false;
   }, [
+    step,
+    selectedBookingOption,
+    selectedPackageToBuy,
+    walletAvailable,
     customTimeStatus.state,
     effectiveProviderLocked,
     externalPaymentReady,
@@ -637,19 +722,9 @@ function BookSessionModal({
     selectedProvider?.hourlyRate,
     selectedTherapistSlot,
     sessionAmount,
-    step,
     therapistPaymentMethod,
-    walletAvailable,
+    usePackage,
   ]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") handleClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, handleClose]);
 
   useEffect(() => {
     if (open) {
@@ -715,8 +790,9 @@ function BookSessionModal({
         requestedDate: dateYmdToIsoNoonUtc(selectedTherapistSlot.date),
         requestedTime: selectedTherapistSlot.start,
         duration: therapistSlotDuration,
-        amount: sessionAmount,
-        paymentMethod: therapistPaymentMethod,
+        amount: usePackage ? 0 : sessionAmount,
+        paymentMethod: usePackage ? "WALLET" : therapistPaymentMethod,
+        usePackage,
         note: composedNote,
       });
     },
@@ -737,7 +813,6 @@ function BookSessionModal({
     },
   });
 
-
   const isLast = step === stepLabels.length - 1;
 
   return (
@@ -754,181 +829,302 @@ function BookSessionModal({
           transition={{ duration: 0.35, ease: easeCalm }}
         >
           <aside
-            className={
-              isListenerCheckIn
-                ? "flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto"
-                : "flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
-            }
+            className="flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
           >
-              <h2
-                id="book-session-title"
-                className={
-                  isListenerCheckIn
-                    ? "font-display text-lg font-semibold tracking-tight text-[#2f5d50] md:text-xl"
-                    : "font-display text-xl font-semibold text-text-secondary md:text-2xl"
-                }
-              >
-                Book Session
-              </h2>
+            <h2
+              id="book-session-title"
+              className="font-display text-xl font-semibold text-text-secondary md:text-2xl"
+            >
+              Book Session
+            </h2>
 
-              <nav className={isListenerCheckIn ? "mt-10 flex flex-col gap-0" : "mt-8 flex flex-col gap-0"} aria-label="Booking steps">
-                {stepLabels.map((label, index) => {
-                  const active = index === step;
-                  const done = index < step;
-                  return (
-                    <div key={label} className="flex gap-3">
-                      <div className="flex flex-col items-center">
-                        <span
-                          className={
-                            isListenerCheckIn
-                              ? `flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                                  active
-                                    ? "bg-[#2f5d50] text-white shadow-sm"
-                                    : done
-                                      ? "bg-[#2f5d50]/85 text-white"
-                                      : "border-2 border-neutral-200 bg-white text-neutral-400"
-                                }`
-                              : `flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                                  active
-                                    ? "bg-text-secondary text-white"
-                                    : done
-                                      ? "bg-text-secondary/80 text-white"
-                                      : "border-2 border-text-primary/20 bg-white text-text-primary/40"
-                                }`
-                          }
-                        >
-                          {index + 1}
-                        </span>
-                        {index < stepLabels.length - 1 ? (
-                          <span
-                            className={
-                              isListenerCheckIn
-                                ? "my-1.5 block min-h-[10px] w-px flex-1 bg-neutral-200"
-                                : "my-1 block h-8 w-px bg-text-primary/15"
-                            }
-                            aria-hidden
-                          />
-                        ) : null}
-                      </div>
-                      <p
-                        className={
-                          isListenerCheckIn
-                            ? `pb-8 text-sm font-semibold leading-snug ${
-                                active ? "text-[#2f5d50]" : "text-neutral-400"
-                              }`
-                            : `pb-6 text-sm font-semibold leading-snug ${
-                                active ? "text-text-secondary" : "text-text-primary/45"
-                              }`
-                        }
+            <nav className="mt-8 flex flex-col gap-0" aria-label="Booking steps">
+              {stepLabels.map((label, index) => {
+                const active = index === step;
+                const done = index < step;
+                return (
+                  <div key={label} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                          active
+                            ? "bg-text-secondary text-white"
+                            : done
+                              ? "bg-text-secondary/80 text-white"
+                              : "border-2 border-text-primary/20 bg-white text-text-primary/40"
+                        }`}
                       >
-                        {label}
-                      </p>
+                        {index + 1}
+                      </span>
+                      {index < stepLabels.length - 1 ? (
+                        <span
+                          className="my-1 block h-8 w-px bg-text-primary/15"
+                          aria-hidden
+                        />
+                      ) : null}
                     </div>
-                  );
-                })}
-              </nav>
-
-              <div
-                className={
-                  isListenerCheckIn
-                    ? "mt-auto rounded-2xl bg-white p-4 shadow-[0_8px_30px_-12px_rgb(43_43_43/18%)] ring-1 ring-black/[0.05] md:p-5"
-                    : "mt-auto rounded-gentle bg-primary/15 p-3 md:p-4"
-                }
-              >
-                <p
-                  className={
-                    isListenerCheckIn
-                      ? "text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500"
-                      : "text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary"
-                  }
-                >
-                  Your Healer
-                </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <HealerAvatar healer={modalHealer} size={isListenerCheckIn ? "lg" : "md"} />
-                  <div className="min-w-0">
                     <p
-                      className={
-                        isListenerCheckIn
-                          ? "truncate font-display text-base font-semibold text-[#2b2b2b]"
-                          : "truncate font-display text-base font-semibold text-text-secondary"
-                      }
+                      className={`pb-6 text-sm font-semibold leading-snug ${
+                        active ? "text-text-secondary" : "text-text-primary/45"
+                      }`}
                     >
-                      {modalHealer.name ?? "Choose a provider"}
-                    </p>
-                    <p
-                      className={
-                        isListenerCheckIn
-                          ? "truncate text-xs font-medium text-[#2f5d50]"
-                          : "truncate text-xs text-text-primary/60"
-                      }
-                    >
-                      {modalHealer.specialty ?? "Provider directory"}
+                      {label}
                     </p>
                   </div>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto rounded-gentle bg-primary/15 p-3 md:p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">
+                Your Healer
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <HealerAvatar healer={modalHealer} size="md" />
+                <div className="min-w-0">
+                  <p className="truncate font-display text-base font-semibold text-text-secondary">
+                    {modalHealer.name ?? "Choose a provider"}
+                  </p>
+                  <p className="truncate text-xs text-text-primary/60">
+                    {modalHealer.specialty ?? "Provider directory"}
+                  </p>
                 </div>
               </div>
-            </aside>
+            </div>
+          </aside>
 
-            <div
-              className={
-                isListenerCheckIn
-                  ? "flex min-w-0 flex-1 flex-col bg-white overflow-hidden"
-                  : "flex min-w-0 flex-1 flex-col bg-white overflow-hidden"
-              }
-            >
-              <div className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4 md:px-8 md:pt-5">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className={
-                    isListenerCheckIn
-                      ? "absolute right-5 top-5 rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-[#2b2b2b]"
-                      : "absolute right-4 top-4 rounded-full p-2 text-text-primary/45 transition-colors hover:bg-accent/50 hover:text-text-primary md:right-5 md:top-5"
-                  }
-                  aria-label="Close"
+          <div className="flex min-w-0 flex-1 flex-col bg-white overflow-hidden">
+            <div className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4 md:px-8 md:pt-5">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="absolute right-4 top-4 rounded-full p-2 text-text-primary/45 transition-colors hover:bg-accent/50 hover:text-text-primary md:right-5 md:top-5"
+                aria-label="Close"
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
                 >
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-                  </svg>
-                </button>
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                </svg>
+              </button>
 
-                {step === 0 ? (
-                  <div className="pr-2 pt-2">
+              {/* STEP 0: Selection / Choice */}
+              {step === 0 ? (
+                <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                  <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
+                    Choose booking type
+                  </h3>
+                  <p className="mt-2 text-sm text-text-primary/65 md:text-base">
+                    Would you like to book a single one-on-one session or purchase a wellness package?
+                  </p>
+
+                  <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                    {/* Option 1: Book Individually */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedBookingOption("SESSION");
+                        setSelectedPackageToBuy(null); // Clear package selection
+                        setStep(1); // Auto-advance to next step
+                      }}
+                      className={`flex flex-col items-start rounded-3xl border p-6 text-left transition duration-300 shadow-soft cursor-pointer ${
+                        selectedBookingOption === "SESSION"
+                          ? "border-text-secondary bg-text-secondary/[0.03] ring-2 ring-text-secondary/20 shadow-soft-hover"
+                          : "border-accent/80 bg-white hover:border-primary/30 hover:shadow-soft-hover"
+                      }`}
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-text-secondary">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </span>
+                      <h4 className="font-display text-lg font-bold text-text-primary mt-5">
+                        Book Individually
+                      </h4>
+                      <p className="mt-2 text-xs text-text-primary/60 leading-relaxed">
+                        Book a single one-on-one consultation slot with your therapist and fill out a quick intake form.
+                      </p>
+                      <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-text-secondary">
+                        Start Session Flow →
+                      </span>
+                    </button>
+
+                    {/* Option 2: Package Session */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedBookingOption("PACKAGE");
+                        // Clear session selection details
+                        setSelectedTherapistSlot(null);
+                        setIntakeChiefConcern("");
+                        setIntakeGoals("");
+                        setIntakePriorTherapy("");
+                        setIntakeSafetyNote("");
+                        setMood(null);
+                        setNotes("");
+                        setStep(1); // Auto-advance to next step
+                      }}
+                      className={`flex flex-col items-start rounded-3xl border p-6 text-left transition duration-300 shadow-soft cursor-pointer ${
+                        selectedBookingOption === "PACKAGE"
+                          ? "border-[#2f745f] bg-[#2f745f]/[0.03] ring-2 ring-[#2f745f]/20 shadow-soft-hover"
+                          : "border-accent/80 bg-white hover:border-[#2f745f]/30 hover:shadow-soft-hover"
+                      }`}
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef6eb] text-[#2f745f]">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                      </span>
+                      <h4 className="font-display text-lg font-bold text-text-primary mt-5">
+                        Package Session
+                      </h4>
+                      <p className="mt-2 text-xs text-text-primary/60 leading-relaxed">
+                        Purchase a discounted bundle of sessions with your therapist or general admin wellness packages.
+                      </p>
+                      <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[#2f745f]">
+                        View Available Packages →
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* STEP 1: Package Selection (if PACKAGE) or Mood/Therapist Selection (if SESSION) */}
+              {step === 1 ? (
+                selectedBookingOption === "PACKAGE" ? (
+                  /* PACKAGE SELECTION BLOCK */
+                  <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                    <h3 className="font-display text-2xl font-semibold text-text-primary md:text-3xl">
+                      Select a Wellness Package
+                    </h3>
+                    <p className="mt-1 text-xs text-text-primary/65 leading-relaxed">
+                      Choose a multi-session bundle to save on consultations.
+                    </p>
+
+                    <div className="mt-6 space-y-6">
+                      {therapistPackagesQuery.isLoading || adminPackagesQuery.isLoading ? (
+                        <TimeSlotGridSkeleton count={3} />
+                      ) : null}
+
+                      {/* Therapist Specific Packages */}
+                      {resolvedSelectedProviderId && (therapistPackagesQuery.data?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#2f745f] bg-[#eef6eb] px-3 py-1.5 rounded-lg inline-block">
+                            Packages by {modalHealer.name}
+                          </p>
+                          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                            {therapistPackagesQuery.data?.map((pkg) => {
+                              const originalPrice = Number(pkg.price);
+                              const discountPercent = Number(pkg.discount || 0);
+                              const finalPrice = originalPrice - originalPrice * (discountPercent / 100);
+                              const totalSessions = pkg.allocations?.reduce((sum: number, a: any) => sum + a.sessionCount, 0) ?? 0;
+                              const active = selectedPackageToBuy?.id === pkg.id;
+
+                              return (
+                                <button
+                                  key={pkg.id}
+                                  type="button"
+                                  onClick={() => setSelectedPackageToBuy(pkg)}
+                                  className={`border rounded-calm p-4 text-left transition flex flex-col justify-between h-40 w-full cursor-pointer ${
+                                    active
+                                      ? "border-[#2f745f] bg-[#2f745f]/5"
+                                      : "border-accent/70 bg-white hover:border-[#2f745f]/40"
+                                  }`}
+                                >
+                                  <div>
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#2f745f] bg-[#eef6eb] px-2 py-0.5 rounded">
+                                      {totalSessions} Sessions
+                                    </span>
+                                    <h4 className="font-display text-sm font-bold text-text-primary mt-1.5 truncate w-full">{pkg.title}</h4>
+                                    <p className="text-[11px] text-text-primary/65 leading-snug line-clamp-2 mt-1">{pkg.description}</p>
+                                  </div>
+                                  <div className="mt-3 border-t border-accent/40 pt-3 flex items-center justify-between w-full">
+                                    <div>
+                                      <span className="font-display text-base font-bold text-text-primary">
+                                        ₹{finalPrice}
+                                      </span>
+                                    </div>
+                                    <span className={`text-[10px] font-bold rounded-full px-3 py-1 ${
+                                      active ? "bg-[#2f745f] text-white" : "bg-accent/40 text-text-primary"
+                                    }`}>
+                                      {active ? "Selected" : "Select"}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* General Admin Packages */}
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-primary/45">
+                          General Packages
+                        </p>
+                        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                          {(adminPackagesQuery.data ?? []).map((pkg) => {
+                            const originalPrice = Number(pkg.price);
+                            const discountPercent = Number(pkg.discount || 0);
+                            const finalPrice = originalPrice - originalPrice * (discountPercent / 100);
+                            const totalSessions = pkg.allocations?.reduce((sum: number, a: any) => sum + a.sessionCount, 0) ?? 0;
+                            const active = selectedPackageToBuy?.id === pkg.id;
+
+                            return (
+                              <button
+                                key={pkg.id}
+                                type="button"
+                                onClick={() => setSelectedPackageToBuy(pkg)}
+                                className={`border rounded-calm p-4 text-left transition flex flex-col justify-between h-40 w-full cursor-pointer ${
+                                  active
+                                    ? "border-text-secondary bg-text-secondary/5"
+                                    : "border-accent/70 bg-white hover:border-[#2f745f]/40"
+                                }`}
+                              >
+                                <div>
+                                  <span className="text-[9px] font-bold uppercase tracking-wider text-text-primary/50 bg-[#faf9f6] px-2 py-0.5 rounded border border-accent">
+                                    {totalSessions} Sessions
+                                  </span>
+                                  <h4 className="font-display text-sm font-bold text-text-primary mt-1.5 truncate w-full">{pkg.title}</h4>
+                                  <p className="text-[11px] text-text-primary/65 leading-snug line-clamp-2 mt-1">{pkg.description}</p>
+                                </div>
+                                <div className="mt-3 border-t border-accent/40 pt-3 flex items-center justify-between w-full">
+                                  <div>
+                                    <span className="font-display text-base font-bold text-text-primary">
+                                      ₹{finalPrice}
+                                    </span>
+                                  </div>
+                                  <span className={`text-[10px] font-bold rounded-full px-3 py-1 ${
+                                    active ? "bg-text-secondary text-white" : "bg-accent/40 text-text-primary"
+                                  }`}>
+                                    {active ? "Selected" : "Select"}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* ORIGINAL SINGLE SESSION FLOW - STEP 0 */
+                  <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
                     {effectiveProviderLocked ? (
                       <>
-                        <h3
-                          className={
-                            isListenerCheckIn
-                              ? "font-display text-3xl font-semibold tracking-tight text-[#2b2b2b] md:text-[2.15rem]"
-                              : "font-display text-3xl font-semibold text-text-primary md:text-4xl"
-                          }
-                        >
-                          How are you feeling today?
+                        <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
+                          Mood check-in
                         </h3>
-                        <p
-                          className={
-                            isListenerCheckIn
-                              ? "mt-2 max-w-xl text-sm leading-relaxed text-neutral-500 md:text-[15px]"
-                              : "mt-2 max-w-xl text-sm text-text-primary/65 md:text-base"
-                          }
-                        >
-                          Help us match your session energy with your current state of mind.
+                        <p className="mt-2 text-sm text-text-primary/65 md:text-base">
+                          How are you feeling today? This helps us check in on your general wellness
+                          before the session.
                         </p>
 
-                        <div
-                          className={
-                            isListenerCheckIn
-                              ? "mt-8 grid grid-cols-2 gap-3 sm:gap-3.5"
-                              : "mt-8 flex flex-wrap gap-3"
-                          }
-                        >
+                        <div className="mt-8 flex flex-wrap gap-3">
                           {MOOD_OPTIONS.map((option) => {
                             const active = mood === option.id;
                             return (
@@ -936,73 +1132,22 @@ function BookSessionModal({
                                 key={option.id}
                                 type="button"
                                 onClick={() => setMood(option.id)}
-                                className={
-                                  isListenerCheckIn
-                                    ? `relative flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors duration-200 ${
-                                        active
-                                          ? "border-[#2f5d50] bg-[#eef4ef] shadow-[inset_0_0_0_1px_rgba(47,93,80,0.12)]"
-                                          : "border-transparent bg-[#f3f3f1] hover:bg-[#ececea]"
-                                      }`
-                                    : `inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors duration-200 ${
-                                        active
-                                          ? "bg-[#cfe8d4] text-text-secondary ring-1 ring-text-secondary/30"
-                                          : "bg-[#eae8e4] text-text-primary/65 hover:bg-accent/60"
-                                      }`
-                                }
-                                whileHover={{ scale: 1.02 }}
+                                whileHover={{ y: -2, transition: hoverLiftTransition }}
                                 whileTap={{ scale: 0.97 }}
-                                transition={hoverLiftTransition}
+                                className={`flex items-center gap-2.5 rounded-full border px-5 py-3 text-sm font-semibold transition-[border-color,box-shadow,background-color] duration-300 shadow-soft ${
+                                  active
+                                    ? "border-text-secondary bg-text-secondary text-white shadow-soft-hover"
+                                    : "border-accent/80 bg-white hover:border-primary/30 hover:shadow-soft-hover"
+                                }`}
                               >
-                                <span
-                                  className={
-                                    isListenerCheckIn
-                                      ? "text-2xl leading-none"
-                                      : "text-base leading-none"
-                                  }
-                                  aria-hidden
-                                >
+                                <span className="text-lg leading-none" aria-hidden>
                                   {option.emoji}
                                 </span>
-                                <span
-                                  className={
-                                    isListenerCheckIn
-                                      ? "flex-1 text-sm font-semibold text-[#2b2b2b]"
-                                      : "text-sm font-semibold"
-                                  }
-                                >
-                                  {option.label}
-                                </span>
-                                {isListenerCheckIn ? (
-                                  <span
-                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                                      active
-                                        ? "border-[#2f5d50] bg-[#2f5d50]"
-                                        : "border-neutral-300 bg-white"
-                                    }`}
-                                    aria-hidden
-                                  >
-                                    {active ? (
-                                      <span className="h-2 w-2 rounded-full bg-white" />
-                                    ) : null}
-                                  </span>
-                                ) : null}
+                                <span>{option.label}</span>
                               </motion.button>
                             );
                           })}
                         </div>
-
-                        {isListenerCheckIn && listenerCandidatesQuery.isLoading ? (
-                          <p className="mt-6 text-xs text-text-primary/55">
-                            Finding an available listener…
-                          </p>
-                        ) : null}
-                        {isListenerCheckIn &&
-                        !listenerCandidatesQuery.isLoading &&
-                        (listenerCandidatesQuery.data?.length ?? 0) === 0 ? (
-                          <p className="mt-6 rounded-gentle bg-[#fdf0ee] px-4 py-3 text-sm font-medium text-[#cf4f45]">
-                            No listeners are online right now. Please try again in a few minutes.
-                          </p>
-                        ) : null}
                       </>
                     ) : (
                       <>
@@ -1010,8 +1155,7 @@ function BookSessionModal({
                           Pick your therapist
                         </h3>
                         <p className="mt-2 max-w-xl text-sm text-text-primary/65 md:text-base">
-                          Choose from approved therapists below. Looking to talk to a peer listener
-                          instead? Open the live listener strip on your dashboard.
+                          Choose from approved therapists below.
                         </p>
 
                         <div className="mt-8 flex items-center justify-between">
@@ -1077,7 +1221,6 @@ function BookSessionModal({
                                 >
                                   <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e8f4ee] text-sm font-semibold text-text-secondary">
                                     {provider.image ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
                                       <img
                                         src={provider.image}
                                         alt={provider.name ?? "Therapist"}
@@ -1113,13 +1256,7 @@ function BookSessionModal({
                     )}
 
                     <div className="mt-10">
-                      <p
-                        className={
-                          isListenerCheckIn
-                            ? "text-sm font-semibold text-[#2b2b2b]"
-                            : "text-xs font-semibold uppercase tracking-[0.2em] text-text-primary/45"
-                        }
-                      >
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-primary/45">
                         Additional Notes
                       </p>
                       <textarea
@@ -1131,451 +1268,311 @@ function BookSessionModal({
                             ? "Tell us more about your week… (Optional)"
                             : "Tell the provider what you'd like support with… (Optional)"
                         }
-                        className={
-                          isListenerCheckIn
-                            ? "mt-2.5 w-full resize-y rounded-2xl border border-[#e8e4dc] bg-[#f5f5f3] px-4 py-3.5 text-sm text-[#2b2b2b] placeholder:text-neutral-400 focus:border-[#2f5d50]/40 focus:outline-none focus:ring-2 focus:ring-[#2f5d50]/15"
-                            : "mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                        }
+                        className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
                       />
                     </div>
                   </div>
-                ) : null}
+                )
+              ) : null}
 
-                {step === 1 ? (
-                  isListenerCheckIn ? (
-                    <div className="mx-auto max-w-2xl pr-2 pt-2">
-                      <h3 className="font-display text-3xl font-semibold tracking-tight text-[#2b2b2b] md:text-[2.15rem]">
-                        Pick an open slot
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-500 md:text-[15px]">
-                        Scheduling comes directly from the provider&apos;s published availability and
-                        is checked live against other bookings.
-                      </p>
+              {/* STEP 2: Time Slots Scheduling (if SESSION) or Package Checkout (if PACKAGE) */}
+              {step === 2 ? (
+                selectedBookingOption === "PACKAGE" && selectedPackageToBuy ? (
+                  /* PACKAGE PURCHASE CONFIRMATION */
+                  <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                    <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
+                      Confirm Package Purchase
+                    </h3>
+                    <p className="mt-2 text-sm text-text-primary/65 md:text-base">
+                      Complete payment to activate this package bundle. The price will be deducted from your wallet balance.
+                    </p>
 
-                      {providerDetailQuery.isLoading ? (
-                        <BookingCalendarSkeleton />
-                      ) : providerDetailQuery.error ? (
-                        <div className="mt-8 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
-                          {providerDetailQuery.error.message}
+                    <div className="mt-8 space-y-6">
+                      <div className="border border-accent/70 rounded-calm p-6 bg-white shadow-soft">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#2f745f] bg-[#eef6eb] px-2 py-0.5 rounded">
+                          {selectedPackageToBuy.allocations?.reduce((sum: number, a: any) => sum + a.sessionCount, 0) ?? 0} Sessions
+                        </span>
+                        <h4 className="font-display text-xl font-bold text-text-primary mt-3">{selectedPackageToBuy.title}</h4>
+                        <p className="text-sm text-text-primary/65 mt-2 leading-relaxed">{selectedPackageToBuy.description}</p>
+                        
+                        <div className="mt-5 border-t border-accent/40 pt-4 flex justify-between items-center text-sm font-semibold">
+                          <span className="text-text-primary/60">Validity Period</span>
+                          <span className="capitalize">{selectedPackageToBuy.durationValue} {selectedPackageToBuy.durationUnit.toLowerCase()}(s)</span>
                         </div>
-                      ) : availability.length === 0 ? (
-                        <div className="mt-8 rounded-gentle bg-[#f4f3f1] px-4 py-4 text-sm text-text-primary/60">
-                          This provider has not published availability yet.
+                      </div>
+
+                      <div className="rounded-gentle border border-accent bg-background px-4 py-3.5 text-sm text-text-primary/70">
+                        <div className="flex justify-between items-center">
+                          <span>Wallet Balance:</span>
+                          <span className="font-semibold text-text-secondary">
+                            {formatCurrency(walletAvailable)}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="mt-6 grid gap-5 md:grid-cols-[1.05fr_1fr]">
-                          <BookingCalendar
-                            availabilities={availability as CalendarAvailabilityEntry[]}
-                            selectedAvailabilityId={selectedAvailability?.id ?? null}
-                            onSelect={(entry) => {
-                              setSelectedAvailabilityId(entry.id);
-                              setSelectedTime("");
-                              setSelectedEndTime("");
-                            }}
-                          />
-
-                          <div className="rounded-2xl border border-[#e8e4dc] bg-white p-4 shadow-[0_6px_28px_-14px_rgb(43_43_43/14%)] md:p-5">
-                            <div className="flex items-center justify-between">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary/45">
-                                Schedule
-                              </p>
-                              {liveSlotsQuery.isFetching ? (
-                                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                  Refreshing…
-                                </span>
-                              ) : selectedAvailability ? (
-                                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                  {selectedAvailability.timezone}
-                                </span>
-                              ) : null}
-                            </div>
-
-                            {selectedAvailability ? (
-                              <p className="mt-1 text-sm font-semibold text-text-primary">
-                                {formatShortDate(selectedAvailability.date)}
-                              </p>
-                            ) : (
-                              <p className="mt-1 text-sm text-text-primary/55">
-                                Pick a day from the calendar to see available hours.
-                              </p>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-accent/40 font-bold text-base">
+                          <span>Price to Pay:</span>
+                          <span className="text-text-secondary">
+                            {formatCurrency(
+                              Number(selectedPackageToBuy.price) - 
+                              Number(selectedPackageToBuy.price) * (Number(selectedPackageToBuy.discount || 0) / 100)
                             )}
-
-                            {liveSlotsQuery.error ? (
-                              <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-3 py-2 text-xs font-medium text-[#cf4f45]">
-                                {liveSlotsQuery.error.message}
-                              </div>
-                            ) : null}
-
-                            {availableWindows.length > 0 ? (
-                              <>
-                                <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                  Available hours
-                                </p>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  {availableWindows.map((window) => (
-                                    <span
-                                      key={`${window.start}-${window.end}`}
-                                      className="rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-text-secondary"
-                                    >
-                                      {formatTimeLabel(window.start)} —{" "}
-                                      {formatTimeLabel(window.end)}
-                                    </span>
-                                  ))}
-                                </div>
-
-                                <div className="mt-5 flex flex-wrap items-end gap-3">
-                                  <label className="flex flex-col">
-                                    <span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                      Start
-                                    </span>
-                                    <input
-                                      type="time"
-                                      value={selectedTime}
-                                      min={
-                                        dayBounds ? formatMinutesToTime(dayBounds.min) : undefined
-                                      }
-                                      max={
-                                        dayBounds
-                                          ? formatMinutesToTime(dayBounds.max - MIN_SESSION_MINUTES)
-                                          : undefined
-                                      }
-                                      step={300}
-                                      onChange={(event) => setSelectedTime(event.target.value)}
-                                      className="rounded-gentle border border-accent/60 bg-[#f8f7f4] px-3 py-2 text-sm font-semibold text-text-primary focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                                    />
-                                  </label>
-                                  <label className="flex flex-col">
-                                    <span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                      End
-                                    </span>
-                                    <input
-                                      type="time"
-                                      value={selectedEndTime}
-                                      min={(() => {
-                                        const start = parseTimeToMinutes(selectedTime);
-                                        if (start === null) return undefined;
-                                        return formatMinutesToTime(start + MIN_SESSION_MINUTES);
-                                      })()}
-                                      max={
-                                        dayBounds ? formatMinutesToTime(dayBounds.max) : undefined
-                                      }
-                                      step={300}
-                                      onChange={(event) => setSelectedEndTime(event.target.value)}
-                                      className="rounded-gentle border border-accent/60 bg-[#f8f7f4] px-3 py-2 text-sm font-semibold text-text-primary focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                                    />
-                                  </label>
-                                  <div className="flex flex-col">
-                                    <span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                      Duration
-                                    </span>
-                                    <span className="inline-flex h-[38px] items-center rounded-gentle bg-[#f4f3f1] px-3 text-sm font-semibold text-text-primary/70">
-                                      {bookingDuration > 0 ? `${bookingDuration} min` : "—"}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {customTimeStatus.state === "conflict" ? (
-                                  <div className="mt-3 rounded-gentle bg-[#fdf0ee] px-3 py-2 text-xs font-medium text-[#cf4f45]">
-                                    Conflicts with another session at{" "}
-                                    {formatTimeLabel(customTimeStatus.conflict.start)} —{" "}
-                                    {formatTimeLabel(customTimeStatus.conflict.end)}. Try a different
-                                    time.
-                                  </div>
-                                ) : customTimeStatus.state === "out-of-window" ? (
-                                  <div className="mt-3 rounded-gentle bg-[#fdf0ee] px-3 py-2 text-xs font-medium text-[#cf4f45]">
-                                    Selected time falls outside the provider&apos;s available hours.
-                                  </div>
-                                ) : customTimeStatus.state === "too-short" ? (
-                                  <div className="mt-3 rounded-gentle bg-[#fdf0ee] px-3 py-2 text-xs font-medium text-[#cf4f45]">
-                                    End time must be at least {MIN_SESSION_MINUTES} minutes after
-                                    start.
-                                  </div>
-                                ) : customTimeStatus.state === "valid" ? (
-                                  <p className="mt-3 text-xs font-medium text-[#1f8a6e]">
-                                    Looks good — this time is free.
-                                  </p>
-                                ) : null}
-
-                                {activeBookingRanges.length > 0 ? (
-                                  <div className="mt-4">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/40">
-                                      Already booked on this day
-                                    </p>
-                                    <ul className="mt-1 space-y-1 text-xs text-text-primary/55">
-                                      {activeBookingRanges.map((range) => (
-                                        <li
-                                          key={`${range.start}-${range.end}`}
-                                          className="rounded-full bg-[#f4f3f1] px-3 py-1"
-                                        >
-                                          {formatTimeLabel(range.start)} —{" "}
-                                          {formatTimeLabel(range.end)}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                ) : null}
-                              </>
-                            ) : selectedAvailability ? (
-                              <div className="mt-4 rounded-gentle bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary/60">
-                                No available hours for this day. Try another date.
-                              </div>
-                            ) : null}
-                          </div>
+                          </span>
                         </div>
+
+                        {walletAvailable < (Number(selectedPackageToBuy.price) - Number(selectedPackageToBuy.price) * (Number(selectedPackageToBuy.discount || 0) / 100)) ? (
+                          <p className="mt-3 text-[#cf4f45] text-xs font-semibold leading-relaxed">
+                            Insufficient wallet balance. Please{" "}
+                            <Link href="/dashboard/wallet" className="underline font-bold">
+                              top up your wallet
+                            </Link>{" "}
+                            to buy this package.
+                          </p>
+                        ) : (
+                          <p className="mt-3 text-text-primary/55 text-xs">
+                            Upon clicking purchase, the final price will be deducted from your wallet balance.
+                          </p>
+                        )}
+                      </div>
+
+                      {packagePurchaseMutation.isError && (
+                        <p className="text-xs font-semibold text-[#cf4f45] bg-[#fdf0ee] border border-red-200 rounded-xl p-3">
+                          {(packagePurchaseMutation.error as any)?.message || "Failed to purchase package."}
+                        </p>
                       )}
                     </div>
-                  ) : (
-                    <div className="mx-auto max-w-2xl pr-2 pt-2">
-                      <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
-                        Pick a session slot
-                      </h3>
-                      <p className="mt-2 text-sm text-text-primary/65 md:text-base">
-                        Times follow this therapist&apos;s weekly template and are checked live
-                        against existing bookings.
-                      </p>
+                  </div>
+                ) : (
+                  /* ORIGINAL SINGLE SESSION FLOW - STEP 1 (Schedule) */
+                  <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                    <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
+                      Pick a session slot
+                    </h3>
+                    <p className="mt-2 text-sm text-text-primary/65 md:text-base">
+                      Times follow this therapist&apos;s weekly template and are checked live
+                      against existing bookings.
+                    </p>
 
-                      {providerDetailQuery.isLoading ? (
-                        <BookingCalendarSkeleton />
-                      ) : providerDetailQuery.error ? (
-                        <div className="mt-8 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
-                          {providerDetailQuery.error.message}
-                        </div>
-                      ) : (
-                        <div className="mt-8 space-y-6 rounded-gentle border border-accent/70 bg-white p-5 shadow-soft md:p-6">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                            <label className="flex flex-col gap-1">
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                Date
-                              </span>
-                              <input
-                                type="date"
-                                value={weeklyDateKey}
-                                min={formatLocalYmd(new Date())}
-                                max={formatLocalYmd(
-                                  new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-                                )}
-                                onChange={(event) => setWeeklyDateKey(event.target.value)}
-                                className="rounded-gentle border border-accent/60 bg-[#f8f7f4] px-3 py-2 text-sm font-semibold text-text-primary focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                              />
-                            </label>
-                            {weeklySlotsQuery.data?.timezone ? (
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                Timezone: {weeklySlotsQuery.data.timezone}
-                              </p>
-                            ) : null}
-                          </div>
-
-                          {weeklySlotsQuery.isFetching ? (
-                            <p className="text-xs font-semibold text-text-primary/55">
-                              Refreshing slots…
+                    {providerDetailQuery.isLoading ? (
+                      <BookingCalendarSkeleton />
+                    ) : providerDetailQuery.error ? (
+                      <div className="mt-8 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
+                        {providerDetailQuery.error.message}
+                      </div>
+                    ) : (
+                      <div className="mt-8 space-y-6 rounded-gentle border border-accent/70 bg-white p-5 shadow-soft md:p-6">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                          <label className="flex flex-col gap-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                              Date
+                            </span>
+                            <input
+                              type="date"
+                              value={weeklyDateKey}
+                              min={formatLocalYmd(new Date())}
+                              max={formatLocalYmd(
+                                new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+                              )}
+                              onChange={(event) => setWeeklyDateKey(event.target.value)}
+                              className="rounded-gentle border border-accent/60 bg-[#f8f7f4] px-3 py-2 text-sm font-semibold text-text-primary focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                            />
+                          </label>
+                          {weeklySlotsQuery.data?.timezone ? (
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                              Timezone: {weeklySlotsQuery.data.timezone}
                             </p>
                           ) : null}
-
-                          {weeklySlotsQuery.error ? (
-                            <div className="rounded-gentle bg-[#fdf0ee] px-3 py-2 text-xs font-medium text-[#cf4f45]">
-                              {weeklySlotsQuery.error.message}
-                            </div>
-                          ) : null}
-
-                          {weeklySlotsQuery.isLoading && !weeklySlotsQuery.data ? (
-                            <TimeSlotGridSkeleton count={9} />
-                          ) : weeklyFreeSlots.length > 0 ? (
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                                Open slots
-                              </p>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {weeklyFreeSlots.map((slot) => {
-                                  const selected =
-                                    selectedTherapistSlot?.date === weeklyDateKey &&
-                                    normalizeTimeToHHmm(selectedTherapistSlot.start) ===
-                                      normalizeTimeToHHmm(slot.start) &&
-                                    normalizeTimeToHHmm(selectedTherapistSlot.end) ===
-                                      normalizeTimeToHHmm(slot.end);
-                                  return (
-                                    <button
-                                      key={`${slot.start}-${slot.end}`}
-                                      type="button"
-                                      onClick={() =>
-                                        setSelectedTherapistSlot({
-                                          date: weeklyDateKey,
-                                          start: normalizeTimeToHHmm(slot.start),
-                                          end: normalizeTimeToHHmm(slot.end),
-                                        })
-                                      }
-                                      className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-                                        selected
-                                          ? "bg-text-secondary text-white ring-2 ring-text-secondary/30"
-                                          : "bg-primary/15 text-text-secondary hover:bg-primary/25"
-                                      }`}
-                                    >
-                                      {formatTimeLabel(slot.start)} — {formatTimeLabel(slot.end)}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="rounded-gentle bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary/60">
-                              No open slots on this day. Try another date.
-                            </div>
-                          )}
                         </div>
-                      )}
-                    </div>
-                  )
-                ) : null}
 
-                {step === 2 && isListenerCheckIn ? (
-                  <div className="pr-2 pt-2">
-                    <h3 className="font-display text-3xl font-semibold tracking-tight text-[#2b2b2b] md:text-[2.15rem]">
-                      Review request
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-neutral-500 md:text-[15px]">
-                      Confirm the provider, timing, and amount. Payment is deducted from your wallet
-                      and held until the session is completed or cancelled.
-                    </p>
-
-                    <div className="mt-8 space-y-3 rounded-2xl border border-[#e8e4dc] bg-[#fafaf8] p-5 text-sm text-neutral-600 md:p-6">
-                      <p>
-                        <span className="font-semibold text-[#2f5d50]">With:</span>{" "}
-                        {selectedProvider?.name ?? modalHealer.name ?? "Choose a provider"}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-[#2f5d50]">Role:</span>{" "}
-                        {selectedProvider
-                          ? toSentenceCase(selectedProvider.role)
-                          : (modalHealer.specialty ?? "Provider directory")}
-                      </p>
-                      {selectedAvailability ? (
-                        <p>
-                          <span className="font-semibold text-[#2f5d50]">Date:</span>{" "}
-                          {formatShortDate(selectedAvailability.date)}
-                        </p>
-                      ) : null}
-                      {resolvedStart && resolvedEnd ? (
-                        <p>
-                          <span className="font-semibold text-[#2f5d50]">Time:</span>{" "}
-                          {formatTimeLabel(resolvedStart)} — {formatTimeLabel(resolvedEnd)}
-                        </p>
-                      ) : null}
-                      <p>
-                        <span className="font-semibold text-[#2f5d50]">Duration:</span>{" "}
-                        {bookingDuration > 0 ? `${bookingDuration} min` : "—"}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-[#2f5d50]">Amount:</span>{" "}
-                        {sessionAmount > 0
-                          ? formatCurrency(sessionAmount)
-                          : selectedProvider?.hourlyRate
-                            ? formatCurrency(selectedProvider.hourlyRate)
-                            : "Pricing unavailable"}
-                      </p>
-                      {notes.trim() ? (
-                        <p>
-                          <span className="font-semibold text-[#2f5d50]">Notes:</span>{" "}
-                          {notes}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    {!selectedProvider?.hourlyRate ? (
-                      <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm text-[#cf4f45]">
-                        This provider has not configured session pricing yet, so direct booking is
-                        disabled for now.
-                      </div>
-                    ) : null}
-
-                    {bookingMutation.error ? (
-                      <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
-                        {bookingMutation.error.message}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {step === 2 && !isListenerCheckIn ? (
-                  <div className="mx-auto max-w-2xl pr-2 pt-2">
-                    <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
-                      Quick intake
-                    </h3>
-                    <p className="mt-2 text-sm text-text-primary/65 md:text-base">
-                      A few details help your therapist prepare. This is shared with them as part of
-                      your booking note.
-                    </p>
-
-                    <div className="mt-8 space-y-5">
-                      <label className="block">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                          What brings you in? <span className="text-[#cf4f45]">*</span>
-                        </span>
-                        <textarea
-                          value={intakeChiefConcern}
-                          onChange={(event) => setIntakeChiefConcern(event.target.value)}
-                          rows={4}
-                          required
-                          placeholder="In a sentence or two…"
-                          className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                        />
-                        {intakeChiefConcern.trim().length > 0 &&
-                        intakeChiefConcern.trim().length < 2 ? (
-                          <p className="mt-1 text-xs font-medium text-[#cf4f45]">
-                            Please add a bit more detail.
+                        {weeklySlotsQuery.isFetching ? (
+                          <p className="text-xs font-semibold text-text-primary/55">
+                            Refreshing slots…
                           </p>
                         ) : null}
-                      </label>
 
-                      <label className="block">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                          Goals for therapy (optional)
-                        </span>
-                        <textarea
-                          value={intakeGoals}
-                          onChange={(event) => setIntakeGoals(event.target.value)}
-                          rows={3}
-                          className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                        />
-                      </label>
+                        {weeklySlotsQuery.error ? (
+                          <div className="rounded-gentle bg-[#fdf0ee] px-3 py-2 text-xs font-medium text-[#cf4f45]">
+                            {weeklySlotsQuery.error.message}
+                          </div>
+                        ) : null}
 
-                      <label className="block">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                          Prior therapy (optional)
-                        </span>
-                        <textarea
-                          value={intakePriorTherapy}
-                          onChange={(event) => setIntakePriorTherapy(event.target.value)}
-                          rows={2}
-                          placeholder="Have you worked with a therapist before?"
-                          className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                        />
-                      </label>
-
-                      <label className="block">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                          Safety or access needs (optional)
-                        </span>
-                        <textarea
-                          value={intakeSafetyNote}
-                          onChange={(event) => setIntakeSafetyNote(event.target.value)}
-                          rows={2}
-                          placeholder="Anything we should know to keep the session comfortable?"
-                          className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-                        />
-                      </label>
-                    </div>
+                        {weeklySlotsQuery.isLoading && !weeklySlotsQuery.data ? (
+                          <TimeSlotGridSkeleton count={9} />
+                        ) : weeklyFreeSlots.length > 0 ? (
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                              Open slots
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {weeklyFreeSlots.map((slot) => {
+                                const selected =
+                                  selectedTherapistSlot?.date === weeklyDateKey &&
+                                  normalizeTimeToHHmm(selectedTherapistSlot.start) ===
+                                    normalizeTimeToHHmm(slot.start) &&
+                                  normalizeTimeToHHmm(selectedTherapistSlot.end) ===
+                                    normalizeTimeToHHmm(slot.end);
+                                return (
+                                  <button
+                                    key={`${slot.start}-${slot.end}`}
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedTherapistSlot({
+                                        date: weeklyDateKey,
+                                        start: normalizeTimeToHHmm(slot.start),
+                                        end: normalizeTimeToHHmm(slot.end),
+                                      })
+                                    }
+                                    className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                                      selected
+                                        ? "bg-text-secondary text-white ring-2 ring-text-secondary/30"
+                                        : "bg-primary/15 text-text-secondary hover:bg-primary/25"
+                                    }`}
+                                  >
+                                    {formatTimeLabel(slot.start)} — {formatTimeLabel(slot.end)}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-gentle bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary/60">
+                            No open slots on this day. Try another date.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ) : null}
+                )
+              ) : null}
 
-                {step === 3 && !isListenerCheckIn ? (
-                  <div className="pr-2 pt-2">
-                    <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
-                      Confirm &amp; pay
-                    </h3>
-                    <p className="mt-2 text-sm text-text-primary/65 md:text-base">
-                      Pay from your wallet or complete a direct QR / card payment before the
-                      booking request is sent to your therapist.
-                    </p>
+              {/* STEP 3: Intake Questions (if SESSION) */}
+              {step === 3 && selectedBookingOption === "SESSION" ? (
+                <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                  <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
+                    Quick intake
+                  </h3>
+                  <p className="mt-2 text-sm text-text-primary/65 md:text-base">
+                    A few details help your therapist prepare. This is shared with them as part of
+                    your booking note.
+                  </p>
 
+                  <div className="mt-8 space-y-5">
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                        What brings you in? <span className="text-[#cf4f45]">*</span>
+                      </span>
+                      <textarea
+                        value={intakeChiefConcern}
+                        onChange={(event) => setIntakeChiefConcern(event.target.value)}
+                        rows={4}
+                        required
+                        placeholder="In a sentence or two…"
+                        className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      />
+                      {intakeChiefConcern.trim().length > 0 &&
+                      intakeChiefConcern.trim().length < 2 ? (
+                        <p className="mt-1 text-xs font-medium text-[#cf4f45]">
+                          Please add a bit more detail.
+                        </p>
+                      ) : null}
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                        Goals for therapy (optional)
+                      </span>
+                      <textarea
+                        value={intakeGoals}
+                        onChange={(event) => setIntakeGoals(event.target.value)}
+                        rows={3}
+                        className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                        Prior therapy (optional)
+                      </span>
+                      <textarea
+                        value={intakePriorTherapy}
+                        onChange={(event) => setIntakePriorTherapy(event.target.value)}
+                        rows={2}
+                        placeholder="Have you worked with a therapist before?"
+                        className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
+                        Safety or access needs (optional)
+                      </span>
+                      <textarea
+                        value={intakeSafetyNote}
+                        onChange={(event) => setIntakeSafetyNote(event.target.value)}
+                        rows={2}
+                        placeholder="Anything we should know to keep the session comfortable?"
+                        className="mt-2 w-full resize-y rounded-gentle border border-accent/80 bg-[#f4f3f1] px-4 py-3 text-sm text-text-primary placeholder:text-text-primary/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* STEP 4: Confirm & Pay (if SESSION) */}
+              {step === 4 && selectedBookingOption === "SESSION" ? (
+                <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                  <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
+                    Confirm &amp; pay
+                  </h3>
+                  <p className="mt-2 text-sm text-text-primary/65 md:text-base">
+                    Pay from your wallet or complete a direct QR / card payment before the
+                    booking request is sent to your therapist.
+                  </p>
+
+                  {activePackage && (
+                    <div className="mt-6 rounded-gentle border border-[#2f745f]/30 bg-[#2f745f]/5 p-4 text-sm text-[#1f2827]">
+                      <p className="font-semibold text-[#2f745f] flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#2f745f] animate-ping" />
+                        Active Wellness Package Available
+                      </p>
+                      <p className="mt-1 text-xs text-[#5c6865]">
+                        You have purchased the package "{activePackage.package.title}" which has {activePackage.allocations.find((a: any) => a.role === "THERAPIST")?.remainingSessions ?? 0} therapist sessions left.
+                      </p>
+                      <div className="mt-4 flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setUsePackage(true)}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition ${
+                            usePackage
+                              ? "bg-[#2f745f] border-[#2f745f] text-white shadow-xs"
+                              : "bg-white border-[#ebe8e2] text-[#1f2827] hover:border-[#2f745f]"
+                          }`}
+                        >
+                          Use Package Session
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUsePackage(false)}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition ${
+                            !usePackage
+                              ? "bg-text-secondary border-text-secondary text-white shadow-xs"
+                              : "bg-white border-[#ebe8e2] text-[#1f2827] hover:border-[#2f745f]"
+                          }`}
+                        >
+                          Pay Standard Price
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {usePackage ? (
+                    <div className="mt-6 rounded-gentle border border-accent/80 bg-background/80 px-4 py-4 text-sm text-text-primary/70">
+                      <p className="font-medium text-text-secondary">
+                        ✓ Payment is fully covered by your wellness package.
+                      </p>
+                      <p className="mt-1 text-xs text-text-primary/55">
+                        1 session will be deducted from "{activePackage?.package.title}" allocations upon booking completion.
+                      </p>
+                    </div>
+                  ) : (
                     <motion.div className="mt-6 space-y-3">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
                         Payment method
@@ -1594,8 +1591,8 @@ function BookSessionModal({
                               key={option.id}
                               type="button"
                               onClick={() => {
-                                setTherapistPaymentMethod(option.id);
-                                setExternalPaymentReady(option.id !== "WALLET");
+                                  setTherapistPaymentMethod(option.id);
+                                  setExternalPaymentReady(option.id !== "WALLET");
                               }}
                               className={`rounded-gentle border px-4 py-3 text-left transition ${
                                 active
@@ -1653,217 +1650,173 @@ function BookSessionModal({
                         </div>
                       )}
                     </motion.div>
+                  )}
 
-                    <div className="mt-8 space-y-3 rounded-gentle border border-accent/80 bg-background/80 p-5 text-sm text-text-primary/70">
+                  <div className="mt-8 space-y-3 rounded-gentle border border-accent/80 bg-background/80 p-5 text-sm text-text-primary/70">
+                    <p>
+                      <span className="font-semibold text-text-secondary">With:</span>{" "}
+                      {selectedProvider?.name ?? modalHealer.name ?? "Choose a provider"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-text-secondary">Role:</span>{" "}
+                      {selectedProvider
+                        ? toSentenceCase(selectedProvider.role)
+                        : (modalHealer.specialty ?? "Therapist")}
+                    </p>
+                    {selectedTherapistSlot ? (
                       <p>
-                        <span className="font-semibold text-text-secondary">With:</span>{" "}
-                        {selectedProvider?.name ?? modalHealer.name ?? "Choose a provider"}
+                        <span className="font-semibold text-text-secondary">Date:</span>{" "}
+                        {formatShortDate(`${selectedTherapistSlot.date}T12:00:00`)}
                       </p>
-                      <p>
-                        <span className="font-semibold text-text-secondary">Role:</span>{" "}
-                        {selectedProvider
-                          ? toSentenceCase(selectedProvider.role)
-                          : (modalHealer.specialty ?? "Therapist")}
-                      </p>
-                      {selectedTherapistSlot ? (
-                        <p>
-                          <span className="font-semibold text-text-secondary">Date:</span>{" "}
-                          {formatShortDate(`${selectedTherapistSlot.date}T12:00:00`)}
-                        </p>
-                      ) : null}
-                      {selectedTherapistSlot ? (
-                        <p>
-                          <span className="font-semibold text-text-secondary">Time:</span>{" "}
-                          {formatTimeLabel(selectedTherapistSlot.start)} —{" "}
-                          {formatTimeLabel(selectedTherapistSlot.end)}
-                        </p>
-                      ) : null}
-                      <p>
-                        <span className="font-semibold text-text-secondary">Duration:</span>{" "}
-                        {therapistSlotDuration > 0 ? `${therapistSlotDuration} min` : "—"}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-text-secondary">Amount:</span>{" "}
-                        {sessionAmount > 0
-                          ? formatCurrency(sessionAmount)
-                          : selectedProvider?.hourlyRate
-                            ? formatCurrency(selectedProvider.hourlyRate)
-                            : "Pricing unavailable"}
-                      </p>
-                      {intakeChiefConcern.trim() ? (
-                        <p>
-                          <span className="font-semibold text-text-secondary">Chief concern:</span>{" "}
-                          {intakeChiefConcern.trim()}
-                        </p>
-                      ) : null}
-                      {notes.trim() ? (
-                        <p>
-                          <span className="font-semibold text-text-secondary">Notes:</span>{" "}
-                          {notes}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    {!selectedProvider?.hourlyRate ? (
-                      <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm text-[#cf4f45]">
-                        This provider has not configured session pricing yet, so direct booking is
-                        disabled for now.
-                      </div>
                     ) : null}
-
-                    {bookingMutation.error ? (
-                      <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
-                        {bookingMutation.error.message}
-                      </div>
+                    {selectedTherapistSlot ? (
+                      <p>
+                        <span className="font-semibold text-text-secondary">Time:</span>{" "}
+                        {formatTimeLabel(selectedTherapistSlot.start)} —{" "}
+                        {formatTimeLabel(selectedTherapistSlot.end)}
+                      </p>
+                    ) : null}
+                    <p>
+                      <span className="font-semibold text-text-secondary">Duration:</span>{" "}
+                      {therapistSlotDuration > 0 ? `${therapistSlotDuration} min` : "—"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-text-secondary">Amount:</span>{" "}
+                      {usePackage ? (
+                        <span className="text-[#2f745f] font-semibold">Covered by package (0 points)</span>
+                      ) : sessionAmount > 0 ? (
+                        formatCurrency(sessionAmount)
+                      ) : selectedProvider?.hourlyRate ? (
+                        formatCurrency(selectedProvider.hourlyRate)
+                      ) : (
+                        "Pricing unavailable"
+                      )}
+                    </p>
+                    {intakeChiefConcern.trim() ? (
+                      <p>
+                        <span className="font-semibold text-text-secondary">Chief concern:</span>{" "}
+                        {intakeChiefConcern.trim()}
+                      </p>
+                    ) : null}
+                    {notes.trim() ? (
+                      <p>
+                        <span className="font-semibold text-text-secondary">Notes:</span>{" "}
+                        {notes}
+                      </p>
                     ) : null}
                   </div>
-                ) : null}
-              </div>
 
-              <div
-                className={
-                  isListenerCheckIn
-                    ? "flex items-center justify-between gap-4 border-t border-[#eceae4] bg-white px-6 py-5 md:px-8"
-                    : "flex items-center justify-between gap-4 border-t border-accent/70 bg-white px-5 py-4 md:px-8"
-                }
-              >
-                {isListenerCheckIn ? (
-                  <>
-                    {step > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setStep((current) => Math.max(0, current - 1))}
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 transition-colors hover:text-[#2b2b2b]"
-                      >
-                        <span aria-hidden>←</span>
-                        Back
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleClose}
-                        className="text-sm font-semibold text-neutral-500 transition-colors hover:text-[#2b2b2b]"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    <motion.button
-                      type="button"
-                      onClick={() => {
-                        if (isLast) {
-                          bookingMutation.mutate();
-                          return;
-                        }
-                        setStep((current) => current + 1);
-                      }}
-                      disabled={!canAdvance || bookingMutation.isPending}
-                      className="inline-flex items-center gap-2 rounded-full bg-[#2f5d50] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                      whileHover={{ scale: 1.02, y: -1 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={hoverLiftTransition}
-                    >
-                      {isLast
-                        ? bookingMutation.isPending
-                          ? "Submitting..."
-                          : "Request Booking"
-                        : "Next Step"}
-                      {!isLast ? (
-                        <span className="text-base leading-none" aria-hidden>
-                          →
-                        </span>
-                      ) : null}
-                    </motion.button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="text-sm font-semibold text-text-primary/55 transition-colors hover:text-text-primary"
-                    >
-                      Cancel
-                    </button>
-                    <div className="flex items-center gap-3">
-                      {step > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setStep((current) => Math.max(0, current - 1))}
-                          className="rounded-full border border-accent/90 px-5 py-2.5 text-sm font-semibold text-text-primary/75 transition-colors hover:bg-accent/40"
-                        >
-                          Back
-                        </button>
-                      ) : null}
-                      <motion.button
-                        type="button"
-                        onClick={() => {
-                          if (isLast) {
-                            bookingMutation.mutate();
-                            return;
-                          }
-                          setStep((current) => current + 1);
-                        }}
-                        disabled={!canAdvance || bookingMutation.isPending}
-                        className="inline-flex items-center gap-2 rounded-full bg-text-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                        whileHover={{ scale: 1.03, y: -1 }}
-                        whileTap={{ scale: 0.97 }}
-                        transition={hoverLiftTransition}
-                      >
-                        {isLast
-                          ? bookingMutation.isPending
-                            ? "Submitting..."
-                            : therapistPaymentMethod === "WALLET"
-                              ? "Confirm & hold wallet"
-                              : "Complete booking"
-                          : "Next Step"}
-                        {!isLast ? (
-                          <span className="text-lg leading-none" aria-hidden>
-                            →
-                          </span>
-                        ) : null}
-                      </motion.button>
+                  {!selectedProvider?.hourlyRate ? (
+                    <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm text-[#cf4f45]">
+                      This provider has not configured session pricing yet, so direct booking is
+                      disabled for now.
                     </div>
-                  </>
-                )}
-              </div>
+                  ) : null}
+
+                  {bookingMutation.error ? (
+                    <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
+                      {bookingMutation.error.message}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
-            {!isListenerCheckIn ? (
-              <motion.div
-                className="pointer-events-none absolute bottom-16 right-6 z-2 hidden max-w-[220px] rounded-gentle border border-accent/80 bg-white/95 p-3 text-xs text-text-primary/70 shadow-soft md:block"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...morphTransition, delay: 0.15 }}
+            <div className="flex items-center justify-between gap-4 border-t border-accent/70 bg-white px-5 py-4 md:px-8">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-sm font-semibold text-text-primary/55 transition-colors hover:text-text-primary"
               >
-                <div className="flex items-start gap-2">
-                  <span className="text-text-secondary" aria-hidden>
-                    <svg
-                      className="h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    >
-                      <path
-                        d="M4 10v4a8 8 0 0012.5 6.5M8 8h.01M12 8h.01M16 8h.01"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M16 3l4 4-4 4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  <div>
-                    <p className="font-semibold text-text-secondary">Live flow</p>
-                    <p className="mt-0.5 leading-relaxed">
-                      Therapist bookings support wallet, QR, or card payment. Listener bookings
-                      always deduct from your wallet balance.
-                    </p>
-                  </div>
+                Cancel
+              </button>
+              <div className="flex items-center gap-3">
+                {step > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep((current) => Math.max(0, current - 1));
+                    }}
+                    className="rounded-full border border-accent/90 px-5 py-2.5 text-sm font-semibold text-text-primary/75 transition-colors hover:bg-accent/40"
+                  >
+                    Back
+                  </button>
+                ) : null}
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    if (isLast) {
+                      if (selectedBookingOption === "PACKAGE") {
+                        packagePurchaseMutation.mutate();
+                      } else {
+                        bookingMutation.mutate();
+                      }
+                      return;
+                    }
+                    setStep((current) => current + 1);
+                  }}
+                  disabled={!canAdvance || bookingMutation.isPending || packagePurchaseMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-full bg-text-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={hoverLiftTransition}
+                >
+                  {isLast
+                    ? bookingMutation.isPending || packagePurchaseMutation.isPending
+                      ? "Submitting..."
+                      : selectedBookingOption === "PACKAGE"
+                        ? "Confirm Purchase"
+                        : therapistPaymentMethod === "WALLET"
+                          ? "Confirm & hold wallet"
+                          : "Complete booking"
+                    : "Next Step"}
+                  {!isLast ? (
+                    <span className="text-lg leading-none" aria-hidden>
+                      →
+                    </span>
+                  ) : null}
+                </motion.button>
+              </div>
+            </div>
+          </div>
+
+          {!isListenerCheckIn ? (
+            <motion.div
+              className="pointer-events-none absolute bottom-16 right-6 z-2 hidden max-w-[220px] rounded-gentle border border-accent/80 bg-white/95 p-3 text-xs text-text-primary/70 shadow-soft md:block"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...morphTransition, delay: 0.15 }}
+            >
+              <div className="flex items-start gap-2">
+                <span className="text-text-secondary" aria-hidden>
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  >
+                    <path
+                      d="M4 10v4a8 8 0 0012.5 6.5M8 8h.01M12 8h.01M16 8h.01"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M16 3l4 4-4 4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <div>
+                  <p className="font-semibold text-text-secondary">Live flow</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Therapist bookings support wallet, QR, or card payment. Listener bookings
+                    always deduct from your wallet balance.
+                  </p>
                 </div>
-              </motion.div>
-            ) : null}
+              </div>
+            </motion.div>
+          ) : null}
         </motion.div>
       ) : null}
     </AnimatePresence>

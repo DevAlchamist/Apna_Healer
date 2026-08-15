@@ -256,6 +256,15 @@ export async function getPublicTherapistById(providerId: string) {
           providedSessions: true,
         },
       },
+      packagesCreated: {
+        where: {
+          publicationStatus: "PUBLISHED",
+          isVisible: true,
+        },
+        include: {
+          allocations: true,
+        },
+      },
     },
   });
 
@@ -289,6 +298,11 @@ export async function getPublicTherapistById(providerId: string) {
     testimonialQuote: profile.testimonialQuote,
     testimonialAuthor: profile.testimonialAuthor,
     retentionRate: profile.retentionRate,
+    packagesCreated: record.packagesCreated.map((p) => ({
+      ...p,
+      price: p.price.toString(),
+      discount: Number(p.discount),
+    })),
   };
 }
 

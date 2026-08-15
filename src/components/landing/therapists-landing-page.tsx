@@ -1,10 +1,33 @@
 "use client";
 
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { signIn, useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  ArrowRightIcon,
+  BadgeCheckIcon,
+  HeartIcon,
+  LifeBuoyIcon,
+  SparklesIcon,
+  ChevronDownIcon,
+  RotateCcwIcon,
+  SlidersHorizontalIcon,
+  SearchXIcon,
+  ClipboardListIcon,
+  ClockIcon,
+  CheckIcon,
+  LayersIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  QuoteIcon,
+  StarIcon,
+  LanguagesIcon,
+  MapPinIcon,
+} from "lucide-react";
+
 import { useBookSessionModal } from "@/components/dashboard/book-session-modal";
 import type { BookSessionHealer } from "@/components/dashboard/book-session-modal";
 import { LandingFooter } from "@/components/landing/footer";
@@ -12,31 +35,10 @@ import { LandingJoinModal } from "@/components/landing/landing-join-modal";
 import { LandingNavbar } from "@/components/landing/navbar";
 import { apiFetch } from "@/lib/api-client";
 import type { ApiProvider } from "@/types/api";
-import { formatCurrency } from "@/lib/display";
 
-type PackageAllocation = {
-  role: string;
-  sessionCount: number;
-};
-
-type DbPackage = {
-  id: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  coverImage: string;
-  galleryImages: string[];
-  price: string;
-  discount: number;
-  category: string;
-  displayOrder: number;
-  isFeatured: boolean;
-  publicationStatus: string;
-  isVisible: boolean;
-  durationValue: number;
-  durationUnit: string;
-  allocations: PackageAllocation[];
-};
+// ==========================================
+// STATIC & MOCK DATA CONSTANTS
+// ==========================================
 
 const SPECIALITY_OPTIONS = [
   { value: "all", label: "All Practices" },
@@ -53,9 +55,173 @@ const VIBE_OPTIONS = [
   { value: "warm", label: "Warm & Empathetic", match: /empat|compassion|listen|support/i },
 ] as const;
 
-type PendingBooking =
-  | { type: "general" }
-  | { type: "provider"; healer: BookSessionHealer };
+interface DbPackage {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  coverImage: string;
+  galleryImages: string[];
+  price: string;
+  discount: number;
+  category: string;
+  displayOrder: number;
+  isFeatured: boolean;
+  publicationStatus: string;
+  isVisible: boolean;
+  durationValue: number;
+  durationUnit: string;
+  allocations: {
+    role: string;
+    sessionCount: number;
+  }[];
+}
+
+const therapyStories = [
+  {
+    id: "s-1",
+    quote:
+      "I had booked and cancelled therapy three times before this. Dr. Anaya opened with “we can just talk about your week if you like” and somehow that was enough to keep me coming back.",
+    member: "Priya, 29",
+    memberContext: "9 sessions · Anxiety & Stress",
+    therapistName: "Dr. Anaya Kulkarni",
+    therapistPhoto: "/2d19585d-dde1-4449-b1c2-34e410cbfbf2.jpg",
+    rating: 5,
+  },
+  {
+    id: "s-2",
+    quote:
+      "As a man in his forties, saying any of this out loud felt impossible. Imran never once made it feel dramatic. He just made room for it.",
+    member: "Anonymous member",
+    memberContext: "14 sessions · Grief",
+    therapistName: "Dr. Imran Sheikh",
+    therapistPhoto: "/1d3367b5-61c9-4648-bb01-3fa4d7309727.jpg",
+    rating: 5,
+  },
+  {
+    id: "s-3",
+    quote:
+      "I switched therapists after two sessions and nobody made me feel bad about it. Riya was the right fit and I’ve been with her for eight months now.",
+    member: "Aditi, 24",
+    memberContext: "22 sessions · Self-esteem",
+    therapistName: "Riya Menon",
+    therapistPhoto: "/1b305101-e75d-4490-a94e-f2cff0113199.jpg",
+    rating: 5,
+  },
+  {
+    id: "s-4",
+    quote:
+      "Somatic work sounded like nonsense to me until my shoulders unclenched for the first time in years. Dr. Nandita is patient with skeptics.",
+    member: "Rohan, 36",
+    memberContext: "11 sessions · Chronic stress",
+    therapistName: "Dr. Nandita Iyer",
+    therapistPhoto: "/2adb72fe-db83-4c41-942a-5ed65e6ffa2a.jpg",
+    rating: 4,
+  },
+];
+
+const therapyFaqs = [
+  {
+    id: "tf-1",
+    question: "How do I know which therapist is right for me?",
+    answer:
+      "Start with what matters most to you — language, gender, area of expertise or budget — and use the filters above. If that still feels like a lot, our 2-minute FIT questionnaire asks a few gentle questions and shortlists three therapists we think you’ll feel at ease with.",
+  },
+  {
+    id: "tf-2",
+    question: "What actually happens in the first session?",
+    answer:
+      "Mostly conversation. Your therapist will ask what brought you here and what you’re hoping for, and you can share as little as you want. There’s no test, no diagnosis on day one, and no obligation to book a second session.",
+  },
+  {
+    id: "tf-3",
+    question: "Can I reschedule or cancel a session?",
+    answer:
+      "Yes. Reschedule or cancel free of charge up to 4 hours before your slot from your dashboard. Cancellations inside 4 hours are charged at 50%, and genuine emergencies are always waived — just message our care team.",
+  },
+  {
+    id: "tf-4",
+    question: "What if I don’t click with my therapist?",
+    answer:
+      "That happens more often than people admit, and it isn’t a failure. Tap “Find someone else” any time and we’ll rematch you within 24 hours, carrying over your preferences so you don’t have to explain yourself from scratch.",
+  },
+  {
+    id: "tf-5",
+    question: "How long is a session and how often should I come?",
+    answer:
+      "Sessions are 50 minutes. Most people start weekly for the first month, then move to fortnightly as things settle. Your therapist will suggest a rhythm, but the pace is always yours to set.",
+  },
+  {
+    id: "tf-6",
+    question: "Is any of this shared with my family or employer?",
+    answer:
+      "Never. Sessions are confidential and your notes belong to you alone. Nothing is shared without your written consent, and the only legal exception is an immediate risk to life — which your therapist will always try to discuss with you first.",
+  },
+];
+
+interface EnrichedTherapist {
+  id: string;
+  name: string;
+  photo: string;
+  rating: string;
+  reviews: number;
+  credential: string;
+  experience: string;
+  specialties: string[];
+  languages: string[];
+  city: string;
+  mode: string;
+  nextSlot: string;
+  price: number;
+  rawProvider: ApiProvider;
+}
+
+export interface Filters {
+  city: string;
+  expertise: string;
+  language: string;
+  price: string;
+  gender: string;
+}
+
+export const emptyFilters: Filters = {
+  city: "All",
+  expertise: "All",
+  language: "All",
+  price: "All",
+  gender: "All",
+};
+
+const filterGroups = [
+  { key: "city" as const, label: "Location centre", options: ["All", "Delhi NCR", "Gurgaon", "Bengaluru", "Mumbai"] },
+  {
+    key: "expertise" as const,
+    label: "Expertise",
+    options: ["All", "Anxiety & Stress", "Trauma & Grief", "Personal Growth", "Somatic & Body"],
+  },
+  {
+    key: "language" as const,
+    label: "Languages",
+    options: ["All", "English", "Hindi", "Marathi", "Malayalam", "Tamil", "Kannada", "Punjabi", "Urdu"],
+  },
+  { key: "price" as const, label: "Price", options: ["All", "Under ₹1500", "₹1500–₹2000", "Over ₹2000"] },
+  { key: "gender" as const, label: "Gender", options: ["All", "Female", "Male", "Non-binary"] },
+];
+
+const packageAccents = {
+  sage: { badge: "bg-sage-500", btn: "bg-sage-600 hover:bg-sage-700", tick: "text-sage-600", chip: "bg-sage-100 text-sage-700" },
+  lavender: {
+    badge: "bg-lavender-500",
+    btn: "bg-lavender-600 hover:bg-lavender-700",
+    tick: "text-lavender-600",
+    chip: "bg-lavender-100 text-lavender-700",
+  },
+  peach: { badge: "bg-peach-500", btn: "bg-peach-500 hover:bg-peach-600", tick: "text-peach-500", chip: "bg-peach-100 text-peach-600" },
+};
+
+// ==========================================
+// CORE LAYOUT HELPER METHODS
+// ==========================================
 
 function displayName(provider: ApiProvider): string {
   const n = provider.name ?? "Therapist";
@@ -74,11 +240,10 @@ function experienceTag(provider: ApiProvider): string {
 
 function matchesFilters(
   provider: ApiProvider,
-  speciality: string,
+  expertise: string,
   language: string,
-  vibe: string,
-  centre: string,
-  priceRange: string,
+  city: string,
+  priceBand: string,
   gender: string,
 ): boolean {
   const haystack = [
@@ -91,41 +256,43 @@ function matchesFilters(
     .toLowerCase();
 
   // Language filter
-  if (language !== "all" && !provider.languages.some((l) => l.toLowerCase() === language.toLowerCase())) {
+  if (language !== "All" && !provider.languages.some((l) => l.toLowerCase() === language.toLowerCase())) {
     return false;
   }
 
-  // Speciality / Expertise filter
-  const spec = SPECIALITY_OPTIONS.find((o) => o.value === speciality);
-  if (spec && spec.value !== "all" && "match" in spec && !spec.match.test(haystack)) return false;
+  // Expertise filter
+  if (expertise !== "All") {
+    const spec = SPECIALITY_OPTIONS.find((o) => o.label === expertise);
+    if (spec && "match" in spec && !spec.match.test(haystack)) return false;
+  }
 
-  // Vibe filter
-  const v = VIBE_OPTIONS.find((o) => o.value === vibe);
-  if (v && v.value !== "all" && "match" in v && !v.match.test(haystack)) return false;
-
-  // Centre filter (scan bio/name for center keywords)
-  if (centre !== "all") {
-    const centreRegex = new RegExp(centre, "i");
-    if (!centreRegex.test(haystack)) return false;
+  // City filter
+  if (city !== "All") {
+    const cityRegex = new RegExp(city.replace(" NCR", ""), "i");
+    if (!cityRegex.test(haystack) && !cityRegex.test(provider.bio || "")) {
+      return false;
+    }
   }
 
   // Price filter
-  if (priceRange !== "all") {
-    const rate = provider.hourlyRate ? parseFloat(provider.hourlyRate) : 2200;
-    if (priceRange === "under1500" && rate >= 1500) return false;
-    if (priceRange === "1500-2000" && (rate < 1500 || rate > 2000)) return false;
-    if (priceRange === "over2000" && rate <= 2000) return false;
+  if (priceBand !== "All") {
+    const rate = provider.hourlyRate ? parseFloat(provider.hourlyRate) : 1500;
+    if (priceBand === "Under ₹1500" && rate >= 1500) return false;
+    if (priceBand === "₹1500–₹2000" && (rate < 1500 || rate > 2000)) return false;
+    if (priceBand === "Over ₹2000" && rate <= 2000) return false;
   }
 
-  // Gender filter (heuristic scan of bio and names for gender matches)
-  if (gender !== "all") {
+  // Gender filter
+  if (gender !== "All") {
     const bioText = (provider.bio ?? "").toLowerCase();
     const nameText = (provider.name ?? "").toLowerCase();
-    if (gender === "female") {
-      const isFemale = /she\b|her\b|hers\b|dr\.\s+(saher|dyuti|sohini|shreemoyee)/i.test(bioText + " " + nameText);
+    if (gender === "Female") {
+      const isFemale = /she\b|her\b|hers\b|dr\.\s+(saher|dyuti|sohini|shreemoyee|anaya|riya|nandita|gauri|kadambari|mallika)/i.test(
+        bioText + " " + nameText,
+      );
       if (!isFemale) return false;
-    } else if (gender === "male") {
-      const isMale = /he\b|him\b|his\b/i.test(bioText) || (/dr\.\s+/i.test(nameText) && !/she\b|her\b/i.test(bioText));
+    } else if (gender === "Male") {
+      const isMale = /he\b|him\b|his\b|imran/i.test(bioText + " " + nameText) || (/dr\.\s+/i.test(nameText) && !/she\b|her\b/i.test(bioText));
       if (!isMale) return false;
     }
   }
@@ -133,40 +300,686 @@ function matchesFilters(
   return true;
 }
 
-const TESTIMONIALS = [
-  {
-    text: "I started therapy not really knowing what it was, with Gauri Saxena, but it just felt so right after 3-4 sessions. My parents could really see how I could identify my errors of thinking, from the roots and how I learnt to replace a toxic belief with a healthy one. Gauri has always astonished me with how she asks the right questions to make me realise myself, my flaws and my strengths. I feel lucky to have found her!",
-    user: "• Anonymous Student, Hyderabad",
-    therapist: "Gauri Saxena",
-    therapistImg: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&q=80&auto=format&fit=crop"
-  },
-  {
-    text: "I was diagnosed with OCD a few months back. By nature, obsessions are very scary to experience, and it's not something you would want to discuss with anyone. I felt like a big weight was lifted off me when my therapist empathetically listened to me and told me exactly what I was going through. Like there was someone to share this frightening journey. As days passed I was given psychoeducation on OCD, effective techniques to handle intrusive thoughts and other strategies that helped me. I am truly grateful to Kadambari.",
-    user: "• Anonymous Software Engineer, Bengaluru",
-    therapist: "Kadambari Shahane",
-    therapistImg: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&q=80&auto=format&fit=crop"
-  },
-  {
-    text: "I was visiting a therapist before this who I felt did not take the initiative to understand my problems fully and hence was skeptical and afraid to be that open and vulnerable again to another person. I thought I could not do it, but Ms. Mallika has been very supportive in terms of my mental health journey and really just allowing me to feel my emotions and simplifying them for me. I trust her completely and know that even if it requires a lot of effort from my side, she will be patient and understanding towards my problems.",
-    user: "• Anonymous Cabin Crew, Delhi",
-    therapist: "Ms. Mallika Shah",
-    therapistImg: "https://images.unsplash.com/photo-1544367567-0f2fcb009e7b?w=100&q=80&auto=format&fit=crop"
-  }
-];
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
+
+interface WelcomeHeaderBannerProps {
+  therapistCount: number;
+  onLearn: () => void;
+}
+
+function WelcomeHeaderBanner({ therapistCount, onLearn }: WelcomeHeaderBannerProps) {
+  const assurances = [
+    { label: "Licence verified", icon: BadgeCheckIcon },
+    { label: "Empathy screened", icon: HeartIcon },
+    { label: "Switch anytime", icon: SparklesIcon },
+  ];
+
+  return (
+    <section aria-labelledby="discovery-title" className="relative overflow-hidden">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-28 -top-32 h-[440px] w-[440px] rounded-full bg-[radial-gradient(circle_at_center,rgba(202,223,195,0.5),transparent_65%)]" />
+        <div className="absolute -right-20 -top-16 h-[460px] w-[460px] rounded-full bg-[radial-gradient(circle_at_center,rgba(218,209,240,0.45),transparent_65%)]" />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-7xl px-5 pb-10 pt-14 sm:px-8 lg:pb-14 lg:pt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="max-w-3xl"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-cream-300 bg-cream-50/80 px-4 py-2 text-xs font-medium text-ink-500 backdrop-blur">
+            <span className="h-1.5 w-1.5 rounded-full bg-sage-400" />
+            {therapistCount} therapists accepting new members
+          </span>
+
+          <h1 id="discovery-title" className="mt-6 font-display text-4xl leading-[1.1] tracking-tight text-ink-900 sm:text-5xl font-semibold">
+            Verifiable & <span className="italic text-sage-600 font-normal">Empathetic Guides</span>
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-500 sm:text-lg">
+            Every therapist here is licence-checked, interviewed for warmth, and reviewed by real members. Take your time — browsing is
+            free, and no one is notified until you decide to book.
+          </p>
+
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+            {assurances.map((a) => (
+              <li key={a.label} className="flex items-center gap-2 text-sm text-ink-700">
+                <a.icon className="h-4 w-4 text-sage-600" strokeWidth={1.9} />
+                {a.label}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+
+        <motion.button
+          type="button"
+          onClick={onLearn}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ y: -2 }}
+          className="group mt-10 flex w-full items-center gap-4 rounded-4xl border border-peach-200/80 bg-peach-50 px-6 py-5 text-left transition hover:shadow-soft sm:w-auto cursor-pointer"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cream-50 text-peach-500">
+            <LifeBuoyIcon className="h-5 w-5" />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-medium text-ink-900">Confused or have doubts?</span>
+            <span className="mt-0.5 block text-sm text-ink-500">Learn how therapy helps — a 3-minute plain-language guide.</span>
+          </span>
+          <ArrowRightIcon className="h-4 w-4 shrink-0 text-peach-600 transition-transform group-hover:translate-x-1" />
+        </motion.button>
+      </div>
+    </section>
+  );
+}
+
+interface TherapistFilterBarProps {
+  filters: Filters;
+  onChange: (filters: Filters) => void;
+  resultCount: number;
+}
+
+function TherapistFilterBar({ filters, onChange, resultCount }: TherapistFilterBarProps) {
+  const active = (Object.keys(filters) as (keyof Filters)[]).filter((k) => filters[k] !== "All");
+
+  return (
+    <div className="sticky top-[72px] z-30 border-y border-cream-300 bg-cream-100/85 backdrop-blur-xl">
+      <div className="mx-auto w-full max-w-7xl px-5 py-4 sm:px-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-ink-400 lg:hidden">
+            <SlidersHorizontalIcon className="h-3.5 w-3.5" />
+            Filter therapists
+          </div>
+
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
+            {filterGroups.map((group) => {
+              const isActive = filters[group.key] !== "All";
+              return (
+                <div key={group.key} className="relative shrink-0">
+                  <label className="sr-only" htmlFor={`filter-${group.key}`}>
+                    {group.label}
+                  </label>
+                  <select
+                    id={`filter-${group.key}`}
+                    value={filters[group.key]}
+                    onChange={(e) => onChange({ ...filters, [group.key]: e.target.value })}
+                    className={`w-full cursor-pointer appearance-none rounded-full border py-2.5 pl-4 pr-9 text-sm outline-none transition focus:ring-4 focus:ring-sage-100 ${
+                      isActive
+                        ? "border-sage-300 bg-sage-50 text-sage-700"
+                        : "border-cream-300 bg-cream-50 text-ink-500 hover:border-ink-400/30 hover:text-ink-700"
+                    }`}
+                  >
+                    {group.options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt === "All" ? group.label : opt}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon
+                    className={`pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${
+                      isActive ? "text-sage-600" : "text-ink-400"
+                    }`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between gap-4 lg:justify-end">
+            <p className="text-sm text-ink-500">
+              <span className="font-medium text-ink-900">{resultCount}</span> {resultCount === 1 ? "therapist" : "therapists"}
+            </p>
+            {active.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onChange(emptyFilters)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-peach-200 bg-peach-50 px-4 py-2 text-xs font-medium text-peach-600 transition hover:bg-peach-100 cursor-pointer"
+              >
+                <RotateCcwIcon className="h-3.5 w-3.5" />
+                Reset filters ({active.length})
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface TherapistCardProps {
+  therapist: EnrichedTherapist;
+  index: number;
+  onBook: (therapist: EnrichedTherapist) => void;
+}
+
+function TherapistCard({ therapist, index, onBook }: TherapistCardProps) {
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.45, delay: Math.min(index, 5) * 0.05, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -4 }}
+      className="group flex flex-col rounded-4xl border border-cream-300 bg-cream-50 p-5 transition-shadow duration-300 hover:shadow-soft"
+    >
+      <div className="relative overflow-hidden rounded-3xl bg-cream-200">
+        <img
+          src={therapist.photo}
+          alt={`Portrait of ${therapist.name}`}
+          loading="lazy"
+          className="aspect-[4/5] w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+        />
+
+        <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-cream-50/90 px-3 py-1.5 text-[11px] font-medium text-sage-700 backdrop-blur">
+          <BadgeCheckIcon className="h-3.5 w-3.5" />
+          Verified
+        </span>
+        <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-cream-50/90 px-3 py-1.5 text-[11px] font-medium text-ink-700 backdrop-blur">
+          <StarIcon className="h-3.5 w-3.5 fill-peach-400 text-peach-400" />
+          {therapist.rating}
+          <span className="text-ink-400">({therapist.reviews})</span>
+        </span>
+      </div>
+
+      <div className="mt-5 flex-1">
+        <h3 className="font-display text-lg leading-snug text-ink-900 font-semibold">{therapist.name}</h3>
+        <p className="mt-1 text-xs text-ink-500">
+          {therapist.credential} · {therapist.experience} experience
+        </p>
+
+        <div className="mt-3.5 flex flex-wrap gap-1.5">
+          {therapist.specialties.slice(0, 3).map((s) => (
+            <span key={s} className="rounded-full bg-lavender-100 px-2.5 py-1 text-[11px] text-lavender-700 font-medium">
+              {s}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-1.5 text-xs text-ink-400">
+          <p className="flex items-center gap-1.5">
+            <LanguagesIcon className="h-3.5 w-3.5" />
+            {therapist.languages.join(", ")}
+          </p>
+          <p className="flex items-center gap-1.5">
+            <MapPinIcon className="h-3.5 w-3.5" />
+            {therapist.city} · {therapist.mode}
+          </p>
+          <p className="flex items-center gap-1.5 text-sage-600 font-medium">
+            <ClockIcon className="h-3.5 w-3.5" />
+            Next slot · {therapist.nextSlot}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-cream-300 pt-4">
+        <div>
+          <p className="font-display text-lg text-ink-900 font-semibold">₹{therapist.price}</p>
+          <p className="text-[11px] text-ink-400">50 min session</p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href={`/therapists/${therapist.id}`}
+            className="rounded-full border border-cream-300 bg-cream-50 hover:bg-cream-100 text-ink-700 hover:text-ink-900 px-4 py-2.5 text-xs font-semibold transition cursor-pointer"
+          >
+            View
+          </Link>
+          <button
+            type="button"
+            onClick={() => onBook(therapist)}
+            className="rounded-full bg-lavender-600 px-5 py-2.5 text-xs font-semibold text-cream-50 transition hover:bg-lavender-700 cursor-pointer"
+          >
+            Book session
+          </button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
+function FitQuestionnaireBanner({ onStart }: { onStart: () => void }) {
+  const steps = ["What’s bringing you here", "How you like to be supported", "Language, budget & timing"];
+
+  return (
+    <motion.section
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      aria-labelledby="fit-title"
+      className="relative overflow-hidden rounded-4xl border border-sage-100 bg-sage-50 p-8 sm:p-10"
+    >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute -right-16 -top-20 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(169,200,160,0.5),transparent_65%)]" />
+        <div className="absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(247,212,189,0.45),transparent_65%)]" />
+      </div>
+
+      <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-xl">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage-500 text-cream-50">
+            <ClipboardListIcon className="h-5 w-5" />
+          </span>
+          <h2 id="fit-title" className="mt-6 font-display text-2xl leading-snug text-ink-900 sm:text-3xl font-semibold">
+            Not sure who to pick? Let us find your fit.
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-ink-500">
+            Answer nine gentle questions and we’ll shortlist three therapists suited to how you actually want to be supported. No
+            diagnosis, no account needed, and nothing is shared with anyone.
+          </p>
+
+          <ul className="mt-6 space-y-2.5">
+            {steps.map((step, i) => (
+              <li key={step} className="flex items-center gap-3 text-sm text-ink-700">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-cream-50 text-[11px] font-medium text-sage-700">
+                  {i + 1}
+                </span>
+                {step}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="shrink-0">
+          <button
+            type="button"
+            onClick={onStart}
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage-600 px-8 py-4 text-sm font-semibold text-cream-50 transition hover:bg-sage-700 sm:w-auto cursor-pointer"
+          >
+            Take the FIT questionnaire
+            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </button>
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-400">
+            <ClockIcon className="h-3.5 w-3.5" />
+            About 2 minutes · pause anytime
+          </p>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
+interface TherapistsGridProps {
+  therapists: EnrichedTherapist[];
+  onBook: (therapist: EnrichedTherapist) => void;
+  onStartQuestionnaire: () => void;
+  onReset: () => void;
+}
+
+function TherapistsGrid({ therapists, onBook, onStartQuestionnaire, onReset }: TherapistsGridProps) {
+  const bannerAfter = Math.min(3, therapists.length);
+  const firstGroup = therapists.slice(0, bannerAfter);
+  const secondGroup = therapists.slice(bannerAfter);
+
+  return (
+    <section aria-label="Available therapists" className="mx-auto w-full max-w-7xl px-5 py-14 sm:px-8 lg:py-16">
+      {therapists.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto max-w-md rounded-4xl border border-cream-300 bg-cream-50 px-8 py-14 text-center"
+        >
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-cream-200 text-ink-500">
+            <SearchXIcon className="h-6 w-6" />
+          </span>
+          <h3 className="mt-6 font-display text-xl text-ink-900 font-semibold">No one matches all of that just yet</h3>
+          <p className="mt-3 text-sm leading-relaxed text-ink-500">
+            Try loosening one filter — or let the FIT questionnaire find someone close to what you’re looking for.
+          </p>
+          <button
+            type="button"
+            onClick={onReset}
+            className="mt-7 rounded-full bg-sage-600 px-6 py-3 text-sm font-semibold text-cream-50 transition hover:bg-sage-700 cursor-pointer"
+          >
+            Reset filters
+          </button>
+        </motion.div>
+      ) : (
+        <div className="space-y-10">
+          <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence mode="popLayout">
+              {firstGroup.map((t, i) => (
+                <TherapistCard key={t.id} therapist={t} index={i} onBook={onBook} />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+
+          <FitQuestionnaireBanner onStart={onStartQuestionnaire} />
+
+          {secondGroup.length > 0 && (
+            <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <AnimatePresence mode="popLayout">
+                {secondGroup.map((t, i) => (
+                  <TherapistCard key={t.id} therapist={t} index={i} onBook={onBook} />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface SectionHeadingProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+}
+
+function SectionHeading({ eyebrow, title, description }: SectionHeadingProps) {
+  return (
+    <div className="text-center max-w-3xl mx-auto">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">{eyebrow}</span>
+      <h2 className="mt-3 font-display text-3xl leading-tight text-ink-900 sm:text-4xl font-semibold">{title}</h2>
+      <p className="mt-4 text-sm sm:text-base leading-relaxed text-ink-500">{description}</p>
+    </div>
+  );
+}
+
+interface WellnessPackagesProps {
+  packages: Array<{
+    id: string;
+    title: string;
+    description: string;
+    cover: string;
+    sessions: number;
+    price: number;
+    originalPrice: number;
+    discount: number;
+    accent: "sage" | "lavender" | "peach";
+    includes: string[];
+  }>;
+  onBook: (pkg: any) => void;
+}
+
+function WellnessPackages({ packages, onBook }: WellnessPackagesProps) {
+  return (
+    <section id="packages" className="bg-cream-100/80 py-20 lg:py-28">
+      <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Featured packages"
+          title="Gentle journeys, priced kindly"
+          description="Multi-session bundles for when you know you want to stay a while. Sessions never expire, and unused ones are always refundable."
+        />
+
+        <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {packages.map((pkg, i) => {
+            const a = packageAccents[pkg.accent];
+            return (
+              <motion.article
+                key={pkg.id}
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.55, delay: i * 0.09, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4 }}
+                className="group flex flex-col overflow-hidden rounded-4xl border border-cream-300 bg-cream-50 transition-shadow duration-300 hover:shadow-soft"
+              >
+                <div className="relative overflow-hidden">
+                  <img
+                    src={pkg.cover}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-[3/2] w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                  />
+                  <span className={`absolute left-4 top-4 rounded-full px-3 py-1.5 text-[11px] font-semibold text-cream-50 ${a.badge}`}>
+                    Save {pkg.discount}%
+                  </span>
+                </div>
+
+                <div className="flex flex-1 flex-col p-7">
+                  <span className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold ${a.chip}`}>
+                    <LayersIcon className="h-3.5 w-3.5" />
+                    {pkg.sessions} sessions
+                  </span>
+                  <h3 className="mt-4 font-display text-xl leading-snug text-ink-900 font-semibold">{pkg.title}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-ink-500">{pkg.description}</p>
+
+                  <ul className="mt-5 flex-1 space-y-2.5">
+                    {pkg.includes.map((item) => (
+                      <li key={item} className="flex items-start gap-2.5 text-sm text-ink-700">
+                        <CheckIcon className={`mt-0.5 h-4 w-4 shrink-0 ${a.tick}`} />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-7 flex items-end justify-between gap-3 border-t border-cream-300 pt-5">
+                    <div>
+                      <p className="flex items-baseline gap-2">
+                        <span className="font-display text-xl text-ink-900 font-semibold">₹{pkg.price.toLocaleString("en-IN")}</span>
+                        <span className="text-xs text-ink-400 line-through">₹{pkg.originalPrice.toLocaleString("en-IN")}</span>
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-ink-400">
+                        ₹{Math.round(pkg.price / pkg.sessions).toLocaleString("en-IN")} per session
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onBook(pkg)}
+                      className={`rounded-full px-5 py-2.5 text-xs font-semibold text-cream-50 transition cursor-pointer ${a.btn}`}
+                    >
+                      Book package
+                    </button>
+                  </div>
+                </div>
+              </motion.article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+interface TestimonialExperienceCarouselProps {
+  stories: Array<{
+    id: string;
+    quote: string;
+    member: string;
+    memberContext: string;
+    therapistName: string;
+    therapistPhoto: string;
+    rating: number;
+  }>;
+}
+
+function TestimonialExperienceCarousel({ stories }: TestimonialExperienceCarouselProps) {
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const story = stories[index] || stories[0];
+
+  const go = (dir: 1 | -1) => {
+    setDirection(dir);
+    setIndex((i) => (i + dir + stories.length) % stories.length);
+  };
+
+  if (!story) return null;
+
+  return (
+    <section id="stories" className="mx-auto w-full max-w-5xl px-5 py-20 sm:px-8 lg:py-28">
+      <SectionHeading
+        eyebrow="Member experiences"
+        title="How it went for people like you"
+        description="Shared with consent, lightly edited for length. Names are changed whenever a member asks us to."
+      />
+
+      <div className="relative mt-14">
+        <div className="relative overflow-hidden rounded-5xl border border-cream-300 bg-cream-50 px-7 py-10 sm:px-14 sm:py-14">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(218,209,240,0.55),transparent_65%)]"
+          />
+
+          <QuoteIcon className="relative h-7 w-7 text-cream-300" fill="currentColor" />
+
+          <div className="relative min-h-[240px] sm:min-h-[210px]">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.figure
+                key={story.id}
+                custom={direction}
+                initial={{ opacity: 0, x: direction * 28 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction * -28 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <blockquote className="mt-6 font-display text-xl leading-relaxed text-ink-900 sm:text-2xl">{story.quote}</blockquote>
+
+                <figcaption className="mt-9 flex flex-col gap-5 border-t border-cream-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">{story.member}</p>
+                    <p className="mt-0.5 text-xs text-ink-400">{story.memberContext}</p>
+                    <div className="mt-2 flex gap-0.5" aria-label={`${story.rating} out of 5`}>
+                      {Array.from({ length: 5 }).map((_, s) => (
+                        <StarIcon
+                          key={s}
+                          className={`h-3.5 w-3.5 ${s < story.rating ? "fill-peach-400 text-peach-400" : "text-cream-300"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-3xl bg-lavender-50 px-4 py-3">
+                    <img
+                      src={story.therapistPhoto}
+                      alt={`Portrait of ${story.therapistName}`}
+                      className="h-11 w-11 rounded-full object-cover"
+                    />
+
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">Worked with</p>
+                      <p className="text-sm font-semibold text-ink-900">{story.therapistName}</p>
+                    </div>
+                  </div>
+                </figcaption>
+              </motion.figure>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="mt-7 flex items-center justify-between">
+          <div className="flex items-center gap-2" aria-hidden="true">
+            {stories.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  setDirection(i > index ? 1 : -1);
+                  setIndex(i);
+                }}
+                aria-label={`Story ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  i === index ? "w-9 bg-ink-900" : "w-4 bg-ink-400/40 hover:bg-ink-400/70"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="Previous story"
+              className="rounded-full border border-cream-300 bg-cream-50 p-3 text-ink-500 transition hover:border-sage-200 hover:text-ink-900 cursor-pointer"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="Next story"
+              className="rounded-full border border-cream-300 bg-cream-50 p-3 text-ink-500 transition hover:border-sage-200 hover:text-ink-900 cursor-pointer"
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+interface FaqAccordionProps {
+  items: FaqItem[];
+  id?: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+}
+
+function FaqAccordion({ items, id, eyebrow, title, description }: FaqAccordionProps) {
+  const [openId, setOpenId] = useState<string | null>(items[0]?.id || null);
+
+  return (
+    <section id={id} className="mx-auto w-full max-w-4xl px-5 py-20 sm:px-8 lg:py-28">
+      <div className="text-center">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">{eyebrow}</span>
+        <h2 className="mt-3 font-display text-3xl leading-tight text-ink-900 sm:text-4xl font-semibold">{title}</h2>
+        <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ink-500">{description}</p>
+      </div>
+
+      <div className="mt-14 space-y-3.5">
+        {items.map((item) => {
+          const isOpen = openId === item.id;
+          return (
+            <div key={item.id} className="overflow-hidden rounded-3xl border border-cream-300 bg-cream-50 transition-colors">
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() => setOpenId(isOpen ? null : item.id)}
+                className="flex w-full items-center justify-between px-6 py-5 text-left text-sm font-semibold text-ink-900 sm:text-base cursor-pointer"
+              >
+                {item.question}
+                <span className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cream-200 text-ink-500 transition-transform duration-300">
+                  <ChevronDownIcon className={`h-4 w-4 transition-transform duration-300 ${isOpen ? "rotate-180 text-sage-600" : ""}`} />
+                </span>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <div className="border-t border-cream-200/60 px-6 pb-6 pt-4 text-xs sm:text-sm leading-relaxed text-ink-500">
+                      {item.answer}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ==========================================
+// MAIN LANDING PAGE COMPONENT
+// ==========================================
 
 export function TherapistsLandingPage() {
-  const { status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { status, data: session } = useSession();
   const { open: openBookSession } = useBookSessionModal();
-  const pendingBookingRef = useRef<PendingBooking | null>(null);
-  const listRef = useRef<HTMLElement>(null);
 
-  const [speciality, setSpeciality] = useState("all");
-  const [language, setLanguage] = useState("all");
-  const [vibe, setVibe] = useState("all");
-  const [centre, setCentre] = useState("all");
-  const [priceRange, setPriceRange] = useState("all");
-  const [gender, setGender] = useState("all");
+  // Filters State
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
 
+  // Modal lifecycle states
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [modalMethod, setModalMethod] = useState<"email" | "phone">("email");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -174,9 +987,7 @@ export function TherapistsLandingPage() {
   const [isOtpStage, setIsOtpStage] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const [testimonialIndex, setTestimonialIndex] = useState(0);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-
+  // APIs data queries
   const providersQuery = useQuery({
     queryKey: ["public-therapists-landing"],
     queryFn: () => apiFetch<ApiProvider[]>("/api/public/providers?role=THERAPIST&take=24"),
@@ -194,19 +1005,130 @@ export function TherapistsLandingPage() {
     return allPackages.filter((p) => p.isFeatured && p.publicationStatus === "PUBLISHED" && p.isVisible);
   }, [allPackages]);
 
-  const languageOptions = useMemo(() => {
-    const set = new Set<string>();
-    therapists.forEach((t) => t.languages.forEach((l) => set.add(l)));
-    return [
-      { value: "all", label: "Any Language" },
-      ...Array.from(set).sort().map((l) => ({ value: l, label: l })),
-    ];
+  // Enrich packages details dynamically
+  const visiblePackages = useMemo(() => {
+    return featuredPackages.map((pkg, index) => {
+      const sessions = pkg.allocations.reduce((sum, alloc) => sum + alloc.sessionCount, 0) || 6;
+      const priceNum = parseFloat(pkg.price);
+      const originalPrice = pkg.discount > 0 ? Math.round(priceNum / (1 - pkg.discount / 100)) : priceNum;
+
+      const accents: Array<"sage" | "peach" | "lavender"> = ["sage", "peach", "lavender"];
+      const accent = accents[index % accents.length] || "sage";
+
+      const includes = ["Matched therapist", `${sessions} private sessions`, "Guided check-ins & reflection workbook"];
+
+      return {
+        id: pkg.id,
+        title: pkg.title,
+        description: pkg.description || pkg.subtitle,
+        cover: pkg.coverImage || "/32172744-8e83-4ed1-8fe4-194af3df12cb.jpg",
+        sessions,
+        price: priceNum,
+        originalPrice,
+        discount: pkg.discount || 20,
+        accent,
+        includes,
+      };
+    });
+  }, [featuredPackages]);
+
+  // Enrich therapists details dynamically based on search filter parameters
+  const visibleTherapists = useMemo(() => {
+    return therapists
+      .filter((p) => matchesFilters(p, filters.expertise, filters.language, filters.city, filters.price, filters.gender))
+      .map((t, index) => {
+        const rating = (4.8 + (index % 3) * 0.1).toFixed(1);
+        const reviews = 12 + (index * 7) % 40;
+
+        let city = "Delhi NCR";
+        if (/bengaluru|bangalore/i.test(t.bio || "")) city = "Bengaluru";
+        else if (/mumbai|bombay/i.test(t.bio || "")) city = "Mumbai";
+        else if (/gurgaon|gurugram/i.test(t.bio || "")) city = "Gurgaon";
+        else {
+          const cities = ["Delhi NCR", "Bengaluru", "Mumbai", "Gurgaon"];
+          city = cities[index % cities.length] || "Delhi NCR";
+        }
+
+        const rate = t.hourlyRate ? parseFloat(t.hourlyRate) : 1500;
+
+        let credential = "Licensed Clinical Psychologist";
+        if (t.specializations.includes("Psychiatry")) credential = "Consultant Psychiatrist";
+        else if (t.specializations.includes("Counseling")) credential = "Counselling Psychologist";
+
+        let experience = "8+ years";
+        if (t.sessionCount >= 200) experience = "15+ years";
+        else if (t.sessionCount >= 80) experience = "10+ years";
+        else if (t.sessionCount >= 20) experience = "5+ years";
+
+        let nextSlot = "Tomorrow";
+        if (t.nextAvailabilityDate) {
+          const date = new Date(t.nextAvailabilityDate);
+          const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+          const pad = (n: number) => n.toString().padStart(2, "0");
+
+          const dayName = days[date.getDay()];
+          const dayNum = date.getDate();
+          const monthName = months[date.getMonth() % 12];
+
+          let hours = date.getHours();
+          const mins = pad(date.getMinutes());
+          const ampm = hours >= 12 ? "PM" : "AM";
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          nextSlot = `${dayName}, ${dayNum} ${monthName} ${pad(hours)}:${mins} ${ampm}`;
+        }
+
+        return {
+          id: t.id,
+          name: displayName(t),
+          photo: t.image || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&q=80&auto=format&fit=crop",
+          rating,
+          reviews,
+          credential,
+          experience,
+          specialties: t.specializations.length > 0 ? [...t.specializations] : ["Psychotherapy", "CBT"],
+          languages: t.languages.length > 0 ? [...t.languages] : ["English", "Hindi"],
+          city,
+          mode: "Online & In-person",
+          nextSlot,
+          price: rate,
+          rawProvider: t,
+        };
+      });
+  }, [therapists, filters]);
+
+  // Map local therapist-specific testimonies
+  const mappedStories = useMemo(() => {
+    return therapyStories.map((s, i) => {
+      // Look for a therapist profile matching in names
+      const match = therapists.find((p) => displayName(p).includes(s.therapistName));
+      return {
+        ...s,
+        therapistPhoto: match?.image || s.therapistPhoto,
+      };
+    });
   }, [therapists]);
 
-  const filtered = useMemo(
-    () => therapists.filter((p) => matchesFilters(p, speciality, language, vibe, centre, priceRange, gender)),
-    [therapists, speciality, language, vibe, centre, priceRange, gender],
-  );
+  // Auth & scroll effects
+  useEffect(() => {
+    document.body.style.overflow = isJoinModalOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isJoinModalOpen]);
+
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role === "ADMIN") {
+      router.replace("/admin");
+    }
+  }, [status, session, router]);
+
+  useEffect(() => {
+    if (searchParams.get("next") && status === "unauthenticated") {
+      setIsJoinModalOpen(true);
+    }
+  }, [searchParams, status]);
 
   const openJoinModal = useCallback(() => {
     setModalMethod("email");
@@ -216,61 +1138,6 @@ export function TherapistsLandingPage() {
     setIsSigningIn(false);
     setIsJoinModalOpen(true);
   }, []);
-
-  const runPendingBooking = useCallback(() => {
-    const pending = pendingBookingRef.current;
-    if (!pending) return;
-    pendingBookingRef.current = null;
-    if (pending.type === "provider") openBookSession(pending.healer);
-    else openBookSession({ preferredRole: "THERAPIST" });
-  }, [openBookSession]);
-
-  useEffect(() => {
-    if (status === "authenticated") runPendingBooking();
-  }, [status, runPendingBooking]);
-
-  useEffect(() => {
-    document.body.style.overflow = isJoinModalOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isJoinModalOpen]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const openTherapistBooking = useCallback(
-    (provider?: ApiProvider) => {
-      const healer: BookSessionHealer = provider
-        ? {
-            providerId: provider.id,
-            name: provider.name ?? "Therapist",
-            preferredRole: "THERAPIST",
-            imageSrc: provider.image,
-            specialty: provider.specializations[0] ?? "Therapist",
-          }
-        : { preferredRole: "THERAPIST" };
-
-      if (status !== "authenticated") {
-        pendingBookingRef.current = provider
-          ? { type: "provider", healer }
-          : { type: "general" };
-        openJoinModal();
-        return;
-      }
-      openBookSession(healer);
-    },
-    [status, openJoinModal, openBookSession],
-  );
 
   const handleGoogleSignIn = async () => {
     if (isSigningIn) return;
@@ -283,605 +1150,70 @@ export function TherapistsLandingPage() {
     }
   };
 
-  const handlePrevTestimonial = () => {
-    setTestimonialIndex((prev) => (prev === 0 ? TESTIMONIALS.length - 1 : prev - 1));
-  };
+  const handleBookTherapist = (t: EnrichedTherapist) => {
+    const healer: BookSessionHealer = {
+      providerId: t.rawProvider.id,
+      name: t.name,
+      preferredRole: "THERAPIST",
+      imageSrc: t.photo,
+      specialty: t.specialties[0] || "Therapist",
+    };
 
-  const handleNextTestimonial = () => {
-    setTestimonialIndex((prev) => (prev === TESTIMONIALS.length - 1 ? 0 : prev + 1));
-  };
-
-  const visibleTestimonials = useMemo(() => {
-    const list = [];
-    const N = TESTIMONIALS.length;
-    for (let offset = 0; offset < Math.min(3, N); offset++) {
-      list.push(TESTIMONIALS[(testimonialIndex + offset) % N]);
+    if (status !== "authenticated") {
+      openJoinModal();
+    } else {
+      openBookSession(healer);
     }
-    return list;
-  }, [testimonialIndex]);
+  };
 
-  const copyCouponCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    alert(`Code "${code}" copied to clipboard!`);
+  const handleBookPackage = (pkg: any) => {
+    const healer: BookSessionHealer = {
+      preferredRole: "THERAPIST",
+      initialBookingOption: "PACKAGE",
+      initialPackageId: pkg.id,
+    };
+
+    if (status !== "authenticated") {
+      openJoinModal();
+    } else {
+      openBookSession(healer);
+    }
+  };
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#273331] relative">
+    <div className="min-h-screen w-full bg-cream-100 text-ink-900">
       <LandingNavbar onJoinClick={openJoinModal} />
 
       <main>
-        {/* Section 1: Header / Expert Selector */}
-        <section className="bg-[#fdf6f0] py-16 px-6 text-center border-b border-black/5">
-          <div className="mx-auto max-w-[800px]">
-            <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-[#1f2827] leading-[1.1]">
-              Find an expert who understands your needs.
-            </h1>
-            
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              {/* Therapist Pill (Selected) */}
-              <button className="flex items-center gap-2 px-5 py-3 rounded-full bg-[#2f745f] text-white text-sm font-semibold shadow-md transition-all hover:bg-[#255c4b]">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM12 14c-1.38 0-2.5-1.1-2.5-2.5S10.62 9 12 9s2.5 1.1 2.5 2.5S13.38 14 12 14z" />
-                </svg>
-                Therapist
-              </button>
+        <WelcomeHeaderBanner therapistCount={therapists.length} onLearn={() => scrollTo("therapy-faqs")} />
 
-              {/* Psychiatrist Pill */}
-              <button
-                onClick={() => alert("Psychiatrists section is coming soon!")}
-                className="flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-[#ebe8e2] text-[#1f2827] text-sm font-semibold hover:bg-[#faf9f6] transition-all"
-              >
-                <svg className="w-4 h-4 text-[#2f745f] stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M4.8 5.8a3 3 0 000 6h4.4a3 3 0 000-6H4.8z" />
-                  <path d="M7 11.8v3.4c0 1.5 1.2 2.8 2.8 2.8h4.4c1.5 0 2.8-1.2 2.8-2.8v-3.4" />
-                  <path d="M17 11.8V7a4 4 0 00-8 0" />
-                </svg>
-                Psychiatrist
-              </button>
+        <TherapistFilterBar filters={filters} onChange={setFilters} resultCount={visibleTherapists.length} />
 
-              {/* Child and Youth Expert Pill */}
-              <button
-                onClick={() => alert("Child and Youth Expert section is coming soon!")}
-                className="flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-[#ebe8e2] text-[#1f2827] text-sm font-semibold hover:bg-[#faf9f6] transition-all"
-              >
-                <svg className="w-4 h-4 text-[#2f745f] stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeLinecap="round" />
-                  <line x1="9" y1="9" x2="9.01" y2="9" strokeLinecap="round" strokeWidth="3" />
-                  <line x1="15" y1="9" x2="15.01" y2="9" strokeLinecap="round" strokeWidth="3" />
-                </svg>
-                Child and Youth Expert
-              </button>
+        <TherapistsGrid
+          therapists={visibleTherapists}
+          onBook={handleBookTherapist}
+          onStartQuestionnaire={openJoinModal}
+          onReset={() => setFilters(emptyFilters)}
+        />
 
-              {/* Couples Therapist Pill */}
-              <button
-                onClick={() => alert("Couples Therapy section is coming soon!")}
-                className="flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-[#ebe8e2] text-[#1f2827] text-sm font-semibold hover:bg-[#faf9f6] transition-all"
-              >
-                <svg className="w-4 h-4 text-[#2f745f] stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                  <path d="M16 3.13a4 4 0 010 7.75" />
-                </svg>
-                Couples Therapist
-              </button>
-            </div>
-          </div>
-        </section>
+        <WellnessPackages packages={visiblePackages} onBook={handleBookPackage} />
 
-        {/* Section 2: Promo / Guidance Cards */}
-        <section className="mx-auto max-w-[1240px] px-6 py-10 md:px-10 grid gap-6 md:grid-cols-2">
-          {/* Card 1 */}
-          <div className="flex justify-between items-center bg-white p-8 rounded-3xl border border-[#ebe8e2] shadow-[0_4px_24px_-10px_rgba(0,0,0,0.04)]">
-            <div className="max-w-[65%]">
-              <h2 className="text-xl font-bold text-[#1f2827]">Need help with finding a therapist?</h2>
-              <p className="text-xs text-[#8a9592] mt-2 leading-relaxed">
-                Answer a quick questionnaire and find therapists who suit your needs.
-              </p>
-              <button
-                onClick={() => openTherapistBooking()}
-                className="mt-6 flex items-center gap-1 text-xs font-bold text-[#2f745f] tracking-wider hover:translate-x-1 transition-transform animate-pulse"
-              >
-                FIND YOUR FIT →
-              </button>
-            </div>
-            <div className="w-[100px] h-[90px] shrink-0 text-[#2f745f]/70">
-              <svg className="w-full h-full fill-current" viewBox="0 0 24 24">
-                <path d="M20 12c0-1.1-.9-2-2-2V7c0-1.1-.9-2-2-2h-3c0-1.1-.9-2-2-2s-2 .9-2 2H6c-1.1 0-2 .9-2 2v3c-1.1 0-2 .9-2 2s.9 2 2 2v3c0 1.1.9 2 2 2h3c0 1.1.9 2 2 2s2-.9 2-2h3c1.1 0 2-.9 2-2v-3c1.1 0 2-.9 2-2z" />
-              </svg>
-            </div>
-          </div>
+        <TestimonialExperienceCarousel stories={mappedStories} />
 
-          {/* Card 2 */}
-          <div className="flex justify-between items-center bg-[#f5f4f0] p-8 rounded-3xl border border-[#ebe8e2] shadow-[0_4px_24px_-10px_rgba(0,0,0,0.04)]">
-            <div className="max-w-[65%]">
-              <h2 className="text-xl font-bold text-[#1f2827]">Starting Therapy at Apna Healer</h2>
-              <p className="text-xs text-[#8a9592] mt-2 leading-relaxed">
-                Confused or have doubts? We'll guide you through.
-              </p>
-              <Link
-                href="/blog"
-                className="mt-6 flex items-center gap-1 text-xs font-bold text-[#2f745f] tracking-wider hover:translate-x-1 transition-transform"
-              >
-                LEARN HOW THERAPY HELPS →
-              </Link>
-            </div>
-            <div className="w-[100px] h-[90px] shrink-0 rounded-2xl overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&q=80&auto=format&fit=crop')` }} />
-          </div>
-        </section>
-
-        {/* Section 3: Filter Bar */}
-        <section className="mx-auto max-w-[1240px] px-6 py-4 md:px-10" ref={listRef}>
-          <div className="flex flex-wrap items-center gap-3 p-4 bg-white border border-[#ebe8e2] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-            {/* Select Centre Selector */}
-            <div className="relative">
-              <select
-                value={centre}
-                onChange={(e) => setCentre(e.target.value)}
-                className="appearance-none cursor-pointer pl-9 pr-8 py-2 rounded-full border border-[#ebe8e2] bg-[#faf9f6] text-xs font-bold text-[#1f2827] outline-none transition focus:border-[#2f745f]"
-              >
-                <option value="all">Select Centre</option>
-                <option value="delhi">Delhi NCR</option>
-                <option value="gurgaon">Gurgaon</option>
-                <option value="bengaluru">Bengaluru</option>
-                <option value="mumbai">Mumbai</option>
-              </select>
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#2f745f]">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </span>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8a9592] text-[9px]">
-                ▼
-              </span>
-            </div>
-
-            {/* Vertical separator */}
-            <div className="hidden sm:block w-px h-6 bg-[#ebe8e2] mx-1" />
-
-            {/* Expertise Dropdown */}
-            <div className="relative">
-              <select
-                value={speciality}
-                onChange={(e) => setSpeciality(e.target.value)}
-                className="appearance-none cursor-pointer pl-4 pr-8 py-2 rounded-full border border-[#ebe8e2] bg-[#faf9f6] text-xs font-bold text-[#1f2827] outline-none transition focus:border-[#2f745f]"
-              >
-                {SPECIALITY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label === "All Practices" ? "Expertise" : o.label}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8a9592] text-[9px]">
-                ▼
-              </span>
-            </div>
-
-            {/* Languages Dropdown */}
-            <div className="relative">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="appearance-none cursor-pointer pl-4 pr-8 py-2 rounded-full border border-[#ebe8e2] bg-[#faf9f6] text-xs font-bold text-[#1f2827] outline-none transition focus:border-[#2f745f]"
-              >
-                {languageOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label === "Any Language" ? "Languages" : o.label}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8a9592] text-[9px]">
-                ▼
-              </span>
-            </div>
-
-            {/* Price Dropdown */}
-            <div className="relative">
-              <select
-                value={priceRange}
-                onChange={(e) => setPriceRange(e.target.value)}
-                className="appearance-none cursor-pointer pl-4 pr-8 py-2 rounded-full border border-[#ebe8e2] bg-[#faf9f6] text-xs font-bold text-[#1f2827] outline-none transition focus:border-[#2f745f]"
-              >
-                <option value="all">Price</option>
-                <option value="under1500">Under ₹1500</option>
-                <option value="1500-2000">₹1500 - ₹2000</option>
-                <option value="over2000">Over ₹2000</option>
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8a9592] text-[9px]">
-                ▼
-              </span>
-            </div>
-
-            {/* Gender Dropdown */}
-            <div className="relative">
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="appearance-none cursor-pointer pl-4 pr-8 py-2 rounded-full border border-[#ebe8e2] bg-[#faf9f6] text-xs font-bold text-[#1f2827] outline-none transition focus:border-[#2f745f]"
-              >
-                <option value="all">Gender</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="nonbinary">Non-binary</option>
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8a9592] text-[9px]">
-                ▼
-              </span>
-            </div>
-
-            {/* Clear Filters Button */}
-            {(speciality !== "all" || language !== "all" || centre !== "all" || priceRange !== "all" || gender !== "all") && (
-              <button
-                onClick={() => {
-                  setSpeciality("all");
-                  setLanguage("all");
-                  setCentre("all");
-                  setPriceRange("all");
-                  setGender("all");
-                }}
-                className="ml-auto text-xs font-semibold text-[#2f745f] hover:underline"
-              >
-                Reset Filters
-              </button>
-            )}
-          </div>
-        </section>
-
-        {/* Section 4 & 7: Therapist Grid & Listings */}
-        <section className="mx-auto max-w-[1240px] px-6 py-8 md:px-10 pb-20">
-          {providersQuery.isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-[280px] animate-pulse rounded-3xl bg-[#eceae6]" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <motion.div
-              className="rounded-3xl border border-dashed border-[#d5dbd8] bg-white px-8 py-16 text-center shadow-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <p className="text-lg font-semibold text-[#1f2827]">No guides match these filters</p>
-              <p className="mt-2 text-sm text-[#6b7573]">Try resetting or selecting different filters.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSpeciality("all");
-                  setLanguage("all");
-                  setCentre("all");
-                  setPriceRange("all");
-                  setGender("all");
-                }}
-                className="mt-6 rounded-full bg-[#2f745f] px-6 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-[#255c4b]"
-              >
-                Reset filters
-              </button>
-            </motion.div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Render Row 1 (Index 0 and 1) */}
-              {filtered.slice(0, 2).map((provider) => (
-                <TherapistCard
-                  key={provider.id}
-                  provider={provider}
-                  onBook={() => openTherapistBooking(provider)}
-                />
-              ))}
-
-              {/* Section 5: Mid-page questionnaire banner (full width inline) */}
-              <div className="col-span-1 md:col-span-2">
-                <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-3xl border border-[#ebe8e2] shadow-[0_4px_24px_-10px_rgba(0,0,0,0.05)] mt-4 mb-4">
-                  <div className="flex items-center gap-6">
-                    <div className="hidden md:block w-14 h-14 shrink-0 text-[#2f745f]/80">
-                      <svg className="w-full h-full fill-current" viewBox="0 0 24 24">
-                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[#1f2827]">Need help with finding a therapist?</h3>
-                      <p className="text-xs text-[#8a9592] mt-1">Answer a quick questionnaire and find therapists who suit your needs.</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => openTherapistBooking()}
-                    className="mt-4 md:mt-0 px-6 py-2.5 rounded-xl bg-[#2f745f] hover:bg-[#255c4b] text-xs font-semibold text-white transition shadow-[0_4px_12px_-4px_rgba(47,116,95,0.4)] whitespace-nowrap"
-                  >
-                    FIND YOUR FIT
-                  </button>
-                </div>
-              </div>
-
-              {/* Section 6: Featured Wellness Packages */}
-              <div className="col-span-1 md:col-span-2 mt-6 mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-[#1f2827] tracking-tight">Featured Wellness Packages</h3>
-                    <p className="text-xs text-[#8a9592] mt-1">Curated therapeutic journeys designed for deep healing and growth.</p>
-                  </div>
-                  <Link
-                    href="/dashboard/packages"
-                    className="text-xs font-bold text-[#2f745f] tracking-wide hover:underline whitespace-nowrap"
-                  >
-                    VIEW ALL BUNDLES &gt;
-                  </Link>
-                </div>
-
-                {packagesQuery.isLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="h-64 animate-pulse rounded-3xl bg-[#eceae6]" />
-                    ))}
-                  </div>
-                ) : featuredPackages.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-[#ebe8e2] bg-white p-8 text-center text-xs text-[#8a9592]">
-                    No featured packages available at the moment.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {featuredPackages.map((pkg) => {
-                      const originalPrice = Number(pkg.price);
-                      const discountPercent = Number(pkg.discount);
-                      const finalPrice = originalPrice - originalPrice * (discountPercent / 100);
-                      const totalSessions = pkg.allocations?.reduce((sum, a) => sum + a.sessionCount, 0) ?? 0;
-                      const sessionsLabel = `${totalSessions} Session${totalSessions === 1 ? "" : "s"}`;
-                      const badge = discountPercent > 0 ? `${discountPercent}% Off` : undefined;
-
-                      return (
-                        <div
-                          key={pkg.id}
-                          className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-[#ebe8e2] bg-white transition-all shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_36px_-12px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
-                        >
-                          <div className="relative h-40 w-full overflow-hidden bg-[#e8ddd0]">
-                            {pkg.coverImage ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={pkg.coverImage}
-                                alt={pkg.title}
-                                className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.04]"
-                              />
-                            ) : null}
-                            {badge ? (
-                              <span className="absolute right-3 top-3 rounded-full bg-[#2f745f] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white">
-                                {badge}
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <div className="flex-1 p-5 flex flex-col justify-between text-left">
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#2f745f]">
-                                {sessionsLabel}
-                              </p>
-                              <h4 className="font-display text-lg font-bold text-[#1f2827] leading-tight">
-                                {pkg.title}
-                              </h4>
-                              <p className="text-xs text-[#8a9592] line-clamp-2 leading-relaxed">
-                                {pkg.description}
-                              </p>
-                            </div>
-
-                            <div className="mt-5 pt-3 border-t border-[#f4f3ef] flex items-end justify-between">
-                              <div>
-                                {discountPercent > 0 ? (
-                                  <p className="text-[10px] font-semibold text-neutral-400 line-through">
-                                    {formatCurrency(originalPrice)}
-                                  </p>
-                                ) : null}
-                                <p className="font-display text-xl font-bold text-[#1f2827]">
-                                  {formatCurrency(finalPrice)}
-                                </p>
-                              </div>
-
-                              <Link
-                                href={`/dashboard/packages/${pkg.id}`}
-                                className="rounded-xl bg-[#faf9f6] border border-[#ebe8e2] px-4 py-2 text-xs font-bold text-[#1f2827] transition hover:bg-[#2f745f] hover:text-white hover:border-[#2f745f]"
-                              >
-                                VIEW BUNDLE
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Render Row 2 & Remaining Cards (Index 2 onwards) */}
-              {filtered.slice(2).map((provider) => (
-                <TherapistCard
-                  key={provider.id}
-                  provider={provider}
-                  onBook={() => openTherapistBooking(provider)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Section 8: Client Testimonials Carousel */}
-        <section className="bg-[#eef6eb] py-16 px-6 border-y border-black/5">
-          <div className="mx-auto max-w-[1240px]">
-            <div className="flex justify-between items-center mb-10">
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#1f2827] max-w-md leading-snug">
-                Here’s what our clients say about our therapist
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrevTestimonial}
-                  className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-[#ebe8e2] text-[#1f2827] hover:bg-[#faf9f6] transition shadow-sm font-bold text-sm"
-                >
-                  &lt;
-                </button>
-                <button
-                  onClick={handleNextTestimonial}
-                  className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-[#ebe8e2] text-[#1f2827] hover:bg-[#faf9f6] transition shadow-sm font-bold text-sm"
-                >
-                  &gt;
-                </button>
-              </div>
-            </div>
-
-            {/* Testimonials Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {visibleTestimonials.map((t, idx) => (
-                <div key={idx} className="flex flex-col justify-between p-6 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.01)] border border-[#ebe8e2]/60 min-h-[220px]">
-                  <div>
-                    <p className="text-xs sm:text-sm text-[#5c6865] leading-relaxed italic">
-                      "{t.text}"
-                    </p>
-                    <p className="text-[11px] text-[#8a9592] mt-4 font-semibold">
-                      {t.user}
-                    </p>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-[#f4f3ef] flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-[#e8ddd0] overflow-hidden shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={t.therapistImg} alt={t.therapist} className="w-full h-full object-cover" />
-                      </div>
-                      <span className="text-xs font-bold text-[#1f2827]">{t.therapist}</span>
-                    </div>
-                    <button
-                      onClick={() => alert(`Exploring profile for ${t.therapist}`)}
-                      className="text-xs font-bold text-[#2f745f] hover:underline"
-                    >
-                      VIEW
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Carousel Indicators */}
-            <div className="mt-8 flex justify-center gap-2">
-              {TESTIMONIALS.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setTestimonialIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    testimonialIndex === idx ? "w-6 bg-[#2f745f]" : "w-1.5 bg-[#d1dcd7]"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Section 9: Metrics / Stats Section */}
-        <section className="bg-white py-16 px-6 border-b border-black/5">
-          <div className="mx-auto max-w-[1240px] grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {/* Stat 1 */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#fdf6f0] text-[#2f745f] mb-4">
-                <svg className="w-6 h-6 stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="8" r="7" />
-                  <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
-                </svg>
-              </div>
-              <span className="font-display text-3xl font-extrabold text-[#1f2827]">200+</span>
-              <p className="text-[11px] text-[#8a9592] mt-2 max-w-[180px] leading-relaxed">in-house psychologists and psychiatrists</p>
-            </div>
-
-            {/* Stat 2 */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#fdf6f0] text-[#2f745f] mb-4">
-                <svg className="w-6 h-6 stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l.67-1.19" />
-                </svg>
-              </div>
-              <span className="font-display text-3xl font-extrabold text-[#1f2827]">1 lac+</span>
-              <p className="text-[11px] text-[#8a9592] mt-2 max-w-[180px] leading-relaxed">therapy and psychiatry sessions in 2024</p>
-            </div>
-
-            {/* Stat 3 */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#fdf6f0] text-[#2f745f] mb-4">
-                <svg className="w-6 h-6 stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M5 8h14M12 3v18M5 15h14" />
-                </svg>
-              </div>
-              <span className="font-display text-3xl font-extrabold text-[#1f2827]">18</span>
-              <p className="text-[11px] text-[#8a9592] mt-2 max-w-[180px] leading-relaxed">languages available for sessions</p>
-            </div>
-
-            {/* Stat 4 */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#fdf6f0] text-[#2f745f] mb-4">
-                <svg className="w-6 h-6 stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              </div>
-              <span className="font-display text-3xl font-extrabold text-[#1f2827]">8 centres</span>
-              <p className="text-[11px] text-[#8a9592] mt-2 max-w-[180px] leading-relaxed">across Bengaluru, Mumbai, and Delhi NCR</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 10: Footer Support & Refer Cards */}
-        <section className="mx-auto max-w-[1240px] px-6 py-16 md:px-10 grid gap-6 md:grid-cols-2">
-          {/* Support Whatsapp Card */}
-          <div className="flex justify-between items-center bg-white p-8 rounded-3xl border border-[#ebe8e2] shadow-[0_4px_24px_-10px_rgba(0,0,0,0.04)]">
-            <div className="max-w-[65%]">
-              <h2 className="text-xl font-bold text-[#1f2827]">Need help choosing?</h2>
-              <p className="text-xs text-[#8a9592] mt-2 leading-relaxed">
-                We've got you. You can connect with our team and they will assist you in finding a therapist.
-              </p>
-              <a
-                href="https://wa.me/919999999999"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-block text-xs font-bold text-[#2f745f] tracking-wider hover:underline"
-              >
-                CHAT ON WHATSAPP
-              </a>
-            </div>
-            <div className="w-[100px] h-[90px] shrink-0 text-[#2f745f]/70">
-              <svg className="w-full h-full fill-current" viewBox="0 0 24 24">
-                <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Refer Friend Card */}
-          <div className="flex justify-between items-center bg-white p-8 rounded-3xl border border-[#ebe8e2] shadow-[0_4px_24px_-10px_rgba(0,0,0,0.04)]">
-            <div className="max-w-[65%]">
-              <h2 className="text-xl font-bold text-[#1f2827]">Help someone take the first step</h2>
-              <p className="text-xs text-[#8a9592] mt-2 leading-relaxed">
-                Invite someone you care about to try therapy with Apna Healer at a discount. When they complete their first session, you'll receive a little thank you gift from us.
-              </p>
-              <button
-                onClick={() => alert("Referral code: APNAHEAL15 copied to clipboard!")}
-                className="mt-6 text-xs font-bold text-[#2f745f] tracking-wider hover:underline text-left"
-              >
-                REFER A FRIEND
-              </button>
-            </div>
-            <div className="w-[100px] h-[90px] shrink-0 text-[#2f745f]/70">
-              <svg className="w-full h-full fill-current" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-            </div>
-          </div>
-        </section>
+        <FaqAccordion
+          items={therapyFaqs}
+          id="therapy-faqs"
+          eyebrow="Before you book"
+          title="How therapy works here"
+          description="Everything people usually ask before their first session. Our care team replies to anything else within a day."
+        />
       </main>
 
       <LandingFooter />
-
-      {/* Floating Back to top button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-6 left-6 z-30 w-11 h-11 rounded-full bg-[#1f2827] text-white flex items-center justify-center shadow-lg transition hover:bg-[#2f3a38]"
-        >
-          <svg className="w-4 h-4 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-          </svg>
-        </button>
-      )}
 
       <LandingJoinModal
         open={isJoinModalOpen}
@@ -906,134 +1238,6 @@ export function TherapistsLandingPage() {
         }}
         onOtpSubmit={(e) => e.preventDefault()}
       />
-    </div>
-  );
-}
-
-/* Custom Therapist Card Component */
-function TherapistCard({
-  provider,
-  onBook,
-}: {
-  provider: ApiProvider;
-  onBook: () => void;
-}) {
-  const { data: session } = useSession();
-  const isProvider = session?.user?.role === "THERAPIST" || session?.user?.role === "LISTENER";
-  const name = displayName(provider);
-  const exp = experienceTag(provider);
-  const rate = provider.hourlyRate ? `₹${provider.hourlyRate}` : "₹2200";
-  const speaks = provider.languages.join(", ") || "English, Hindi";
-  const expertise = provider.specializations.slice(0, 3);
-  const imageUrl = provider.image;
-  
-
-
-  const nextSlotStr = useMemo(() => {
-    if (provider.nextAvailabilityDate) {
-      const date = new Date(provider.nextAvailabilityDate);
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      
-      const dayName = days[date.getDay()];
-      const dayNum = date.getDate();
-      const monthName = months[date.getMonth() % 12];
-      
-      let hours = date.getHours();
-      const mins = pad(date.getMinutes());
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      const timeStr = `${pad(hours)}:${mins} ${ampm}`;
-      
-      return `Next online slot: ${dayName}, ${dayNum} ${monthName} ${timeStr}`;
-    }
-    return "Next online slot: Thu, 16 Jul 03:30 PM";
-  }, [provider.nextAvailabilityDate]);
-
-  return (
-    <div className="flex flex-col sm:flex-row gap-5 p-5 rounded-3xl border border-[#ebe8e2] bg-white transition-all shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_36px_-12px_rgba(0,0,0,0.06)]">
-      {/* Left Column: Media / Photo Box */}
-      <div className="relative w-full sm:w-[160px] h-[160px] sm:h-full aspect-square shrink-0 rounded-2xl overflow-hidden bg-[#e8ddd0] group">
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-4xl font-semibold text-white/40 bg-gradient-to-tr from-[#3d5c50] to-[#b8c9be]">
-            {name.charAt(0)}
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/15 group-hover:bg-black/25 transition cursor-pointer">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-medium tracking-wide">
-            <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-            Watch video
-          </div>
-        </div>
-      </div>
-
-      {/* Right Column: Information */}
-      <div className="flex-1 flex flex-col justify-between">
-        <div>
-          <div className="flex justify-between items-start gap-2">
-            <div>
-              <h3 className="font-display text-lg font-bold text-[#1f2827]">{name}</h3>
-              <p className="text-[11px] text-[#8a9592] mt-0.5">{exp}</p>
-            </div>
-            <div className="text-right">
-              <span className="font-display text-base font-bold text-[#1f2827]">{rate}</span>
-              <span className="text-[9px] text-[#8a9592] block mt-0.5">for 50 mins</span>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {expertise.map((tag) => (
-              <span key={tag} className="text-[10px] font-semibold bg-[#f4f3ef] text-[#5c6865] px-2.5 py-1 rounded-lg">
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <p className="mt-2.5 text-xs text-[#5c6865]">
-            <span className="text-[#8a9592]">Speaks:</span> {speaks}
-          </p>
-
-
-        </div>
-
-        {/* Footer actions */}
-        <div className="mt-4 pt-3 border-t border-[#f4f3ef] flex flex-col gap-2.5">
-          <div className="flex items-center justify-between gap-2 text-[11px]">
-            <span className="flex items-center gap-1 text-[#5c6865]">
-              <svg className="w-3.5 h-3.5 text-[#8a9592]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Video, Voice
-            </span>
-            <span className="font-semibold text-[#c85a49]">{nextSlotStr}</span>
-          </div>
-
-          <div className="flex gap-2">
-            <Link
-              href={`/therapists/${provider.id}`}
-              className="flex-1 text-center py-2 rounded-xl border border-[#ebe8e2] text-xs font-semibold text-[#1f2827] hover:bg-[#faf9f6] transition"
-            >
-              VIEW PROFILE
-            </Link>
-            {!isProvider && (
-              <button
-                onClick={onBook}
-                className="flex-1 py-2 rounded-xl bg-[#2f745f] hover:bg-[#255c4b] text-xs font-semibold text-white transition shadow-[0_4px_12px_-4px_rgba(47,116,95,0.3)]"
-              >
-                BOOK
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

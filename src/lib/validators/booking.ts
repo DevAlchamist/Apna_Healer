@@ -3,6 +3,13 @@ import { moneyAmountSchema } from "@/lib/validators/common";
 
 export const bookingPaymentMethodSchema = z.enum(["WALLET", "QR", "CARD"]);
 
+export const bookingAmountSchema = z
+  .number()
+  .nonnegative()
+  .refine((value) => Number.isFinite(value) && Math.round(value * 100) === value * 100, {
+    message: "Amount must have at most two decimal places.",
+  });
+
 export const createBookingSchema = z
   .object({
     providerId: z.string().min(1),
@@ -10,9 +17,10 @@ export const createBookingSchema = z
     requestedDate: z.string().datetime(),
     requestedTime: z.string().min(1),
     duration: z.coerce.number().int().positive().max(480),
-    amount: moneyAmountSchema,
+    amount: bookingAmountSchema,
     paymentMethod: bookingPaymentMethodSchema.optional(),
     note: z.string().trim().max(500).optional(),
+    usePackage: z.boolean().optional(),
   })
 
 export const updateBookingStatusSchema = z.object({

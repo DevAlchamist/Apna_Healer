@@ -97,6 +97,7 @@ export async function createBooking(input: {
   amount: number;
   note?: string;
   paymentMethod?: BookingPaymentMethod;
+  usePackage?: boolean;
 }) {
   if (input.type !== BookingType.THERAPIST) {
     throw new ApiError(
@@ -205,6 +206,55 @@ export async function createBooking(input: {
       );
     }
 
+    // Determine package booking coverage
+    let selectedPurchase = null;
+    let finalAmount = decimalAmount;
+
+    if (input.usePackage && tx.packagePurchase) {
+      const packagePurchases = await tx.packagePurchase.findMany({
+        where: {
+          userId: input.userId,
+          status: "ACTIVE",
+          expiryDate: {
+            gte: new Date(),
+          },
+        },
+        include: {
+          package: true,
+          allocations: true,
+        },
+      });
+
+      // Match therapist specific package first, then general package
+      selectedPurchase = packagePurchases.find(
+        (p) =>
+          p.package.providerId === input.providerId &&
+          p.allocations.some(
+            (a) => a.role === Role.THERAPIST && a.remainingSessions > 0,
+          ),
+      );
+
+      if (!selectedPurchase) {
+        selectedPurchase = packagePurchases.find(
+          (p) =>
+            p.package.providerId === null &&
+            p.allocations.some(
+              (a) => a.role === Role.THERAPIST && a.remainingSessions > 0,
+            ),
+        );
+      }
+
+      if (!selectedPurchase) {
+        throw new ApiError(
+          400,
+          "No active package found covering therapist sessions.",
+          "NO_ACTIVE_PACKAGE",
+        );
+      }
+
+      finalAmount = toDecimal(0);
+    }
+
     const startTime = mergeDateAndTime(input.requestedDate, input.requestedTime);
 
     const booking = await tx.booking.create({
@@ -215,7 +265,7 @@ export async function createBooking(input: {
         requestedDate: input.requestedDate,
         requestedTime: input.requestedTime,
         duration: input.duration,
-        amount: decimalAmount,
+        amount: finalAmount,
         paymentMethod,
         note: input.note,
         status: BookingStatus.ACCEPTED,
@@ -226,25 +276,39 @@ export async function createBooking(input: {
       },
     });
 
-    if (paymentMethod === BookingPaymentMethod.WALLET) {
-      await applyWalletHoldForBooking(tx, {
-        wallet,
-        bookingId: booking.id,
-        userId: input.userId,
-        providerId: input.providerId,
-        bookingType: input.type,
-        amount: decimalAmount,
+    if (selectedPurchase) {
+      // Consume package session
+      const allocation = selectedPurchase.allocations.find(
+        (a) => a.role === Role.THERAPIST,
+      )!;
+      await tx.packagePurchaseAllocation.update({
+        where: { id: allocation.id },
+        data: {
+          remainingSessions: { decrement: 1 },
+          usedSessions: { increment: 1 },
+        },
       });
     } else {
-      await recordExternalBookingPayment(tx, {
-        wallet,
-        bookingId: booking.id,
-        userId: input.userId,
-        providerId: input.providerId,
-        bookingType: input.type,
-        amount: decimalAmount,
-        paymentMethod,
-      });
+      if (paymentMethod === BookingPaymentMethod.WALLET) {
+        await applyWalletHoldForBooking(tx, {
+          wallet,
+          bookingId: booking.id,
+          userId: input.userId,
+          providerId: input.providerId,
+          bookingType: input.type,
+          amount: decimalAmount,
+        });
+      } else {
+        await recordExternalBookingPayment(tx, {
+          wallet,
+          bookingId: booking.id,
+          userId: input.userId,
+          providerId: input.providerId,
+          bookingType: input.type,
+          amount: decimalAmount,
+          paymentMethod,
+        });
+      }
     }
 
     const session = await tx.careSession.create({
@@ -260,11 +324,21 @@ export async function createBooking(input: {
       },
     });
 
+    if (selectedPurchase) {
+      await tx.packageSessionUsage.create({
+        data: {
+          purchaseId: selectedPurchase.id,
+          sessionId: session.id,
+          providerRole: Role.THERAPIST,
+        },
+      });
+    }
+
     await tx.sessionLog.create({
       data: {
         sessionId: session.id,
         event: SessionLogEvent.BOOKED,
-        metadata: { bookingId: booking.id, source: "BOOKING_PAYMENT" },
+        metadata: { bookingId: booking.id, source: selectedPurchase ? "PACKAGE_USAGE" : "BOOKING_PAYMENT" },
       },
     });
 
@@ -379,18 +453,49 @@ export async function updateBookingStatus(input: {
     }
 
     if (input.status === BookingStatus.REJECTED || input.status === BookingStatus.CANCELLED) {
-      if (booking.paymentMethod === BookingPaymentMethod.WALLET) {
-        await releaseWalletHoldForBooking(tx, {
-          bookingId: booking.id,
-          userId: booking.userId,
-          amount: booking.amount,
-          action: input.status,
+      // Check if this booking was covered by a package
+      const packageUsage = tx.packageSessionUsage
+        ? await tx.packageSessionUsage.findFirst({
+            where: { sessionId: booking.session?.id }
+          })
+        : null;
+
+      if (packageUsage) {
+        // Find the allocation
+        const allocation = await tx.packagePurchaseAllocation.findFirst({
+          where: {
+            purchaseId: packageUsage.purchaseId,
+            role: Role.THERAPIST
+          }
+        });
+        if (allocation) {
+          // Increment remaining sessions
+          await tx.packagePurchaseAllocation.update({
+            where: { id: allocation.id },
+            data: {
+              remainingSessions: { increment: 1 },
+              usedSessions: { decrement: 1 }
+            }
+          });
+        }
+        // Delete the usage record
+        await tx.packageSessionUsage.delete({
+          where: { id: packageUsage.id }
         });
       } else {
-        await voidExternalBookingPayment(tx, {
-          bookingId: booking.id,
-          action: input.status,
-        });
+        if (booking.paymentMethod === BookingPaymentMethod.WALLET) {
+          await releaseWalletHoldForBooking(tx, {
+            bookingId: booking.id,
+            userId: booking.userId,
+            amount: booking.amount,
+            action: input.status,
+          });
+        } else {
+          await voidExternalBookingPayment(tx, {
+            bookingId: booking.id,
+            action: input.status,
+          });
+        }
       }
 
       const updatedBooking = await tx.booking.update({

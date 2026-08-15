@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       amount: input.amount,
       note: input.note,
       paymentMethod: input.paymentMethod as BookingPaymentMethod | undefined,
+      usePackage: input.usePackage,
     });
     return created(booking);
   } catch (error) {

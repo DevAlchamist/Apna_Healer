@@ -12,6 +12,23 @@ import { LandingFooter } from "@/components/landing/footer";
 import { LandingJoinModal } from "@/components/landing/landing-join-modal";
 import { LandingNavbar } from "@/components/landing/navbar";
 import { apiFetch } from "@/lib/api-client";
+import {
+  HeartHandshakeIcon,
+  ChevronLeftIcon,
+  BadgeCheckIcon,
+  CheckIcon,
+  GraduationCapIcon,
+  MapPinIcon,
+  Share2Icon,
+  PauseIcon,
+  PlayIcon,
+  ChevronDownIcon,
+  LanguagesIcon,
+  ClockIcon,
+  CalendarCheckIcon,
+  ShieldCheckIcon,
+  ChevronRightIcon
+} from "lucide-react";
 
 const DEFAULT_PHILOSOPHY_QUOTE =
   "Healing is not about fixing what is broken, but discovering the wholeness that was always there.";
@@ -21,27 +38,47 @@ const DEFAULT_BIO_FALLBACK =
 
 const MOCK_FAQS = [
   {
-    question: "Why did you choose to become a therapist?",
-    answer: "Growing up in a joint family provided me with ample opportunities to interact with diverse individuals, understand their emotional nuances, and witness the power of active listening. I realized that a compassionate, structured space can help people heal from deep-seated struggles and achieve self-actualization."
+    question: "What happens in the first session?",
+    answer: "We talk. I will ask what brought you here and a little about your life right now. Nothing is required of you beyond showing up — you can share as much or as little as feels comfortable."
   },
   {
-    question: "What should I expect in my first session?",
-    answer: "The first session is a safe space for you to share your primary concerns, symptoms, and expectations. We will conduct a gentle assessment of your history, discuss potential goals, and align on a collaborative therapeutic process that fits your pace."
+    question: "How do I know if therapy is right for me?",
+    answer: "You do not need a diagnosis or a crisis to begin. If something has been sitting heavily with you for a while, that is reason enough to talk it through with someone."
   },
   {
-    question: "How long does the therapy journey take?",
-    answer: "Therapy is a highly individualized process. Some clients experience positive shifts and learn coping mechanisms within 8-12 sessions, while others benefit from longer-term support. We will review your progress regularly and decide together."
+    question: "Is everything I say confidential?",
+    answer: "Yes. Sessions are private and encrypted, and nothing is shared outside our conversation except in rare situations where there is a risk to life, as required by law."
+  },
+  {
+    question: "Can I reschedule or cancel?",
+    answer: "You can reschedule or cancel free of charge up to 12 hours before your session, directly from your bookings page."
+  },
+  {
+    question: "How many sessions will I need?",
+    answer: "It varies. Some people feel clearer within four to six sessions; others prefer ongoing support. We review together every few weeks and you decide the pace."
   }
 ];
 
 const MOCK_TESTIMONIALS = [
   {
-    quote: "My sessions with Dyuti have been going really well, and I have nothing but positive feedback to share. She has helped me unpack my anxiety step-by-step and replace my limiting patterns with healthy beliefs.",
-    author: "Anonymous Client"
+    quote: "I had put off therapy for years because I expected to be analysed. Instead it felt like being listened to properly for the first time.",
+    author: "R. S.",
+    context: "Working with Dr. Menon for 6 months"
   },
   {
-    quote: "I felt a massive weight lift off my shoulders from the very first session. The psychoeducation on stress and narrative techniques she offered were extremely easy to apply in my day-to-day life.",
-    author: "Software Engineer, Bengaluru"
+    quote: "She gave me practical things to try between sessions, which made a real difference at work. I stopped dreading Monday mornings.",
+    author: "Priya K.",
+    context: "Burnout & work stress"
+  },
+  {
+    quote: "Being able to switch between Malayalam and English meant I could actually explain what I felt, instead of translating it first.",
+    author: "A. N.",
+    context: "Family conflict"
+  },
+  {
+    quote: "Patient, warm and never rushed. I never once felt like just another appointment on a calendar.",
+    author: "Devika M.",
+    context: "Anxiety, 1 year of sessions"
   }
 ];
 
@@ -54,6 +91,75 @@ function initials(name: string | null): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+type DayAvailability = {
+  key: string;
+  date: Date;
+  weekday: string;
+  dayNumber: string;
+  month: string;
+  slots: TimeSlot[];
+};
+
+type TimeSlot = {
+  label: string;
+  period: 'Morning' | 'Afternoon' | 'Evening';
+  available: boolean;
+};
+
+const slotTemplate: Omit<TimeSlot, 'available'>[] = [
+  { label: '9:00 AM', period: 'Morning' },
+  { label: '10:30 AM', period: 'Morning' },
+  { label: '12:00 PM', period: 'Afternoon' },
+  { label: '2:30 PM', period: 'Afternoon' },
+  { label: '4:00 PM', period: 'Afternoon' },
+  { label: '6:30 PM', period: 'Evening' },
+  { label: '8:00 PM', period: 'Evening' }
+];
+
+const unavailablePattern: number[][] = [
+  [0, 1, 3],
+  [2, 5],
+  [],
+  [0, 4, 6],
+  [1, 2, 3, 4, 5, 6],
+  [3],
+  [0, 2, 6]
+];
+
+function buildAvailability(): DayAvailability[] {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const today = new Date();
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, "0");
+    const d = date.getDate().toString().padStart(2, "0");
+    const key = `${y}-${m}-${d}`;
+
+    const weekday = index === 0 ? 'Today' : days[date.getDay()];
+    const dayNumber = date.getDate().toString();
+    const month = months[date.getMonth()];
+
+    const blocked = unavailablePattern[index % unavailablePattern.length];
+
+    return {
+      key,
+      date,
+      weekday,
+      dayNumber,
+      month,
+      slots: slotTemplate.map((slot, slotIndex) => ({
+        ...slot,
+        available: !blocked.includes(slotIndex)
+      }))
+    };
+  });
 }
 
 export function TherapistDetailPage() {
@@ -71,18 +177,6 @@ export function TherapistDetailPage() {
   const [isOtpStage, setIsOtpStage] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // Redesign state variables
-  const [showFullBio, setShowFullBio] = useState(false);
-  const [sessionType, setSessionType] = useState<"video" | "inperson" | "call">("video");
-  const [selectedDateIdx, setSelectedDateIdx] = useState<number | null>(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-
-  // FAQ Carousel state
-  const [faqIndex, setFaqIndex] = useState(0);
-  
-  // Testimonial Carousel state
-  const [testimonialIndex, setTestimonialIndex] = useState(0);
-
   const query = useQuery({
     queryKey: ["public-therapist", therapistId],
     queryFn: () => apiFetch<any>(`/api/public/providers/${therapistId}`),
@@ -91,27 +185,36 @@ export function TherapistDetailPage() {
 
   const therapist = query.data;
 
-  const specializations = useMemo(() => {
-    return therapist?.specializations?.filter(Boolean) ?? [
-      "Cognitive Behaviour Therapy",
-      "Trauma-Informed Therapy",
-      "Narrative Therapy",
-      "Acceptance and Commitment Therapy (ACT)",
-      "Emotion Focused Approach (EFT)"
-    ];
-  }, [therapist?.specializations]);
+  // Single Session Booking state
+  const days = useMemo(() => buildAvailability(), []);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
-  const certifications = useMemo(() => {
-    return therapist?.certifications?.filter(Boolean) ?? [
-      "Master of Science in Clinical Psychology (Manipal University)",
-      "Bachelor of Arts in Psychology (Delhi University)",
-      "Accredited Cognitive Behavioural Practitioner"
-    ];
-  }, [therapist?.certifications]);
+  useEffect(() => {
+    if (days.length > 0 && !selectedDay) {
+      setSelectedDay(days[0].key);
+    }
+  }, [days, selectedDay]);
 
-  const experienceLabel = therapist?.experienceYears
-    ? `${therapist.experienceYears}+ Years`
-    : "10+ Years";
+  const slotsQuery = useQuery({
+    queryKey: ["public-therapist-slots", therapistId, selectedDay],
+    queryFn: () => apiFetch<any>(`/api/therapists/${therapistId}/weekly-slots?date=${encodeURIComponent(selectedDay || "")}`),
+    enabled: !!therapistId && !!selectedDay,
+  });
+
+  const slotsList = useMemo(() => {
+    return (slotsQuery.data?.slots ?? []).filter((s: any) => !s.isBooked);
+  }, [slotsQuery.data?.slots]);
+
+  const activeDay = days.find((day) => day.key === selectedDay) ?? null;
+  const canBook = Boolean(selectedDay && selectedSlot);
+
+  const handleSelectDay = (key: string) => {
+    setSelectedDay(key);
+    setSelectedSlot(null);
+    setConfirmed(false);
+  };
 
   const openJoinModal = useCallback(() => {
     setModalMethod("email");
@@ -126,40 +229,12 @@ export function TherapistDetailPage() {
     if (!therapist) return;
 
     let preselection = undefined;
-    if (selectedDateIdx !== null && selectedTimeSlot !== null) {
-      const targetDate = new Date(Date.now() + (selectedDateIdx + 1) * 24 * 60 * 60 * 1000);
-      const y = targetDate.getFullYear();
-      const m = (targetDate.getMonth() + 1).toString().padStart(2, "0");
-      const d = targetDate.getDate().toString().padStart(2, "0");
-      const dateYmd = `${y}-${m}-${d}`;
-
-      // parse time to HH:mm (e.g. "03:30 PM" -> "15:30")
-      const match = selectedTimeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-      let startHHmm = selectedTimeSlot;
-      if (match) {
-        let hours = Number(match[1]);
-        const minutes = Number(match[2]);
-        const ampm = match[3].toUpperCase();
-        if (ampm === "PM" && hours !== 12) {
-          hours += 12;
-        } else if (ampm === "AM" && hours === 12) {
-          hours = 0;
-        }
-        startHHmm = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-      }
-
-      // calculate end (50 minutes later)
-      const [h, min] = startHHmm.split(":").map(Number);
-      const startMinutes = h * 60 + min;
-      const endMinutes = startMinutes + 50;
-      const endHours = Math.floor(endMinutes / 60) % 24;
-      const endMins = endMinutes % 60;
-      const endHHmm = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
-
+    if (selectedDay !== null && selectedSlot !== null) {
+      const slotObj = slotsList.find((s: any) => s.start === selectedSlot);
       preselection = {
-        dateYmd,
-        start: startHHmm,
-        end: endHHmm,
+        dateYmd: selectedDay,
+        start: selectedSlot,
+        end: slotObj?.end ?? `${String(parseInt(selectedSlot.split(":")[0]) + 1).padStart(2, "0")}:${selectedSlot.split(":")[1]}`,
       };
     }
 
@@ -177,7 +252,26 @@ export function TherapistDetailPage() {
       return;
     }
     openBookSession(healer);
-  }, [therapist, status, selectedDateIdx, selectedTimeSlot, openJoinModal, openBookSession]);
+  }, [therapist, status, selectedDay, selectedSlot, slotsList, openJoinModal, openBookSession]);
+
+  const handleBookPackage = useCallback((pkg: any) => {
+    if (!therapist) return;
+    const healer: BookSessionHealer = {
+      providerId: therapist.id,
+      name: therapist.name ?? "Therapist",
+      preferredRole: "THERAPIST",
+      imageSrc: therapist.image,
+      specialty: therapist.specializations?.[0] ?? "Therapist",
+      initialBookingOption: "PACKAGE",
+      initialPackageId: pkg.id,
+    };
+    if (status !== "authenticated") {
+      pendingBookingRef.current = { healer };
+      openJoinModal();
+      return;
+    }
+    openBookSession(healer);
+  }, [therapist, status, openJoinModal, openBookSession]);
 
   useEffect(() => {
     if (status === "authenticated" && pendingBookingRef.current) {
@@ -207,531 +301,247 @@ export function TherapistDetailPage() {
     }
   };
 
-  // Mock available dates scroller starting from tomorrow
-  const availableDates = useMemo(() => {
-    const list = [];
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const now = new Date();
-    
-    for (let i = 1; i <= 7; i++) {
-      const targetDate = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
-      const dayName = days[targetDate.getDay()];
-      const dayNum = targetDate.getDate();
-      const monthName = months[targetDate.getMonth()];
-      
-      const suffix = (day: number) => {
-        if (day > 3 && day < 21) return "th";
-        switch (day % 10) {
-          case 1:  return "st";
-          case 2:  return "nd";
-          case 3:  return "rd";
-          default: return "th";
-        }
-      };
-
-      list.push({
-        label: `${dayNum}${suffix(dayNum)} ${monthName}`,
-        day: dayName,
-        available: i % 4 !== 3, // mock some dates as not available
-        slotsCount: (i * 2 + 1) % 4, // mock slot count (e.g. 1 available, 3 available)
-      });
-    }
-    return list;
-  }, []);
-
-  const mockTimeSlots = [
-    "09:30 AM", "11:00 AM", "12:30 PM", "03:30 PM", "05:00 PM"
-  ];
-
   const name = therapist?.name ?? "Therapist";
 
-  // Left bio text toggle limits
-  const bioText = therapist?.bio?.trim() || DEFAULT_BIO_FALLBACK;
-  const isBioLong = bioText.length > 280;
-  const displayedBio = showFullBio ? bioText : `${bioText.slice(0, 280)}...`;
+  // Dynamic values parsed from database
+  const credentials = useMemo(() => {
+    const certs = therapist?.certifications?.filter(Boolean) ?? [];
+    if (certs.length > 0) {
+      return certs.map((c: string) => {
+        const parts = c.split(/\s+from\s+|\s*\(\s*/i);
+        const degree = parts[0]?.trim() || c;
+        let institution = parts[1]?.replace(/\)$/, "")?.trim() || "Apna Healer Academy";
+        return { degree, institution };
+      });
+    }
+    return [
+      { degree: 'M.Phil. Clinical Psychology', institution: 'NIMHANS, Bengaluru' },
+      { degree: 'M.A. Psychology', institution: 'University of Delhi' }
+    ];
+  }, [therapist?.certifications]);
+
+  const bioShort = therapist?.philosophyQuote ?? DEFAULT_PHILOSOPHY_QUOTE;
+  const bioFull = useMemo(() => {
+    if (!therapist?.bio) return [DEFAULT_BIO_FALLBACK];
+    return therapist.bio.split(/\n+/).map((p: string) => p.trim()).filter(Boolean);
+  }, [therapist?.bio]);
+
+  const concernsList = useMemo(() => {
+    return therapist?.specializations?.filter((s: string) => !s.toLowerCase().includes("therapy") && !s.toLowerCase().includes("cbt")) ?? [
+      'Anxiety & overthinking',
+      'Depression & low mood',
+      'Work burnout',
+      'Relationship difficulties',
+      'Self-esteem',
+      'Life transitions'
+    ];
+  }, [therapist?.specializations]);
+
+  const specializationsList = useMemo(() => {
+    return therapist?.specializations?.filter(Boolean) ?? [
+      'Cognitive Behavioural Therapy (CBT)',
+      'Acceptance & Commitment Therapy (ACT)',
+      'Mindfulness-Based Stress Reduction',
+      'Trauma-informed practice'
+    ];
+  }, [therapist?.specializations]);
+
+  const languagesList = therapist?.languages?.length > 0 ? therapist.languages : ['English', 'Hindi'];
+
+  const affiliationsList = useMemo(() => {
+    return [
+      { name: 'Rehabilitation Council of India', role: 'Licensed Practitioner (CRR)' },
+      { name: 'Indian Association of Clinical Psychologists', role: 'Life Member' }
+    ];
+  }, []);
+
+  const mappedPackages = useMemo(() => {
+    const list = therapist?.packagesCreated ?? [];
+    if (list.length > 0) {
+      return list.map((pkg: any) => {
+        const totalSessions = pkg.allocations?.reduce((sum: number, a: any) => sum + a.sessionCount, 0) ?? 0;
+        const originalPrice = Number(pkg.price);
+        const discountPercent = Number(pkg.discount || 0);
+        const finalPrice = originalPrice - originalPrice * (discountPercent / 100);
+        return {
+          id: pkg.id,
+          name: pkg.title,
+          sessions: totalSessions,
+          originalPrice: originalPrice,
+          price: finalPrice,
+          description: pkg.description,
+          rawPackage: pkg
+        };
+      });
+    }
+    const rate = Number(therapist?.hourlyRate ?? 1499);
+    return [
+      {
+        id: 'starter',
+        name: 'Getting Started',
+        sessions: 4,
+        originalPrice: rate * 4,
+        price: Math.round(rate * 4 * 0.9),
+        description: 'Four weekly sessions to settle in and find your footing.'
+      },
+      {
+        id: 'steady',
+        name: 'Steady Progress',
+        sessions: 8,
+        originalPrice: rate * 8,
+        price: Math.round(rate * 8 * 0.83),
+        description: 'Two months of consistent work on a specific concern.'
+      },
+      {
+        id: 'deep',
+        name: 'Deeper Work',
+        sessions: 12,
+        originalPrice: rate * 12,
+        price: Math.round(rate * 12 * 0.77),
+        description: 'For longer-term patterns that need time and continuity.'
+      }
+    ];
+  }, [therapist]);
+
+  const experienceLabel = therapist?.experienceYears
+    ? `${therapist.experienceYears}`
+    : "10";
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#273331]">
+    <div className="min-h-screen bg-[#FBF8F3] text-[#33302B]">
+      {/* Dynamic font loader inside head for Fraunces */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap');
+        .font-fraunces {
+          font-family: 'Fraunces', Georgia, serif;
+        }
+      `}} />
+
       <LandingNavbar onJoinClick={openJoinModal} />
 
-      <main className="mx-auto max-w-[1240px] px-6 pb-24 pt-8 md:px-10">
+      <main className="mx-auto max-w-6xl px-5 pb-24 pt-8 sm:px-8 sm:pt-12">
         <Link
           href="/therapists"
-          className="inline-flex items-center gap-1 text-xs font-bold text-[#2f745f] transition hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm text-[#5F5A52] transition-colors duration-150 ease-out hover:text-[#2E4739] mb-8 font-semibold"
         >
-          ← ALL THERAPISTS
+          <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
+          All therapists
         </Link>
 
         {query.isLoading ? (
           <div className="mt-12 grid gap-10 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
-              <div className="h-40 animate-pulse rounded-3xl bg-[#e8e6e1]" />
-              <div className="h-64 animate-pulse rounded-3xl bg-[#e8e6e1]" />
+              <div className="h-40 animate-pulse rounded-3xl bg-[#EAE3D8]" />
+              <div className="h-64 animate-pulse rounded-3xl bg-[#EAE3D8]" />
             </div>
-            <div className="h-[400px] animate-pulse rounded-3xl bg-[#e8e6e1]" />
+            <div className="h-[400px] animate-pulse rounded-3xl bg-[#EAE3D8]" />
           </div>
         ) : query.error || !therapist ? (
-          <div className="mt-12 rounded-3xl border border-dashed border-[#cfd4d2] bg-white px-8 py-16 text-center shadow-sm">
+          <div className="mt-12 rounded-3xl border border-dashed border-[#DDD4C6] bg-white px-8 py-16 text-center shadow-sm">
             <p className="text-lg font-semibold">Therapist not found</p>
-            <Link href="/therapists" className="mt-4 inline-block text-xs font-bold text-[#2f745f] hover:underline">
+            <Link href="/therapists" className="mt-4 inline-block text-xs font-bold text-[#2E4739] hover:underline">
               Browse all therapists
             </Link>
           </div>
         ) : (
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Center-Left Scrollable Column */}
-            <div className="lg:col-span-8 space-y-10">
-              
-              {/* Profile Header Summary */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)] flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center gap-5">
-                  <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 bg-[#e8ddd0] border border-[#ebe8e2]">
-                    {therapist.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={therapist.image} alt={name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-white/40 bg-gradient-to-tr from-[#3d5c50] to-[#b8c9be]">
-                        {initials(name)}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h1 className="font-display text-2xl md:text-3xl font-bold text-[#1f2827]">
-                      {name}
-                    </h1>
-                    <p className="text-sm text-[#8a9592] mt-1">Consultant Psychologist</p>
-                    
-                    <div className="mt-4 flex flex-wrap gap-4 text-xs text-[#5c6865]">
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <svg className="w-4 h-4 text-[#2f745f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                        </svg>
-                        B.A, M.Sc
-                      </span>
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <svg className="w-4 h-4 text-[#2f745f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        {experienceLabel} of experience
-                      </span>
-                    </div>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
 
-                {/* Share Button */}
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("Therapist link copied to clipboard!");
-                  }}
-                  className="w-10 h-10 rounded-full border border-[#ebe8e2] text-[#5c6865] flex items-center justify-center hover:bg-[#faf9f6] transition shrink-0 shadow-xs self-start md:self-center"
-                  aria-label="Share profile"
-                >
-                  <svg className="w-4 h-4 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
-                  </svg>
-                </button>
-              </div>
+            {/* Center-Left Scrollable Column */}
+            <div className="lg:col-span-7 xl:col-span-8">
+
+              {/* Profile Header Summary */}
+              <ProfileHeader
+                name={name}
+                photo={therapist.image}
+                title={therapist.role === "THERAPIST" ? "Consultant Psychologist" : "Listener"}
+                verified={true}
+                experienceYears={experienceLabel}
+                sessionsCompleted={therapist.sessionsCompleted ?? 1200}
+                location={`${therapist.city ?? "Bengaluru"} · Online sessions`}
+                credentials={credentials}
+              />
 
               {/* Video Introduction Box */}
-              <div className="aspect-video w-full rounded-3xl overflow-hidden bg-[#e8ddd0] relative group shadow-sm">
-                {therapist.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={therapist.image} alt={name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-[#3d5c50] to-[#b8c9be]" />
-                )}
-                {/* Play button overlay */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/15 group-hover:bg-black/25 transition cursor-pointer">
-                  <div className="w-16 h-16 rounded-full bg-white/95 text-[#2f745f] flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-all">
-                    <svg className="w-6 h-6 fill-current ml-1" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                </div>
+              <div className="mt-10">
+                <VideoIntro
+                  poster={therapist.image || "/1319c024-f930-4806-99d6-7e584018bce8.jpg"}
+                  length="1:42"
+                  therapistName={name}
+                />
               </div>
 
-              {/* Biography Text Block */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <h3 className="font-display text-lg font-bold text-[#1f2827] mb-4">Biography</h3>
-                <p className="text-xs sm:text-sm text-[#5c6865] leading-relaxed whitespace-pre-line">
-                  {displayedBio}
-                </p>
-                {isBioLong && (
-                  <button
-                    onClick={() => setShowFullBio(!showFullBio)}
-                    className="mt-3 text-xs font-bold text-[#2f745f] hover:underline block"
-                  >
-                    {showFullBio ? "Read less ∧" : "Read more ∨"}
-                  </button>
-                )}
-              </div>
+              {/* Biography Section */}
+              <Section id="about" title={`About ${name.split(" ")[0] || "Therapist"}`}>
+                <Biography intro={bioShort} paragraphs={bioFull} />
+              </Section>
 
-              {/* Concerns I can help with */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="9" />
-                      <path d="M8 12h8m-4-4v8" />
-                    </svg>
-                  </div>
-                  <h3 className="font-display text-lg font-bold text-[#1f2827]">Concerns I can help with</h3>
-                </div>
-                
-                <div className="space-y-4">
-                  {[
-                    "I've been feeling really down lately, and it's affecting my daily life.",
-                    "I've been feeling overwhelmed by anxiety lately.",
-                    "I avoid social events, and I am self-conscious about my appearance."
-                  ].map((quoteText, idx) => (
-                    <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-[#faf9f6] border border-[#ebe8e2]/60">
-                      <span className="text-2xl text-[#2f745f] font-serif leading-none shrink-0">&ldquo;</span>
-                      <p className="text-xs sm:text-sm text-[#5c6865] leading-relaxed italic">{quoteText}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Concerns I help with */}
+              <Section
+                id="concerns"
+                title="Concerns she helps with"
+                description="If what you are carrying is not listed, it is still worth asking."
+              >
+                <ConcernsList concerns={concernsList} />
+              </Section>
 
-              {/* I offer therapy for categories carousel */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                        <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-display text-lg font-bold text-[#1f2827]">I offer therapy for</h3>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button className="w-7 h-7 rounded-full bg-[#f4f3ef] border border-[#ebe8e2] text-[#1f2827] flex items-center justify-center text-xs hover:bg-[#faf9f6] transition font-bold">&lt;</button>
-                    <button className="w-7 h-7 rounded-full bg-[#f4f3ef] border border-[#ebe8e2] text-[#1f2827] flex items-center justify-center text-xs hover:bg-[#faf9f6] transition font-bold">&gt;</button>
-                  </div>
-                </div>
+              {/* Approach & specialisations */}
+              <Section id="approach" title="Approach & specialisations">
+                <SpecializationsList items={specializationsList} />
+              </Section>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { label: "Relationship skills", color: "bg-red-50 text-red-500" },
-                    { label: "Anger management", color: "bg-yellow-50 text-yellow-600" },
-                    { label: "Self improvement", color: "bg-blue-50 text-blue-500" },
-                    { label: "Parenting concerns", color: "bg-green-50 text-green-600" }
-                  ].map((card, idx) => (
-                    <div key={idx} className="p-4 rounded-2xl border border-[#ebe8e2] bg-white flex flex-col items-center text-center hover:shadow-xs transition">
-                      <div className={`w-12 h-12 rounded-full ${card.color} flex items-center justify-center mb-3`}>
-                        <svg className="w-6 h-6 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="6" />
-                          <path d="M12 9v6m-3-3h6" />
-                        </svg>
-                      </div>
-                      <span className="text-xs font-semibold text-[#1f2827]">{card.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Languages */}
+              <Section id="languages" title="Languages">
+                <LanguagesRow languages={languagesList} />
+              </Section>
 
-              {/* I Specialise in */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                      <path d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.25 0h8.25" />
-                    </svg>
-                  </div>
-                  <h3 className="font-display text-lg font-bold text-[#1f2827]">I Specialise in</h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {specializations.map((spec: string, index: number) => (
-                    <div
-                      key={index}
-                      onClick={() => alert(`Showing info for modality: ${spec}`)}
-                      className="flex items-center justify-between p-4 rounded-2xl border border-[#ebe8e2] bg-white hover:border-[#2f745f]/40 hover:bg-[#faf9f6]/40 cursor-pointer transition shadow-2xs"
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <span className="w-6 h-6 rounded-full bg-[#fdf6f0] text-[#e05a36] flex items-center justify-center font-display font-extrabold text-xs shrink-0 shadow-3xs">
-                          {index + 1}
-                        </span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#1f2827]">{spec}</span>
-                      </div>
-                      <span className="text-[#8a9592] text-xs font-bold font-mono shrink-0">&gt;</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Languages I speak */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                      <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-display text-lg font-bold text-[#1f2827]">Languages I speak</h3>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5">
-                  {(therapist.languages?.length > 0 ? therapist.languages : ["English", "Hindi"]).map((lang: string) => (
-                    <span key={lang} className="flex items-center gap-1.5 px-4.5 py-2 rounded-full border border-[#ebe8e2] bg-[#fdf6f0]/40 text-xs font-bold text-[#1f2827] shadow-3xs">
-                      <span className="text-[#2f745f]">✓</span> {lang}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* My Affiliations */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" />
-                      <circle cx="12" cy="12" r="6" />
-                      <circle cx="12" cy="12" r="2" />
-                    </svg>
-                  </div>
-                  <h3 className="font-display text-lg font-bold text-[#1f2827]">My Affiliations</h3>
-                </div>
-
-                <ul className="space-y-3.5">
-                  <li className="flex items-start gap-3.5 text-xs sm:text-sm text-[#5c6865] leading-relaxed">
-                    <span className="w-5 h-5 rounded-full bg-[#eef6eb] text-[#2f745f] flex items-center justify-center font-bold text-[10px] shrink-0">✓</span>
-                    <span>Consultant Psychologist at Apna Healer from Aug 2023 to present</span>
-                  </li>
-                </ul>
-              </div>
+              {/* Professional affiliations */}
+              <Section id="affiliations" title="Professional affiliations">
+                <AffiliationsList affiliations={affiliationsList} />
+              </Section>
 
               {/* FAQs Carousel */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                        <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-display text-lg font-bold text-[#1f2827]">FAQs</h3>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setFaqIndex((prev) => (prev === 0 ? MOCK_FAQS.length - 1 : prev - 1))}
-                      className="w-7 h-7 rounded-full bg-[#f4f3ef] border border-[#ebe8e2] text-[#1f2827] flex items-center justify-center text-xs hover:bg-[#faf9f6] transition font-bold"
-                    >
-                      &lt;
-                    </button>
-                    <button
-                      onClick={() => setFaqIndex((prev) => (prev === MOCK_FAQS.length - 1 ? 0 : prev + 1))}
-                      className="w-7 h-7 rounded-full bg-[#f4f3ef] border border-[#ebe8e2] text-[#1f2827] flex items-center justify-center text-xs hover:bg-[#faf9f6] transition font-bold"
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-[#faf9f6] border border-[#ebe8e2]/60 min-h-[160px] flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-[#1f2827]">
-                      {MOCK_FAQS[faqIndex].question}
-                    </h4>
-                    <p className="text-xs text-[#5c6865] mt-3 leading-relaxed whitespace-pre-line">
-                      {MOCK_FAQS[faqIndex].answer}
-                    </p>
-                  </div>
-                  
-                  <div className="mt-6 flex justify-center gap-1.5">
-                    {MOCK_FAQS.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setFaqIndex(idx)}
-                        className={`h-1 rounded-full transition-all ${
-                          faqIndex === idx ? "w-6 bg-[#2f745f]" : "w-1.5 bg-[#d1dcd7]"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <FaqCarousel faqs={MOCK_FAQS} therapistFirstName={name.split(" ")[0]} />
 
               {/* Testimonials Carousel */}
-              <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#eef6eb] text-[#2f745f] flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 fill-none stroke-current" strokeWidth={2} viewBox="0 0 24 24">
-                        <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-display text-lg font-bold text-[#1f2827]">Testimonials</h3>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setTestimonialIndex((prev) => (prev === 0 ? MOCK_TESTIMONIALS.length - 1 : prev - 1))}
-                      className="w-7 h-7 rounded-full bg-[#f4f3ef] border border-[#ebe8e2] text-[#1f2827] flex items-center justify-center text-xs hover:bg-[#faf9f6] transition font-bold"
-                    >
-                      &lt;
-                    </button>
-                    <button
-                      onClick={() => setTestimonialIndex((prev) => (prev === MOCK_TESTIMONIALS.length - 1 ? 0 : prev + 1))}
-                      className="w-7 h-7 rounded-full bg-[#f4f3ef] border border-[#ebe8e2] text-[#1f2827] flex items-center justify-center text-xs hover:bg-[#faf9f6] transition font-bold"
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                </div>
+              <TestimonialCarousel testimonials={MOCK_TESTIMONIALS} />
 
-                <div className="p-6 rounded-2xl bg-[#faf9f6] border border-[#ebe8e2]/60 min-h-[150px] flex flex-col justify-between">
-                  <div>
-                    <span className="text-3xl text-[#2f745f]/30 font-serif leading-none block -mt-2">&ldquo;</span>
-                    <p className="text-xs sm:text-sm text-[#5c6865] leading-relaxed italic -mt-2">
-                      {MOCK_TESTIMONIALS[testimonialIndex].quote}
+            </div>
+
+            {/* Center-Right Sticky Booking & Packages Column */}
+            <aside className="lg:col-span-5 xl:col-span-4">
+              <div className="no-scrollbar lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto space-y-6">
+
+                {isProvider ? (
+                  <div className="rounded-3xl border border-[#EAE3D8] bg-white/80 p-6 shadow-soft text-center space-y-4">
+                    <h3 className="font-fraunces text-lg font-bold text-[#2E4739]">Provider Account</h3>
+                    <p className="text-sm text-[#5F5A52]">
+                      Professional provider account - booking therapist sessions is not available.
                     </p>
                   </div>
-                  <div className="mt-5 flex justify-between items-center">
-                    <span className="text-xs font-bold text-[#1f2827]">
-                      {MOCK_TESTIMONIALS[testimonialIndex].author}
-                    </span>
-                    <div className="flex gap-1.5">
-                      {MOCK_TESTIMONIALS.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setTestimonialIndex(idx)}
-                          className={`h-1.5 rounded-full transition-all ${
-                            testimonialIndex === idx ? "w-5 bg-[#2f745f]" : "w-1.5 bg-[#d1dcd7]"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <BookingCard
+                    therapist={therapist}
+                    days={days}
+                    selectedDay={selectedDay}
+                    onSelectDay={handleSelectDay}
+                    selectedSlot={selectedSlot}
+                    onSelectSlot={setSelectedSlot}
+                    confirmed={confirmed}
+                    onConfirm={() => setConfirmed(true)}
+                    canBook={canBook}
+                    beginJourney={beginJourney}
+                    slotsList={slotsList}
+                    isLoadingSlots={slotsQuery.isLoading}
+                  />
+                )}
+
+                <PackageList
+                  packages={mappedPackages}
+                  handleBookPackage={handleBookPackage}
+                />
               </div>
-
-            </div>
-
-            {/* Center-Right Fixed Column (Sticky Booking Widget) */}
-            <div className="lg:col-span-4">
-              {isProvider ? (
-                <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 shadow-[0_12px_44px_-16px_rgba(0,0,0,0.06)] space-y-4 text-center sticky top-24">
-                  <h3 className="font-display text-lg font-bold text-[#1f2827]">Provider Account</h3>
-                  <p className="text-sm text-[#5c6865]">
-                    Professional provider account - booking therapist sessions is not available.
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-white border border-[#ebe8e2] rounded-3xl p-6 shadow-[0_12px_44px_-16px_rgba(0,0,0,0.06)] space-y-6 sticky top-24">
-                  
-                  {/* Session Duration & Price */}
-                  <div>
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-[#8a9592]">Session Duration</span>
-                      <span className="text-[#e05a36] bg-red-50 border border-red-100 rounded-lg px-2.5 py-1">
-                        50 mins, 1 session
-                      </span>
-                    </div>
-                    
-                    <div className="border-t border-[#ebe8e2] my-4" />
-                    
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-[#1f2827] text-lg font-bold">
-                        {therapist.hourlyRate ? `₹${therapist.hourlyRate}` : "₹2200"}
-                      </span>
-                      <span className="text-xs text-[#8a9592]">/ session</span>
-                    </div>
-                  </div>
-
-                  {/* Date Picker slots */}
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#8a9592]">
-                        Check available slots
-                      </h4>
-                      <button
-                        onClick={() => alert("Showing full schedule calendar...")}
-                        className="text-[#2f745f] hover:text-[#255c4b]"
-                        aria-label="Full calendar"
-                      >
-                        <svg className="w-4.5 h-4.5 stroke-current fill-none" strokeWidth={2} viewBox="0 0 24 24">
-                          <rect x="3" y="4" width="18" height="18" rx="2" />
-                          <path d="M16 2v4M8 2v4M3 10h18" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Horizontal Dates list */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                      {availableDates.map((item, idx) => (
-                        <button
-                          key={idx}
-                          disabled={!item.available}
-                          onClick={() => {
-                            setSelectedDateIdx(idx);
-                            setSelectedTimeSlot(null); // Reset time when date changes
-                          }}
-                          className={`flex-1 min-w-[76px] flex flex-col items-center p-2.5 rounded-xl border text-center transition-all ${
-                            !item.available
-                              ? "bg-[#faf9f6]/80 border-[#ebe8e2]/60 text-[#d1dcd7] cursor-not-allowed"
-                              : selectedDateIdx === idx
-                              ? "bg-[#2f745f] border-[#2f745f] text-white shadow-xs"
-                              : "bg-white border-[#ebe8e2] text-[#1f2827] hover:border-[#2f745f]"
-                          }`}
-                        >
-                          <span className="text-[10px] uppercase font-bold tracking-wide opacity-80">{item.day}</span>
-                          <span className="text-xs font-extrabold mt-1">{item.label.split(" ")[0]}</span>
-                          <span className={`text-[8px] font-semibold mt-1 block ${
-                            selectedDateIdx === idx ? "text-white/90" : "text-[#8a9592]"
-                          }`}>
-                            {item.available ? `${item.slotsCount} available` : "not available"}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Time Slots Section */}
-                  {selectedDateIdx !== null && (
-                    <div>
-                      <div className="flex justify-between items-baseline mb-3 text-xs font-semibold text-[#8a9592]">
-                        <span>NOON</span>
-                        <span className="text-[10px] font-bold">12:00 PM - 05:00 PM</span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {mockTimeSlots.map((time) => (
-                          <button
-                            key={time}
-                            onClick={() => setSelectedTimeSlot(time)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
-                              selectedTimeSlot === time
-                                ? "bg-[#2f745f] border-[#2f745f] text-white shadow-xs"
-                                : "bg-white border-[#ebe8e2] text-[#1f2827] hover:border-[#2f745f]"
-                            }`}
-                          >
-                            {time}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Booking Action Button */}
-                  <button
-                    type="button"
-                    onClick={beginJourney}
-                    disabled={selectedDateIdx === null || selectedTimeSlot === null}
-                    className={`w-full py-4 rounded-xl text-sm font-bold tracking-wide shadow-md transition-all ${
-                      selectedDateIdx !== null && selectedTimeSlot !== null
-                        ? "bg-[#2f745f] hover:bg-[#255c4b] text-white hover:shadow-lg"
-                        : "bg-[#eceae6] border border-[#ebe8e2] text-[#8a9592] cursor-not-allowed shadow-none"
-                    }`}
-                  >
-                    PROCEED
-                  </button>
-
-                </div>
-              )}
-            </div>
+            </aside>
 
           </div>
         )}
@@ -763,5 +573,703 @@ export function TherapistDetailPage() {
         onOtpSubmit={(e) => e.preventDefault()}
       />
     </div>
+  );
+}
+
+/* Inlined Child Components mapped exactly to template design */
+
+function Section({
+  title,
+  description,
+  id,
+  action,
+  children
+}: {
+  title: string;
+  description?: string;
+  id?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} aria-labelledby={`${id ?? title}-heading`} className="pt-10">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <h2
+            id={`${id ?? title}-heading`}
+            className="font-fraunces text-2xl text-[#2E4739] font-semibold"
+          >
+            {title}
+          </h2>
+          {description ? (
+            <p className="mt-1 text-sm text-[#5F5A52]">{description}</p>
+          ) : null}
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ProfileHeader({
+  name,
+  photo,
+  title,
+  verified,
+  experienceYears,
+  sessionsCompleted,
+  location,
+  credentials
+}: {
+  name: string;
+  photo?: string | null;
+  title: string;
+  verified: boolean;
+  experienceYears: string;
+  sessionsCompleted: number;
+  location: string;
+  credentials: { degree: string; institution: string }[];
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href).catch(() => undefined);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8 text-left">
+      <div className="h-32 w-32 flex-none rounded-3xl overflow-hidden bg-[#F5F0E8] border border-[#EAE3D8] sm:h-40 sm:w-40">
+        {photo ? (
+          <img
+            src={photo}
+            alt={`Portrait of ${name}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-white/40 bg-gradient-to-tr from-[#2E4739] to-[#87AB92]">
+            {initials(name)}
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="font-fraunces text-3xl leading-tight text-[#2E4739] sm:text-4xl font-semibold">
+                {name}
+              </h1>
+              {verified ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#E3ECE5] px-2.5 py-1 text-xs font-semibold text-[#587761]">
+                  <BadgeCheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  Verified
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1.5 text-base text-[#5F5A52] font-medium">{title}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex flex-none items-center gap-2 rounded-full border border-[#DDD4C6] px-4 py-2 text-sm font-semibold text-[#33302B] transition-colors duration-150 ease-out hover:border-[#A8C3AF] hover:bg-[#F1F5F1] cursor-pointer"
+          >
+            {copied ? (
+              <CheckIcon className="h-4 w-4 text-[#587761]" aria-hidden="true" />
+            ) : (
+              <Share2Icon className="h-4 w-4" aria-hidden="true" />
+            )}
+            {copied ? 'Link copied' : 'Share profile'}
+          </button>
+        </div>
+
+        <dl className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="sr-only">Experience</dt>
+            <dd className="text-[#33302B]">
+              <span className="font-semibold">{experienceYears}+ years</span>{' '}
+              <span className="text-[#8C867C] font-medium">experience</span>
+            </dd>
+          </div>
+          <span className="h-1 w-1 rounded-full bg-[#DDD4C6]" aria-hidden="true" />
+          <div className="flex items-baseline gap-1.5">
+            <dt className="sr-only">Sessions completed</dt>
+            <dd className="text-[#33302B]">
+              <span className="font-semibold">
+                {sessionsCompleted.toLocaleString('en-IN')}+
+              </span>{' '}
+              <span className="text-[#8C867C] font-medium">sessions</span>
+            </dd>
+          </div>
+          <span className="h-1 w-1 rounded-full bg-[#DDD4C6]" aria-hidden="true" />
+          <div className="flex items-center gap-1.5 text-[#8C867C]">
+            <dt className="sr-only">Location</dt>
+            <MapPinIcon className="h-4 w-4" aria-hidden="true" />
+            <dd className="font-medium">{location}</dd>
+          </div>
+        </dl>
+
+        <ul className="mt-4 space-y-1.5">
+          {credentials.map((credential, idx) => (
+            <li
+              key={idx}
+              className="flex items-start gap-2 text-sm text-[#5F5A52]"
+            >
+              <GraduationCapIcon
+                className="mt-0.5 h-4 w-4 flex-none text-[#87AB92]"
+                aria-hidden="true"
+              />
+              <span>
+                <span className="text-[#33302B] font-semibold">{credential.degree}</span>
+                <span className="text-[#8C867C] font-medium"> · {credential.institution}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </header>
+  );
+}
+
+function VideoIntro({
+  poster,
+  length,
+  therapistName
+}: {
+  poster: string;
+  length: string;
+  therapistName: string;
+}) {
+  const [playing, setPlaying] = useState(false);
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-[#EAE3D8] bg-[#F5F0E8]">
+      <img
+        src={poster}
+        alt={`Still from ${therapistName}'s video introduction`}
+        className="h-full w-full object-cover"
+      />
+
+      <div className="absolute inset-0 bg-[#1F3227]/25" aria-hidden="true" />
+
+      <button
+        type="button"
+        onClick={() => setPlaying((value) => !value)}
+        aria-label={playing ? 'Pause video introduction' : 'Play video introduction'}
+        className="group absolute inset-0 flex items-center justify-center focus-visible:outline-none cursor-pointer"
+      >
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FBF8F3]/95 text-[#2E4739] shadow-[0_2px_4px_rgba(51,48,43,0.04),_0_16px_32px_-16px_rgba(51,48,43,0.16)] transition-transform duration-150 ease-out group-hover:scale-105">
+          {playing ? (
+            <PauseIcon className="h-6 w-6" aria-hidden="true" />
+          ) : (
+            <PlayIcon className="ml-0.5 h-6 w-6 fill-current" aria-hidden="true" />
+          )}
+        </span>
+      </button>
+
+      <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-center justify-between gap-4 sm:inset-x-6 sm:bottom-5">
+        <p className="text-sm font-medium text-[#FBF8F3]">
+          {playing ? 'Now playing' : `A short hello from ${therapistName.split(' ')[1] || therapistName}`}
+        </p>
+        <span className="rounded-full bg-[#1F3227]/60 px-2.5 py-1 text-xs font-medium text-[#FBF8F3]">
+          {length}
+        </span>
+      </div>
+
+      {playing ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-[#FBF8F3]/25" aria-hidden="true">
+          <motion.div
+            className="h-full bg-[#A8C3AF]"
+            initial={{ width: '0%' }}
+            animate={{ width: '100%' }}
+            transition={{ duration: 108, ease: 'linear' }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Biography({ intro, paragraphs }: { intro: string; paragraphs: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="text-left">
+      <p className="max-w-2xl font-fraunces text-xl leading-relaxed text-[#2E4739] font-medium">
+        {intro}
+      </p>
+
+      <AnimatePresence initial={false}>
+        {expanded ? (
+          <motion.div
+            key="bio"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="max-w-2xl space-y-4 pt-5 text-[15px] leading-relaxed text-[#5F5A52] font-medium">
+              {paragraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+        className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#587761] transition-colors duration-150 ease-out hover:text-[#2E4739] cursor-pointer"
+      >
+        {expanded ? 'Show less' : 'Read full introduction'}
+        <ChevronDownIcon
+          className={`h-4 w-4 transition-transform duration-200 ease-out ${expanded ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+    </div>
+  );
+}
+
+function ConcernsList({ concerns }: { concerns: string[] }) {
+  return (
+    <ul className="flex flex-wrap gap-2 text-left">
+      {concerns.map((concern) => (
+        <li
+          key={concern}
+          className="rounded-full border border-[#EAE3D8] bg-white/70 px-4 py-2 text-sm text-[#5F5A52] font-semibold transition-colors duration-150 ease-out hover:border-[#C8DACD] hover:bg-[#F1F5F1] hover:text-[#2E4739]"
+        >
+          {concern}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SpecializationsList({ items }: { items: string[] }) {
+  return (
+    <ul className="grid gap-x-8 gap-y-3 sm:grid-cols-2 text-left">
+      {items.map((item) => (
+        <li key={item} className="flex items-start gap-2.5 text-[15px] text-[#5F5A52] font-semibold">
+          <CheckIcon
+            className="mt-0.5 h-4 w-4 flex-none text-[#87AB92]"
+            aria-hidden="true"
+          />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function LanguagesRow({ languages }: { languages: string[] }) {
+  return (
+    <p className="flex flex-wrap items-center gap-2 text-[15px] text-[#5F5A52] font-medium text-left">
+      <LanguagesIcon className="h-4 w-4 text-[#87AB92]" aria-hidden="true" />
+      <span>Sessions can be held in </span>
+      <span className="text-[#33302B] font-semibold">{languages.join(', ')}</span>
+      <span className="text-[#8C867C]">— or a comfortable mix of them.</span>
+    </p>
+  );
+}
+
+function AffiliationsList({ affiliations }: { affiliations: { name: string; role: string }[] }) {
+  return (
+    <ul className="divide-y divide-[#EAE3D8] border-y border-[#EAE3D8] text-left">
+      {affiliations.map((affiliation) => (
+        <li
+          key={affiliation.name}
+          className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3.5"
+        >
+          <span className="text-[15px] text-[#33302B] font-semibold">{affiliation.name}</span>
+          <span className="text-sm text-[#8C867C] font-medium">{affiliation.role}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Carousel({
+  title,
+  description,
+  id,
+  children
+}: {
+  title: string;
+  description?: string;
+  id: string;
+  children: React.ReactNode;
+}) {
+  const trackRef = useRef<HTMLUListElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const updateArrows = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 8);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }, []);
+
+  useEffect(() => {
+    updateArrows();
+    if (typeof window !== "undefined") {
+      window.addEventListener('resize', updateArrows);
+      return () => window.removeEventListener('resize', updateArrows);
+    }
+  }, [updateArrows]);
+
+  const scrollBy = (direction: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.round(el.clientWidth * 0.8), behavior: 'smooth' });
+  };
+
+  return (
+    <section aria-labelledby={`${id}-heading`} className="pt-10 text-left">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <h2 id={`${id}-heading`} className="font-fraunces text-2xl text-[#2E4739] font-semibold">
+            {title}
+          </h2>
+          {description ? (
+            <p className="mt-1 text-sm text-[#5F5A52] font-medium">{description}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-none gap-2">
+          <button
+            type="button"
+            disabled={!canScrollLeft}
+            onClick={() => scrollBy(-1)}
+            aria-label="Scroll backwards"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#DDD4C6] text-[#33302B] transition-colors duration-150 ease-out hover:border-[#A8C3AF] hover:bg-[#F1F5F1] disabled:border-[#EAE3D8] disabled:text-[#8C867C]/50 disabled:hover:bg-transparent cursor-pointer"
+          >
+            <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            disabled={!canScrollRight}
+            onClick={() => scrollBy(1)}
+            aria-label="Scroll forwards"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#DDD4C6] text-[#33302B] transition-colors duration-150 ease-out hover:border-[#A8C3AF] hover:bg-[#F1F5F1] disabled:border-[#EAE3D8] disabled:text-[#8C867C]/50 disabled:hover:bg-transparent cursor-pointer"
+          >
+            <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      <ul
+        ref={trackRef}
+        onScroll={updateArrows}
+        className="no-scrollbar -mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-1 scrollbar-none"
+      >
+        {children}
+      </ul>
+    </section>
+  );
+}
+
+function FaqCarousel({ faqs, therapistFirstName }: { faqs: typeof MOCK_FAQS; therapistFirstName: string }) {
+  return (
+    <Carousel
+      id="faqs"
+      title="Common questions"
+      description={`Answered by Dr. ${therapistFirstName || "Menon"}, for anyone starting out.`}
+    >
+      {faqs.map((faq) => (
+        <li
+          key={faq.question}
+          className="w-[19rem] flex-none snap-start rounded-3xl border border-[#EAE3D8] bg-white/70 p-6 sm:w-[22rem]"
+        >
+          <h3 className="font-fraunces text-lg leading-snug text-[#2E4739] font-semibold">
+            {faq.question}
+          </h3>
+          <p className="mt-3 text-sm leading-relaxed text-[#5F5A52] font-medium">{faq.answer}</p>
+        </li>
+      ))}
+    </Carousel>
+  );
+}
+
+function TestimonialCarousel({ testimonials }: { testimonials: typeof MOCK_TESTIMONIALS }) {
+  return (
+    <Carousel
+      id="testimonials"
+      title="In their words"
+      description="Shared anonymously, with permission."
+    >
+      {testimonials.map((testimonial) => (
+        <li
+          key={testimonial.author}
+          className="flex w-[19rem] flex-none snap-start flex-col rounded-3xl bg-[#F4F2FA] p-6 sm:w-[22rem] text-left"
+        >
+          <p className="font-fraunces text-lg leading-relaxed text-[#2E4739] font-medium">
+            “{testimonial.quote}”
+          </p>
+          <div className="mt-auto pt-6">
+            <p className="text-sm font-semibold text-[#33302B]">{testimonial.author}</p>
+            <p className="mt-0.5 text-sm text-[#8C867C] font-medium">{testimonial.context}</p>
+          </div>
+        </li>
+      ))}
+    </Carousel>
+  );
+}
+
+function formatSlotLabel(time24: string): string {
+  const [hStr, mStr] = time24.split(":");
+  let h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function BookingCard({
+  therapist,
+  days,
+  selectedDay,
+  onSelectDay,
+  selectedSlot,
+  onSelectSlot,
+  confirmed,
+  onConfirm,
+  canBook,
+  beginJourney,
+  slotsList,
+  isLoadingSlots
+}: {
+  therapist: any;
+  days: DayAvailability[];
+  selectedDay: string | null;
+  onSelectDay: (key: string) => void;
+  selectedSlot: string | null;
+  onSelectSlot: (label: string) => void;
+  confirmed: boolean;
+  onConfirm: () => void;
+  canBook: boolean;
+  beginJourney: () => void;
+  slotsList: any[];
+  isLoadingSlots: boolean;
+}) {
+  const activeDayObj = days.find((day) => day.key === selectedDay) ?? null;
+
+  return (
+    <div className="rounded-3xl border border-[#EAE3D8] bg-white/80 p-6 shadow-[0_1px_2px_rgba(51,48,43,0.03),_0_8px_24px_-12px_rgba(51,48,43,0.10)] text-left">
+      <div className="flex items-baseline justify-between gap-3">
+        <div>
+          <p className="font-fraunces text-3xl text-[#2E4739] font-semibold">
+            ₹{Number(therapist.hourlyRate ?? 1499).toLocaleString('en-IN')}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-[#8C867C] font-medium">
+            <ClockIcon className="h-4 w-4" aria-hidden="true" />
+            50-minute session
+          </p>
+        </div>
+        <span className="rounded-full bg-[#E3ECE5] px-3 py-1 text-xs font-semibold text-[#587761]">
+          Online
+        </span>
+      </div>
+
+      <fieldset className="mt-6 border-0 p-0 m-0">
+        <legend className="text-sm font-semibold text-[#33302B]">Choose a day</legend>
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
+          {days.map((day) => {
+            const selected = day.key === selectedDay;
+            return (
+              <button
+                key={day.key}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onSelectDay(day.key)}
+                className={`flex flex-col items-center gap-0.5 rounded-2xl border px-1 py-2.5 transition-colors duration-150 ease-out cursor-pointer ${
+                  selected ?
+                    'border-[#6E9179] bg-[#6E9179] text-white' :
+                    'border-[#EAE3D8] text-[#33302B] hover:border-[#A8C3AF] hover:bg-[#F1F5F1]'
+                }`}
+              >
+                <span className="text-[10px] uppercase tracking-wide opacity-80 font-bold">
+                  {day.weekday === 'Today' ? 'Now' : day.weekday}
+                </span>
+                <span className="text-sm font-bold">{day.dayNumber}</span>
+                <span className={`text-[8px] font-semibold mt-1 block ${
+                  selected ? "text-white/90" : "text-[#8C867C]"
+                }`}>
+                  {selected ? (isLoadingSlots ? "loading..." : `${slotsList.length} slots`) : "select"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-6 border-0 p-0 m-0">
+        <legend className="text-sm font-semibold text-[#33302B]">
+          {activeDayObj ?
+            `Times on ${activeDayObj.weekday === 'Today' ? 'today' : `${activeDayObj.weekday} ${activeDayObj.dayNumber} ${activeDayObj.month}`}` :
+            'Times'}
+        </legend>
+        <div className="mt-3">
+          {isLoadingSlots ? (
+            <div className="text-xs text-[#8C867C] font-semibold animate-pulse py-2">
+              Loading available slots...
+            </div>
+          ) : slotsList.length > 0 ? (
+            <div className="grid grid-cols-3 gap-1.5">
+              {slotsList.map((slot) => {
+                const selected = selectedSlot === slot.start;
+                return (
+                  <button
+                    key={slot.start}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => {
+                      onSelectSlot(slot.start);
+                      onConfirm();
+                    }}
+                    className={`rounded-xl border px-1 py-2 text-[13px] font-semibold transition-colors duration-150 ease-out cursor-pointer ${
+                      selected ?
+                        'border-[#6E9179] bg-[#6E9179] text-white' :
+                        'border-[#EAE3D8] text-[#5F5A52] hover:border-[#A8C3AF] hover:bg-[#F1F5F1] hover:text-[#2E4739]'
+                    }`}
+                  >
+                    {formatSlotLabel(slot.start)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-xs text-[#8C867C] font-semibold py-2">
+              No slots available for this date.
+            </div>
+          )}
+        </div>
+      </fieldset>
+
+      <button
+        type="button"
+        disabled={!canBook}
+        onClick={beginJourney}
+        className={`mt-6 w-full rounded-2xl px-5 py-3.5 text-sm font-bold transition-colors duration-150 ease-out cursor-pointer ${canBook ?
+          'bg-[#2E4739] text-[#FBF8F3] hover:bg-[#1F3227]' :
+          'cursor-not-allowed bg-[#F5F0E8] text-[#8C867C]/60'
+          }`}
+      >
+        {confirmed ? 'Book Session' : 'Select Slot'}
+      </button>
+
+      <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-[#8C867C] font-semibold">
+        {confirmed ? (
+          <>
+            <CalendarCheckIcon
+              className="mt-px h-3.5 w-3.5 flex-none text-[#6E9179]"
+              aria-hidden="true"
+            />
+            Your slot will be locked while you complete checkout details.
+          </>
+        ) : (
+          <>
+            <ShieldCheckIcon
+              className="mt-px h-3.5 w-3.5 flex-none text-[#8C867C]"
+              aria-hidden="true"
+            />
+            {canBook ?
+              'Free rescheduling up to 12 hours before your session.' :
+              'Pick a day and a time to continue. Nothing is charged yet.'}
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+function PackageList({
+  packages,
+  handleBookPackage
+}: {
+  packages: any[];
+  handleBookPackage: (pkg: any) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  return (
+    <section aria-labelledby="packages-heading" className="mt-6 text-left">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 id="packages-heading" className="font-fraunces text-lg text-[#2E4739] font-semibold">
+          Session packages
+        </h2>
+        <span className="text-xs text-[#8C867C] font-medium">Pay once, book as you go</span>
+      </div>
+
+      <ul className="space-y-3 p-0 m-0">
+        {packages.map((pack) => {
+          const discount = Math.round(
+            (pack.originalPrice - pack.price) / pack.originalPrice * 100
+          );
+          const isSelected = selected === pack.id;
+          return (
+            <li
+              key={pack.id}
+              className={`rounded-3xl border bg-white/70 p-5 transition-colors duration-150 ease-out list-none ${isSelected ? 'border-[#6E9179] bg-[#F1F5F1]' : 'border-[#EAE3D8] hover:border-[#C8DACD]'
+                }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-[15px] font-bold text-[#2E4739]">{pack.name}</h3>
+                  <p className="mt-0.5 text-xs text-[#8C867C] font-semibold">
+                    {pack.sessions} sessions
+                  </p>
+                </div>
+                <span className="flex-none rounded-full bg-[#F9E5D7] px-2.5 py-1 text-xs font-semibold text-[#C97F4E]">
+                  {discount}% off
+                </span>
+              </div>
+
+              <p className="mt-2.5 text-sm leading-relaxed line-clamp-1 text-[#5F5A52] font-semibold">
+                {pack.description}
+              </p>
+
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="flex items-baseline gap-2">
+                  <span className="font-fraunces text-xl text-[#2E4739] font-semibold">
+                    ₹{pack.price.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-sm text-[#8C867C] line-through font-medium">
+                    ₹{pack.originalPrice.toLocaleString('en-IN')}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      handleBookPackage(pack.rawPackage ?? pack);
+                    } else {
+                      setSelected(pack.id);
+                    }
+                  }}
+                  aria-pressed={isSelected}
+                  className={`flex-none rounded-full px-4 py-2 text-sm font-bold transition-colors duration-150 ease-out cursor-pointer ${isSelected ?
+                    'bg-[#6E9179] text-white hover:bg-[#587761]' :
+                    'border border-[#DDD4C6] text-[#33302B] hover:border-[#A8C3AF] hover:bg-[#F1F5F1]'
+                    }`}
+                >
+                  {isSelected ? 'Book Package' : 'Select'}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

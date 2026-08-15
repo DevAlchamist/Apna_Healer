@@ -346,6 +346,7 @@ model User {
   blogReportsReviewed    BlogReport[]          @relation("BlogReportReviewer")
   blogModerationActions  BlogModerationAction[]
   packagePurchases       PackagePurchase[]
+  packagesCreated        Package[]             @relation("ProviderPackages")
 
   @@index([role, createdAt(sort: Desc)])
   @@map("users")
@@ -1313,6 +1314,9 @@ model Package {
 
   allocations        PackageSessionAllocation[]
   purchases          PackagePurchase[]
+
+  providerId         String?
+  provider           User?                    @relation("ProviderPackages", fields: [providerId], references: [id], onDelete: Cascade)
 
   @@map("packages")
 }
