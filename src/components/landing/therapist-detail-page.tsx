@@ -27,7 +27,8 @@ import {
   ClockIcon,
   CalendarCheckIcon,
   ShieldCheckIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  CalendarIcon
 } from "lucide-react";
 
 const DEFAULT_PHILOSOPHY_QUOTE =
@@ -128,12 +129,12 @@ const unavailablePattern: number[][] = [
   [0, 2, 6]
 ];
 
-function buildAvailability(): DayAvailability[] {
+function buildAvailability(length = 30): DayAvailability[] {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const today = new Date();
 
-  return Array.from({ length: 7 }, (_, index) => {
+  return Array.from({ length }, (_, index) => {
     const date = new Date(today);
     date.setDate(today.getDate() + index);
 
@@ -162,6 +163,23 @@ function buildAvailability(): DayAvailability[] {
   });
 }
 
+function buildSingleDay(date: Date): DayAvailability {
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const d = date.getDate().toString().padStart(2, "0");
+  const key = `${y}-${m}-${d}`;
+  return {
+    key,
+    date,
+    weekday: weekdays[date.getDay()],
+    dayNumber: date.getDate().toString(),
+    month: months[date.getMonth()],
+    slots: []
+  };
+}
+
 export function TherapistDetailPage() {
   const params = useParams<{ id: string }>();
   const therapistId = params.id;
@@ -186,16 +204,20 @@ export function TherapistDetailPage() {
   const therapist = query.data;
 
   // Single Session Booking state
-  const days = useMemo(() => buildAvailability(), []);
+  const days = useMemo(() => buildAvailability(30), []);
+  const [customDays, setCustomDays] = useState<DayAvailability[]>([]);
+  const allDays = useMemo(() => [...days, ...customDays], [days, customDays]);
+
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [startIndex, setStartIndex] = useState(0);
 
   useEffect(() => {
-    if (days.length > 0 && !selectedDay) {
-      setSelectedDay(days[0].key);
+    if (allDays.length > 0 && !selectedDay) {
+      setSelectedDay(allDays[0].key);
     }
-  }, [days, selectedDay]);
+  }, [allDays, selectedDay]);
 
   const slotsQuery = useQuery({
     queryKey: ["public-therapist-slots", therapistId, selectedDay],
@@ -207,7 +229,7 @@ export function TherapistDetailPage() {
     return (slotsQuery.data?.slots ?? []).filter((s: any) => !s.isBooked);
   }, [slotsQuery.data?.slots]);
 
-  const activeDay = days.find((day) => day.key === selectedDay) ?? null;
+  const activeDay = allDays.find((day) => day.key === selectedDay) ?? null;
   const canBook = Boolean(selectedDay && selectedSlot);
 
   const handleSelectDay = (key: string) => {
@@ -409,12 +431,16 @@ export function TherapistDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#FBF8F3] text-[#33302B]">
-      {/* Dynamic font loader inside head for Fraunces */}
+      {/* Global scrollbar removal */}
       <style dangerouslySetInnerHTML={{
         __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap');
-        .font-fraunces {
-          font-family: 'Fraunces', Georgia, serif;
+        /* Hide scrollbars globally on this page */
+        *::-webkit-scrollbar {
+          display: none !important;
+        }
+        * {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
         }
       `}} />
 
@@ -463,13 +489,15 @@ export function TherapistDetailPage() {
               />
 
               {/* Video Introduction Box */}
-              <div className="mt-10">
-                <VideoIntro
-                  poster={therapist.image || "/1319c024-f930-4806-99d6-7e584018bce8.jpg"}
-                  length="1:42"
-                  therapistName={name}
-                />
-              </div>
+              {!!(therapist.videoUrl || therapist.introVideoUrl || therapist.video) && (
+                <div className="mt-10">
+                  <VideoIntro
+                    poster={therapist.image || "/1319c024-f930-4806-99d6-7e584018bce8.jpg"}
+                    length="1:42"
+                    therapistName={name}
+                  />
+                </div>
+              )}
 
               {/* Biography Section */}
               <Section id="about" title={`About ${name.split(" ")[0] || "Therapist"}`}>
@@ -514,7 +542,7 @@ export function TherapistDetailPage() {
 
                 {isProvider ? (
                   <div className="rounded-3xl border border-[#EAE3D8] bg-white/80 p-6 shadow-soft text-center space-y-4">
-                    <h3 className="font-fraunces text-lg font-bold text-[#2E4739]">Provider Account</h3>
+                    <h3 className="font-display text-lg font-bold text-[#2E4739]">Provider Account</h3>
                     <p className="text-sm text-[#5F5A52]">
                       Professional provider account - booking therapist sessions is not available.
                     </p>
@@ -522,7 +550,7 @@ export function TherapistDetailPage() {
                 ) : (
                   <BookingCard
                     therapist={therapist}
-                    days={days}
+                    days={allDays}
                     selectedDay={selectedDay}
                     onSelectDay={handleSelectDay}
                     selectedSlot={selectedSlot}
@@ -533,6 +561,22 @@ export function TherapistDetailPage() {
                     beginJourney={beginJourney}
                     slotsList={slotsList}
                     isLoadingSlots={slotsQuery.isLoading}
+                    startIndex={startIndex}
+                    onPrevDays={() => setStartIndex((prev) => Math.max(0, prev - 1))}
+                    onNextDays={() => setStartIndex((prev) => Math.min(allDays.length - 4, prev + 1))}
+                    onSelectCalendarDate={(val) => {
+                      const dateObj = new Date(`${val}T00:00:00`);
+                      const existingIdx = allDays.findIndex((d) => d.key === val);
+                      if (existingIdx !== -1) {
+                        setSelectedDay(val);
+                        setStartIndex(Math.max(0, Math.min(allDays.length - 4, existingIdx)));
+                      } else {
+                        const newDay = buildSingleDay(dateObj);
+                        setCustomDays((prev) => [...prev, newDay]);
+                        setSelectedDay(val);
+                        setStartIndex(allDays.length);
+                      }
+                    }}
                   />
                 )}
 
@@ -597,7 +641,7 @@ function Section({
         <div>
           <h2
             id={`${id ?? title}-heading`}
-            className="font-fraunces text-2xl text-[#2E4739] font-semibold"
+            className="font-display text-2xl text-[#2E4739] font-semibold"
           >
             {title}
           </h2>
@@ -661,7 +705,7 @@ function ProfileHeader({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="font-fraunces text-3xl leading-tight text-[#2E4739] sm:text-4xl font-semibold">
+              <h1 className="font-display text-3xl leading-tight text-[#2E4739] sm:text-4xl font-semibold">
                 {name}
               </h1>
               {verified ? (
@@ -800,7 +844,7 @@ function Biography({ intro, paragraphs }: { intro: string; paragraphs: string[] 
 
   return (
     <div className="text-left">
-      <p className="max-w-2xl font-fraunces text-xl leading-relaxed text-[#2E4739] font-medium">
+      <p className="max-w-2xl font-display text-xl leading-relaxed text-[#2E4739] font-medium">
         {intro}
       </p>
 
@@ -897,131 +941,106 @@ function AffiliationsList({ affiliations }: { affiliations: { name: string; role
   );
 }
 
-function Carousel({
-  title,
-  description,
-  id,
-  children
-}: {
-  title: string;
-  description?: string;
-  id: string;
-  children: React.ReactNode;
-}) {
-  const trackRef = useRef<HTMLUListElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-
-  const updateArrows = useCallback(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 8);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
-  }, []);
-
-  useEffect(() => {
-    updateArrows();
-    if (typeof window !== "undefined") {
-      window.addEventListener('resize', updateArrows);
-      return () => window.removeEventListener('resize', updateArrows);
-    }
-  }, [updateArrows]);
-
-  const scrollBy = (direction: 1 | -1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    el.scrollBy({ left: direction * Math.round(el.clientWidth * 0.8), behavior: 'smooth' });
-  };
-
-  return (
-    <section aria-labelledby={`${id}-heading`} className="pt-10 text-left">
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <div>
-          <h2 id={`${id}-heading`} className="font-fraunces text-2xl text-[#2E4739] font-semibold">
-            {title}
-          </h2>
-          {description ? (
-            <p className="mt-1 text-sm text-[#5F5A52] font-medium">{description}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-none gap-2">
-          <button
-            type="button"
-            disabled={!canScrollLeft}
-            onClick={() => scrollBy(-1)}
-            aria-label="Scroll backwards"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#DDD4C6] text-[#33302B] transition-colors duration-150 ease-out hover:border-[#A8C3AF] hover:bg-[#F1F5F1] disabled:border-[#EAE3D8] disabled:text-[#8C867C]/50 disabled:hover:bg-transparent cursor-pointer"
-          >
-            <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
-          </button>
-
-          <button
-            type="button"
-            disabled={!canScrollRight}
-            onClick={() => scrollBy(1)}
-            aria-label="Scroll forwards"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#DDD4C6] text-[#33302B] transition-colors duration-150 ease-out hover:border-[#A8C3AF] hover:bg-[#F1F5F1] disabled:border-[#EAE3D8] disabled:text-[#8C867C]/50 disabled:hover:bg-transparent cursor-pointer"
-          >
-            <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-
-      <ul
-        ref={trackRef}
-        onScroll={updateArrows}
-        className="no-scrollbar -mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-1 scrollbar-none"
-      >
-        {children}
-      </ul>
-    </section>
-  );
-}
-
 function FaqCarousel({ faqs, therapistFirstName }: { faqs: typeof MOCK_FAQS; therapistFirstName: string }) {
   return (
-    <Carousel
-      id="faqs"
-      title="Common questions"
-      description={`Answered by Dr. ${therapistFirstName || "Menon"}, for anyone starting out.`}
-    >
-      {faqs.map((faq) => (
-        <li
-          key={faq.question}
-          className="w-[19rem] flex-none snap-start rounded-3xl border border-[#EAE3D8] bg-white/70 p-6 sm:w-[22rem]"
-        >
-          <h3 className="font-fraunces text-lg leading-snug text-[#2E4739] font-semibold">
-            {faq.question}
-          </h3>
-          <p className="mt-3 text-sm leading-relaxed text-[#5F5A52] font-medium">{faq.answer}</p>
-        </li>
-      ))}
-    </Carousel>
+    <section aria-labelledby="faqs-heading" className="pt-10 text-left overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes marquee-faq {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-50%, 0, 0); }
+        }
+        .animate-marquee-faq {
+          display: flex;
+          gap: 16px;
+          width: max-content;
+          animation: marquee-faq 35s linear infinite;
+        }
+        .animate-marquee-faq:hover {
+          animation-play-state: paused;
+        }
+      `}} />
+      <div className="mb-5">
+        <h2 id="faqs-heading" className="font-display text-2xl text-[#2E4739] font-semibold">
+          Common questions
+        </h2>
+        <p className="mt-1 text-sm text-[#5F5A52] font-medium">
+          Answered by Dr. {therapistFirstName || "Menon"}, for anyone starting out.
+        </p>
+      </div>
+
+      <div className="overflow-hidden relative w-full">
+        {/* Left/right fade gradients */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#FBF8F3] to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#FBF8F3] to-transparent z-10 pointer-events-none" />
+
+        <div className="animate-marquee-faq">
+          {[...faqs, ...faqs, ...faqs].map((faq, index) => (
+            <div
+              key={`${faq.question}-${index}`}
+              className="w-[19rem] sm:w-[22rem] shrink-0 rounded-3xl border border-[#EAE3D8] bg-white/70 p-6"
+            >
+              <h3 className="font-display text-lg leading-snug text-[#2E4739] font-semibold">
+                {faq.question}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-[#5F5A52] font-medium">{faq.answer}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
 function TestimonialCarousel({ testimonials }: { testimonials: typeof MOCK_TESTIMONIALS }) {
   return (
-    <Carousel
-      id="testimonials"
-      title="In their words"
-      description="Shared anonymously, with permission."
-    >
-      {testimonials.map((testimonial) => (
-        <li
-          key={testimonial.author}
-          className="flex w-[19rem] flex-none snap-start flex-col rounded-3xl bg-[#F4F2FA] p-6 sm:w-[22rem] text-left"
-        >
-          <p className="font-fraunces text-lg leading-relaxed text-[#2E4739] font-medium">
-            “{testimonial.quote}”
-          </p>
-          <div className="mt-auto pt-6">
-            <p className="text-sm font-semibold text-[#33302B]">{testimonial.author}</p>
-            <p className="mt-0.5 text-sm text-[#8C867C] font-medium">{testimonial.context}</p>
-          </div>
-        </li>
-      ))}
-    </Carousel>
+    <section aria-labelledby="testimonials-heading" className="pt-10 text-left overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes marquee-testi {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-50%, 0, 0); }
+        }
+        .animate-marquee-testi {
+          display: flex;
+          gap: 16px;
+          width: max-content;
+          animation: marquee-testi 40s linear infinite;
+        }
+        .animate-marquee-testi:hover {
+          animation-play-state: paused;
+        }
+      `}} />
+      <div className="mb-5">
+        <h2 id="testimonials-heading" className="font-display text-2xl text-[#2E4739] font-semibold">
+          In their words
+        </h2>
+        <p className="mt-1 text-sm text-[#5F5A52] font-medium">
+          Shared anonymously, with permission.
+        </p>
+      </div>
+
+      <div className="overflow-hidden relative w-full">
+        {/* Left/right fade gradients */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#FBF8F3] to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#FBF8F3] to-transparent z-10 pointer-events-none" />
+
+        <div className="animate-marquee-testi">
+          {[...testimonials, ...testimonials, ...testimonials].map((testimonial, index) => (
+            <div
+              key={`${testimonial.author}-${index}`}
+              className="flex w-[19rem] sm:w-[22rem] shrink-0 flex-col rounded-3xl bg-[#F4F2FA] p-6 text-left"
+            >
+              <p className="font-display text-lg leading-relaxed text-[#2E4739] font-medium">
+                “{testimonial.quote}”
+              </p>
+              <div className="mt-auto pt-6">
+                <p className="text-sm font-semibold text-[#33302B]">{testimonial.author}</p>
+                <p className="mt-0.5 text-sm text-[#8C867C] font-medium">{testimonial.context}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1047,7 +1066,11 @@ function BookingCard({
   canBook,
   beginJourney,
   slotsList,
-  isLoadingSlots
+  isLoadingSlots,
+  startIndex,
+  onPrevDays,
+  onNextDays,
+  onSelectCalendarDate
 }: {
   therapist: any;
   days: DayAvailability[];
@@ -1061,14 +1084,55 @@ function BookingCard({
   beginJourney: () => void;
   slotsList: any[];
   isLoadingSlots: boolean;
+  startIndex: number;
+  onPrevDays: () => void;
+  onNextDays: () => void;
+  onSelectCalendarDate: (val: string) => void;
 }) {
   const activeDayObj = days.find((day) => day.key === selectedDay) ?? null;
+  const datePickerRef = useRef<HTMLInputElement>(null);
+
+  const todayYmd = useMemo(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = (today.getMonth() + 1).toString().padStart(2, "0");
+    const d = today.getDate().toString().padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  const visibleDays = useMemo(() => {
+    return days.slice(startIndex, startIndex + 4);
+  }, [days, startIndex]);
+
+  const morningSlots = useMemo(() => {
+    return slotsList.filter((slot) => {
+      const [hStr] = slot.start.split(":");
+      const h = parseInt(hStr, 10);
+      return h < 12;
+    });
+  }, [slotsList]);
+
+  const afternoonSlots = useMemo(() => {
+    return slotsList.filter((slot) => {
+      const [hStr] = slot.start.split(":");
+      const h = parseInt(hStr, 10);
+      return h >= 12 && h < 17;
+    });
+  }, [slotsList]);
+
+  const eveningSlots = useMemo(() => {
+    return slotsList.filter((slot) => {
+      const [hStr] = slot.start.split(":");
+      const h = parseInt(hStr, 10);
+      return h >= 17;
+    });
+  }, [slotsList]);
 
   return (
     <div className="rounded-3xl border border-[#EAE3D8] bg-white/80 p-6 shadow-[0_1px_2px_rgba(51,48,43,0.03),_0_8px_24px_-12px_rgba(51,48,43,0.10)] text-left">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <p className="font-fraunces text-3xl text-[#2E4739] font-semibold">
+          <p className="font-display text-3xl text-[#2E4739] font-semibold">
             ₹{Number(therapist.hourlyRate ?? 1499).toLocaleString('en-IN')}
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-[#8C867C] font-medium">
@@ -1082,34 +1146,75 @@ function BookingCard({
       </div>
 
       <fieldset className="mt-6 border-0 p-0 m-0">
-        <legend className="text-sm font-semibold text-[#33302B]">Choose a day</legend>
-        <div className="mt-3 grid grid-cols-7 gap-1.5">
-          {days.map((day) => {
-            const selected = day.key === selectedDay;
-            return (
-              <button
-                key={day.key}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onSelectDay(day.key)}
-                className={`flex flex-col items-center gap-0.5 rounded-2xl border px-1 py-2.5 transition-colors duration-150 ease-out cursor-pointer ${
-                  selected ?
+        <div className="flex items-center justify-between">
+          <legend className="text-sm font-semibold text-[#33302B]">Choose a day</legend>
+          <div className="relative">
+            <input
+              type="date"
+              ref={datePickerRef}
+              min={todayYmd}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val) onSelectCalendarDate(val);
+              }}
+              className="absolute inset-0 w-0 h-0 opacity-0 pointer-events-none"
+            />
+            <button
+              type="button"
+              onClick={() => datePickerRef.current?.showPicker()}
+              className="flex items-center gap-1 text-xs font-bold text-[#6E9179] hover:text-[#587761] border border-[#6E9179]/20 rounded-full px-2.5 py-1 hover:bg-[#F1F5F1] transition cursor-pointer"
+            >
+              <CalendarIcon className="h-3.5 w-3.5" />
+              Calendar
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-1.5">
+          <button
+            type="button"
+            disabled={startIndex === 0}
+            onClick={onPrevDays}
+            className="p-1.5 rounded-full border border-[#EAE3D8] hover:bg-[#F1F5F1] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+          >
+            <ChevronLeftIcon className="h-4 w-4 text-[#33302B]" />
+          </button>
+
+          <div className="grid grid-cols-4 gap-1.5 flex-1">
+            {visibleDays.map((day) => {
+              const selected = day.key === selectedDay;
+              return (
+                <button
+                  key={day.key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onSelectDay(day.key)}
+                  className={`flex flex-col items-center gap-0.5 rounded-2xl border px-1 py-2.5 transition-colors duration-150 ease-out cursor-pointer ${selected ?
                     'border-[#6E9179] bg-[#6E9179] text-white' :
                     'border-[#EAE3D8] text-[#33302B] hover:border-[#A8C3AF] hover:bg-[#F1F5F1]'
-                }`}
-              >
-                <span className="text-[10px] uppercase tracking-wide opacity-80 font-bold">
-                  {day.weekday === 'Today' ? 'Now' : day.weekday}
-                </span>
-                <span className="text-sm font-bold">{day.dayNumber}</span>
-                <span className={`text-[8px] font-semibold mt-1 block ${
-                  selected ? "text-white/90" : "text-[#8C867C]"
-                }`}>
-                  {selected ? (isLoadingSlots ? "loading..." : `${slotsList.length} slots`) : "select"}
-                </span>
-              </button>
-            );
-          })}
+                    }`}
+                >
+                  <span className="text-[10px] uppercase tracking-wide opacity-80 font-bold truncate max-w-full">
+                    {day.weekday === 'Today' ? 'Now' : day.weekday}
+                  </span>
+                  <span className="text-sm font-bold">{day.dayNumber}</span>
+                  <span className={`text-[8px] font-semibold mt-1 block ${selected ? "text-white/90" : "text-[#8C867C]"
+                    }`}>
+                    {selected ? (isLoadingSlots ? "loading..." : `${slotsList.length} slots`) : "select"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            disabled={startIndex + 4 >= days.length}
+            onClick={onNextDays}
+            className="p-1.5 rounded-full border border-[#EAE3D8] hover:bg-[#F1F5F1] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+          >
+            <ChevronRightIcon className="h-4 w-4 text-[#33302B]" />
+          </button>
         </div>
       </fieldset>
 
@@ -1125,28 +1230,91 @@ function BookingCard({
               Loading available slots...
             </div>
           ) : slotsList.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1.5">
-              {slotsList.map((slot) => {
-                const selected = selectedSlot === slot.start;
-                return (
-                  <button
-                    key={slot.start}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => {
-                      onSelectSlot(slot.start);
-                      onConfirm();
-                    }}
-                    className={`rounded-xl border px-1 py-2 text-[13px] font-semibold transition-colors duration-150 ease-out cursor-pointer ${
-                      selected ?
-                        'border-[#6E9179] bg-[#6E9179] text-white' :
-                        'border-[#EAE3D8] text-[#5F5A52] hover:border-[#A8C3AF] hover:bg-[#F1F5F1] hover:text-[#2E4739]'
-                    }`}
-                  >
-                    {formatSlotLabel(slot.start)}
-                  </button>
-                );
-              })}
+            <div className="space-y-4">
+              {/* Morning Slots */}
+              {morningSlots.length > 0 && (
+                <div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8C867C] mb-2">Morning</h4>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {morningSlots.map((slot) => {
+                      const selected = selectedSlot === slot.start;
+                      return (
+                        <button
+                          key={slot.start}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => {
+                            onSelectSlot(slot.start);
+                            onConfirm();
+                          }}
+                          className={`rounded-xl border px-1 py-2 text-[13px] font-semibold transition-colors duration-150 ease-out cursor-pointer ${selected ?
+                            'border-[#6E9179] bg-[#6E9179] text-white' :
+                            'border-[#EAE3D8] text-[#5F5A52] hover:border-[#A8C3AF] hover:bg-[#F1F5F1] hover:text-[#2E4739]'
+                            }`}
+                        >
+                          {formatSlotLabel(slot.start)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Afternoon Slots */}
+              {afternoonSlots.length > 0 && (
+                <div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8C867C] mb-2">Afternoon</h4>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {afternoonSlots.map((slot) => {
+                      const selected = selectedSlot === slot.start;
+                      return (
+                        <button
+                          key={slot.start}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => {
+                            onSelectSlot(slot.start);
+                            onConfirm();
+                          }}
+                          className={`rounded-xl border px-1 py-2 text-[13px] font-semibold transition-colors duration-150 ease-out cursor-pointer ${selected ?
+                            'border-[#6E9179] bg-[#6E9179] text-white' :
+                            'border-[#EAE3D8] text-[#5F5A52] hover:border-[#A8C3AF] hover:bg-[#F1F5F1] hover:text-[#2E4739]'
+                            }`}
+                        >
+                          {formatSlotLabel(slot.start)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {eveningSlots.length > 0 && (
+                <div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8C867C] mb-2">Evening</h4>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {eveningSlots.map((slot) => {
+                      const selected = selectedSlot === slot.start;
+                      return (
+                        <button
+                          key={slot.start}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => {
+                            onSelectSlot(slot.start);
+                            onConfirm();
+                          }}
+                          className={`rounded-xl border px-1 py-2 text-[13px] font-semibold transition-colors duration-150 ease-out cursor-pointer ${selected ?
+                            'border-[#6E9179] bg-[#6E9179] text-white' :
+                            'border-[#EAE3D8] text-[#5F5A52] hover:border-[#A8C3AF] hover:bg-[#F1F5F1] hover:text-[#2E4739]'
+                            }`}
+                        >
+                          {formatSlotLabel(slot.start)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-xs text-[#8C867C] font-semibold py-2">
@@ -1205,7 +1373,7 @@ function PackageList({
   return (
     <section aria-labelledby="packages-heading" className="mt-6 text-left">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 id="packages-heading" className="font-fraunces text-lg text-[#2E4739] font-semibold">
+        <h2 id="packages-heading" className="font-display text-lg text-[#2E4739] font-semibold">
           Session packages
         </h2>
         <span className="text-xs text-[#8C867C] font-medium">Pay once, book as you go</span>
@@ -1241,7 +1409,7 @@ function PackageList({
 
               <div className="mt-4 flex items-center justify-between gap-3">
                 <p className="flex items-baseline gap-2">
-                  <span className="font-fraunces text-xl text-[#2E4739] font-semibold">
+                  <span className="font-display text-xl text-[#2E4739] font-semibold">
                     ₹{pack.price.toLocaleString('en-IN')}
                   </span>
                   <span className="text-sm text-[#8C867C] line-through font-medium">

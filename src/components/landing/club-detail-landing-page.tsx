@@ -4,11 +4,23 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { signIn, useSession } from "next-auth/react";
+import {
+  Sunrise,
+  NotebookPen,
+  Users,
+  MessageCircle,
+  Footprints,
+  HandHeart,
+  ArrowDown,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingJoinModal } from "@/components/landing/landing-join-modal";
 import { LandingNavbar } from "@/components/landing/navbar";
+import { ClubJoinModal } from "@/components/clubs/club-join-modal";
 import { apiFetch } from "@/lib/api-client";
 import type { ApiPublicClubDetail } from "@/types/api";
 
@@ -106,6 +118,44 @@ function LeafIcon() {
   );
 }
 
+function getFeatureIcon(iconName: string) {
+  switch (iconName) {
+    case "Sunrise":
+      return <Sunrise className="h-6 w-6 text-[#2f745f]" strokeWidth={1.3} aria-hidden />;
+    case "NotebookPen":
+      return <NotebookPen className="h-6 w-6 text-[#2f745f]" strokeWidth={1.3} aria-hidden />;
+    case "Users":
+      return <Users className="h-6 w-6 text-[#2f745f]" strokeWidth={1.3} aria-hidden />;
+    case "MessageCircle":
+      return <MessageCircle className="h-6 w-6 text-[#2f745f]" strokeWidth={1.3} aria-hidden />;
+    case "Footprints":
+      return <Footprints className="h-6 w-6 text-[#2f745f]" strokeWidth={1.3} aria-hidden />;
+    case "HandHeart":
+      return <HandHeart className="h-6 w-6 text-[#2f745f]" strokeWidth={1.3} aria-hidden />;
+    case "leaf":
+      return <LeafIcon />;
+    case "wind":
+    default:
+      return <WindIcon />;
+  }
+}
+
+function parseGatheringDate(startsAtStr?: string) {
+  if (!startsAtStr) {
+    return { day: "24", month: "OCT", weekday: "Thursday", time: "18:00" };
+  }
+  try {
+    const d = new Date(startsAtStr);
+    const day = d.getDate().toString();
+    const month = d.toLocaleString("default", { month: "short" }).toUpperCase();
+    const weekday = d.toLocaleString("default", { weekday: "long" });
+    const time = d.toLocaleTimeString("default", { hour: "2-digit", minute: "2-digit", hour12: true });
+    return { day, month, weekday, time };
+  } catch (e) {
+    return { day: "24", month: "OCT", weekday: "Thursday", time: "18:00" };
+  }
+}
+
 function splitHeroTitle(title: string, subtitle: string): { lead: string; accent: string } {
   const words = title.trim().split(/\s+/);
   if (words.length >= 3) {
@@ -133,6 +183,7 @@ export function ClubDetailLandingPage() {
   const [otpCode, setOtpCode] = useState("");
   const [isOtpStage, setIsOtpStage] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isClubJoinModalOpen, setIsClubJoinModalOpen] = useState(false);
 
   const query = useQuery({
     queryKey: ["public-club", slug],
@@ -156,7 +207,7 @@ export function ClubDetailLandingPage() {
       return club.landingFeatures.slice(0, 2).map((f) => ({
         title: f.title,
         description: f.description,
-        icon: f.icon === "leaf" ? "leaf" : "wind",
+        icon: f.icon,
       }));
     }
     return DEFAULT_FEATURES;
@@ -182,7 +233,7 @@ export function ClubDetailLandingPage() {
 
   const testimonials = useMemo(() => {
     if (!club?.reviews?.length) return FALLBACK_TESTIMONIALS;
-    return club.reviews.slice(0, 2).map((r) => ({
+    return club.reviews.slice(0, 4).map((r) => ({
       quote: r.quote,
       author: r.authorLabel,
       since: r.memberSince?.trim() || "Member",
@@ -227,7 +278,7 @@ export function ClubDetailLandingPage() {
   const joinSanctuary = useCallback(() => {
     if (!club) return;
     if (!requireAuth({ type: "join" })) return;
-    window.location.href = `/dashboard/clubs/${club.slug}`;
+    setIsClubJoinModalOpen(true);
   }, [club, requireAuth]);
 
   const joinEventAsGuest = useCallback(
@@ -243,7 +294,7 @@ export function ClubDetailLandingPage() {
     const pending = pendingRef.current;
     pendingRef.current = null;
     if (pending.type === "join") {
-      window.location.href = `/dashboard/clubs/${club.slug}`;
+      setIsClubJoinModalOpen(true);
     } else if (pending.type === "event") {
       window.location.href = `/events/${pending.slug}`;
     }
@@ -271,13 +322,30 @@ export function ClubDetailLandingPage() {
     document.getElementById("club-pulse")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const isMember = status === "authenticated";
+
+  // Testimonials Slider state
+  const [voiceIndex, setVoiceIndex] = useState(0);
+  const voice = testimonials[voiceIndex] || testimonials[0];
+
+  const goVoice = (step: number) => {
+    setVoiceIndex((current) => (current + step + testimonials.length) % testimonials.length);
+  };
+
   return (
-    <div className="min-h-screen bg-[#f9f7f2] text-[#273331]">
+    <div className="min-h-screen bg-[#FBF8F3] text-[#33302B] relative overflow-hidden">
+      {/* Background Glowing Gradients matching Home Landing Page */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute -left-32 -top-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(202,223,195,0.55),transparent_65%)]" />
+        <div className="absolute -right-24 top-10 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle_at_center,rgba(218,209,240,0.5),transparent_65%)]" />
+        <div className="absolute bottom-[-160px] left-1/3 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(247,212,189,0.45),transparent_65%)]" />
+      </div>
+
       <LandingNavbar onJoinClick={openJoinModal} />
 
       {query.isLoading ? (
         <div className="mx-auto max-w-[1240px] px-6 py-24 md:px-10">
-          <div className="h-[70vh] animate-pulse rounded-[32px] bg-[#e8e6e1]" />
+          <div className="h-[70vh] animate-pulse rounded-[32px] bg-[#E3ECE5]/20 border border-[#EAE3D8]" />
         </div>
       ) : query.error || !club ? (
         <div className="mx-auto max-w-[1240px] px-6 py-24 text-center md:px-10">
@@ -289,294 +357,380 @@ export function ClubDetailLandingPage() {
       ) : (
         <>
           {/* Hero */}
-          <section className="relative min-h-[88vh] overflow-hidden">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${heroImage})` }}
+          <section className="relative h-[92vh] min-h-[34rem] w-full overflow-hidden">
+            <img
+              src={heroImage}
+              alt={club.title}
+              className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-linear-to-b from-[#1a2e28]/30 via-transparent to-[#f9f7f2]" />
-            <motion.div
-              className="relative mx-auto flex min-h-[88vh] max-w-[900px] flex-col items-center justify-center px-6 pb-28 pt-32 text-center md:px-10"
-              initial="hidden"
-              animate="show"
-              variants={reveal}
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5a8f78]">
-                {club.sphere} · {heroTagline}
-              </p>
-              <h1 className="mt-6 text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-6xl lg:text-7xl">
-                {heroTitle.lead}
-                <br />
-                <span className="font-semibold italic text-[#2f745f]">{heroTitle.accent}</span>
-              </h1>
-              <p className="mt-6 max-w-xl text-sm leading-7 text-[#4a5654] md:text-base">
-                {club.purpose ??
-                  club.description ??
-                  club.subtitle ??
-                  "Step out of the noise. Reconnect with the natural rhythm of your breath in our digital atrium designed for collective stillness."}
-              </p>
-              <button
-                type="button"
-                onClick={scrollToPulse}
-                className="mt-12 flex flex-col items-center gap-2 text-sm font-semibold text-[#2f745f] transition hover:text-[#245d4c]"
+            <span
+              className="absolute inset-0 bg-gradient-to-b from-[#1a2e28]/55 via-[#1a2e28]/45 to-[#1a2e28]/85"
+              aria-hidden="true"
+            />
+
+            <div className="relative mx-auto flex h-full max-w-[78rem] flex-col justify-end px-6 pb-16 lg:px-10 lg:pb-20">
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                className="text-[0.75rem] uppercase tracking-[0.2em] text-[#E3ECE5] font-bold"
               >
-                <span className="grid h-10 w-10 place-content-center rounded-full border border-[#2f745f]/40">
-                  ↓
-                </span>
-                Begin the journey
-              </button>
-            </motion.div>
+                {club.sphere} · {heroTagline}
+              </motion.p>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1], delay: 0.06 }}
+                className="mt-6 max-w-[20ch] font-display text-[3rem] font-bold leading-[1.02] tracking-tight text-white sm:text-[4rem] lg:text-[4.75rem]"
+              >
+                {heroTitle.lead}
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1], delay: 0.12 }}
+                className="mt-7 max-w-[38ch] font-display text-[1.35rem] leading-relaxed text-white/90 sm:text-[1.6rem]"
+              >
+                {club.subtitle || "A quiet space"} <em className="italic text-[#E3ECE5] font-medium">{heroTitle.accent}</em>
+              </motion.p>
+
+              <motion.button
+                onClick={scrollToPulse}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: 0.22 }}
+                className="group mt-11 inline-flex w-fit items-center gap-3 rounded-full border border-white/35 px-6 py-3 text-sm tracking-wide text-white transition hover:border-white/70 hover:bg-white/10"
+              >
+                Begin the Journey
+                <ArrowDown
+                  className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-y-0.5"
+                  strokeWidth={1.6}
+                  aria-hidden="true"
+                />
+              </motion.button>
+            </div>
           </section>
 
           {/* Pulse of the collective */}
-          <motion.section
-            id="club-pulse"
-            className="mx-auto max-w-[1240px] px-6 py-20 md:px-10 md:py-28"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={reveal}
-          >
-            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-              <div>
-                <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-5xl">
-                  The Pulse of the Collective
-                </h2>
-                <div className="mt-4 h-px w-16 bg-[#c5ccc9]" />
-                <p className="mt-6 max-w-lg text-base leading-8 text-[#5f6b69]">
-                  {club.description ??
-                    club.purpose ??
-                    "A living rhythm of breathwork, transformation, and ancient pranayama—woven together for those who seek stillness in community."}
-                </p>
-                <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  {features.map((f) => (
-                    <div
-                      key={f.title}
-                      className="rounded-[20px] bg-[#f0f0ed] p-5"
-                    >
-                      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#e5efe9]">
-                        {f.icon === "wind" ? <WindIcon /> : <LeafIcon />}
-                      </div>
-                      <p className="font-semibold text-[#1f2827]">{f.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-[#5f6b69]">{f.description}</p>
-                    </div>
-                  ))}
-                </div>
+          <section id="club-pulse" aria-labelledby="pulse-heading" className="scroll-mt-6 bg-[#FBF8F3] relative z-10">
+            <div className="mx-auto max-w-[78rem] px-6 py-20 lg:px-10 lg:py-28">
+              <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:gap-20">
+                <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={reveal}>
+                  <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#6E9179] font-bold">The pulse of the collective</p>
+                  <h2
+                    id="pulse-heading"
+                    className="mt-5 max-w-[22ch] font-display text-[2.1rem] leading-[1.14] text-[#2E4739] font-bold sm:text-[2.6rem]"
+                  >
+                    A place to be <em className="italic text-[#6E9179] font-medium">unedited</em> for a couple of hours a week.
+                  </h2>
+                </motion.div>
+
+                <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={reveal} transition={{ delay: 0.08 }}>
+                  <p className="max-w-[54ch] text-[1.05rem] leading-relaxed text-[#5F5A52] lg:pt-14 font-medium">
+                    {club.purpose || club.description || "A living rhythm of breathwork, transformation, and pranayama—woven together for those who seek stillness in community."}
+                  </p>
+                </motion.div>
               </div>
-              <div className="relative">
-                <div
-                  className="aspect-[4/5] w-full rounded-[32px] bg-cover bg-center shadow-[0_24px_60px_-30px_rgba(0,0,0,0.35)]"
-                  style={{ backgroundImage: `url(${pulseImage})` }}
-                />
-                <div className="absolute -bottom-4 left-4 max-w-[280px] rounded-[20px] bg-white p-5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.25)] md:left-6">
-                  <p className="text-sm italic leading-7 text-[#2f745f]">&ldquo;{pulseQuote}&rdquo;</p>
-                </div>
+
+              {/* Dynamic Feature Cards matching template background colors */}
+              <div className="mt-16 grid gap-6 lg:grid-cols-2 lg:gap-8">
+                {features.map((feature, index) => (
+                  <motion.div
+                    key={feature.title}
+                    initial={{ opacity: 0, y: 15 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.45, delay: index * 0.08 }}
+                    className="h-full"
+                  >
+                    <article
+                      className={`flex h-full flex-col rounded-[2rem] px-8 py-10 sm:px-10 border border-[#EAE3D8] shadow-sm ${index === 0 ? "bg-[#E3ECE5]/40" : "bg-[#EAE3D8]/30"
+                        }`}
+                    >
+                      <div className="mb-4">
+                        {getFeatureIcon(feature.icon ?? "wind")}
+                      </div>
+                      <h3 className="mt-2 max-w-[24ch] font-display text-[1.45rem] leading-snug text-[#2E4739] font-bold">
+                        {feature.title}
+                      </h3>
+                      <p className="mt-4 max-w-[42ch] text-[0.98rem] leading-relaxed text-[#5F5A52] font-medium">
+                        {feature.description}
+                      </p>
+                    </article>
+                  </motion.div>
+                ))}
               </div>
             </div>
-          </motion.section>
+          </section>
+
+          {/* Our Quote Callout */}
+          <section aria-label="A member's words" className="bg-[#FBF8F3] relative z-10">
+            <div className="mx-auto max-w-[78rem] px-6 pb-24 lg:px-10">
+              <motion.div initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                <figure className="relative">
+                  <div className="overflow-hidden rounded-[2rem] shadow-soft">
+                    <img
+                      src={pulseImage}
+                      alt="Members sitting together"
+                      className="h-[22rem] w-full object-cover sm:h-[30rem]"
+                    />
+                    <span className="absolute inset-0" aria-hidden="true" />
+                  </div>
+
+                  <figcaption className="mx-5 -mt-16 rounded-[1.5rem] bg-[#FBF8F3] border border-[#EAE3D8] px-7 py-8 shadow-soft sm:mx-10 sm:-mt-20 sm:max-w-2xl sm:px-10 sm:py-10 lg:ml-16 relative z-20">
+                    <blockquote className="space-y-4">
+                      <p className="font-display text-[1.35rem] leading-[1.4] text-[#2E4739] font-bold sm:text-[1.65rem]">
+                        &ldquo;{pulseQuote}&rdquo;
+                      </p>
+                      <footer className="text-sm text-[#8C867C] font-semibold">— Member Reflection</footer>
+                    </blockquote>
+                  </figcaption>
+                </figure>
+              </motion.div>
+            </div>
+          </section>
 
           {/* Our Rituals */}
-          <section className="bg-[#f9f7f2] py-8 md:py-16">
-            <div className="mx-auto max-w-[1240px] px-6 md:px-10">
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.2 }}
-                variants={reveal}
-              >
-                <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-5xl">
-                  Our Rituals
+          <section aria-labelledby="rituals-heading" className="border-t border-[#EAE3D8] bg-[#FBF8F3]/60 relative z-10">
+            <div className="mx-auto max-w-[78rem] px-6 py-20 lg:px-10 lg:py-28">
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={reveal}>
+                <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#6E9179] font-bold">Our rituals</p>
+                <h2
+                  id="rituals-heading"
+                  className="mt-5 max-w-[26ch] font-display text-[2.1rem] leading-[1.15] text-[#2E4739] font-bold sm:text-[2.5rem]"
+                >
+                  The small practices that <em className="italic text-[#6E9179] font-medium">keep us together</em>.
                 </h2>
-                <p className="mt-4 max-w-xl text-base leading-7 text-[#5f6b69]">{ritualsIntro}</p>
               </motion.div>
 
-              <div className="mt-14 space-y-20 md:space-y-28">
+              <ol className="mt-16 space-y-16 lg:space-y-24">
                 {rituals.map((ritual, index) => {
                   const imageFirst = index % 2 === 0;
                   return (
-                    <motion.div
-                      key={ritual.title}
-                      className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${
-                        imageFirst ? "" : "lg:[&>*:first-child]:order-2"
-                      }`}
-                      initial="hidden"
-                      whileInView="show"
-                      viewport={{ once: true, amount: 0.15 }}
-                      variants={reveal}
-                    >
-                      <div
-                        className={`h-[280px] rounded-[32px] bg-cover bg-center md:h-[360px] ${
-                          imageFirst ? "" : "lg:order-2"
-                        }`}
-                        style={{ backgroundImage: `url(${ritual.image})` }}
-                      />
-                      <div className={imageFirst ? "" : "lg:order-1"}>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2f745f]">
-                          {ritual.label}
-                        </p>
-                        <h3 className="mt-3 font-display text-3xl font-semibold text-[#1f2827] md:text-4xl">
-                          {ritual.title}
-                        </h3>
-                        <p className="mt-4 max-w-md text-base leading-8 text-[#5f6b69]">
-                          {ritual.description}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={joinSanctuary}
-                          className="mt-6 text-sm font-semibold text-[#2f745f] underline underline-offset-4 transition hover:text-[#245d4c]"
-                        >
-                          {ritual.cta}
-                        </button>
-                      </div>
-                    </motion.div>
+                    <li key={ritual.title}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.45 }}
+                      >
+                        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+                          <figure className={`overflow-hidden rounded-[2rem] shadow-soft ${imageFirst ? "" : "lg:order-2"}`}>
+                            <img
+                              src={ritual.image}
+                              alt={ritual.title}
+                              className="h-72 w-full object-cover transition-transform duration-300 ease-out hover:scale-[1.015] sm:h-[24rem]"
+                            />
+                          </figure>
+
+                          <div className={imageFirst ? "" : "lg:order-1"}>
+                            <p className="text-[0.7rem] uppercase tracking-[0.16em] text-[#8C867C] font-bold">{ritual.label}</p>
+                            <h3 className="mt-4 font-display text-[1.9rem] leading-tight text-[#2E4739] font-bold">{ritual.title}</h3>
+                            <p className="mt-4 max-w-[46ch] text-[1rem] leading-relaxed text-[#5F5A52] font-medium">
+                              {ritual.description}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={joinSanctuary}
+                              className="group mt-7 inline-flex items-center gap-2 border-b border-[#2E4739]/30 pb-1 text-sm text-[#2E4739] font-bold transition duration-150 ease-out hover:border-[#2E4739]"
+                            >
+                              Join the circle
+                              <ArrowRight
+                                className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                                strokeWidth={1.6}
+                                aria-hidden="true"
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </li>
                   );
                 })}
-              </div>
+              </ol>
             </div>
           </section>
 
           {/* Upcoming Gatherings */}
-          <motion.section
-            className="mx-auto max-w-[1240px] px-6 py-20 md:px-10 md:py-28"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.15 }}
-            variants={reveal}
-          >
-            <div className="text-center">
-              <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-5xl">
-                Upcoming Gatherings
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#5f6b69]">
-                Join us from anywhere in the world. Our virtual atrium is always open for those
-                seeking breath. {club.weeklyEventsLabel}
-              </p>
-            </div>
-
-            {club.events.length === 0 ? (
-              <p className="mt-12 text-center text-sm text-[#7a8583]">
-                New gatherings are being scheduled. Join the sanctuary to be notified first.
-              </p>
-            ) : (
-              <div className="mt-12 grid gap-6 md:grid-cols-3">
-                {club.events.map((event, i) => (
-                  <article
-                    key={event.slug}
-                    className="flex flex-col rounded-[24px] bg-white p-6 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.2)]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="rounded-full bg-[#e5efe9] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#2f745f]">
-                        {event.mode === "Virtual" ? "Live session" : "Workshop"}
-                      </span>
-                      <span className="text-right text-[11px] font-medium text-[#5f6b69]">
-                        {event.tag}
-                      </span>
-                    </div>
-                    <h3 className="mt-5 text-xl font-semibold text-[#1f2827]">{event.title}</h3>
-                    <p className="mt-2 flex-1 text-sm leading-6 text-[#5f6b69]">
-                      {event.description || `Hosted by ${event.host}.`}
-                    </p>
-                    <div className="mt-6 flex items-center justify-between">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f0f0ed] text-xs font-semibold text-[#5f6b69]">
-                        +{Math.max(event.seatsRemaining, 12)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          i === club.events.length - 1 && club.events.length > 1
-                            ? openJoinModal()
-                            : joinEventAsGuest(event.slug)
-                        }
-                        className="rounded-full bg-[#ebe8e0] px-5 py-2.5 text-sm font-semibold text-[#1f2827] transition hover:bg-[#e0ddd4]"
-                      >
-                        {i === club.events.length - 1 && club.events.length > 1
-                          ? "Sign Up"
-                          : "Join as Guest"}
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </motion.section>
-
-          {/* Voices from the Atrium */}
-          <motion.section
-            className="bg-[#1e3d32] py-20 md:py-28"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.15 }}
-            variants={reveal}
-          >
-            <div className="mx-auto max-w-[1240px] px-6 md:px-10">
-              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                <h2 className="text-4xl font-semibold text-white md:text-5xl">
-                  Voices from the Atrium
+          <section aria-labelledby="gatherings-heading" className="border-t border-[#EAE3D8] bg-[#FBF8F3] relative z-10">
+            <div className="mx-auto max-w-[78rem] px-6 py-20 lg:px-10 lg:py-24">
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={reveal}>
+                <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#6E9179] font-bold">Upcoming gatherings</p>
+                <h2 id="gatherings-heading" className="mt-5 font-display text-[2.1rem] leading-tight text-[#2E4739] font-bold">
+                  Come sit with us
                 </h2>
-                <p className="max-w-md text-sm italic leading-7 text-white/75 md:text-right md:text-base">
-                  &ldquo;{voicesQuote}&rdquo;
-                </p>
-              </div>
-              <div className="mt-12 grid gap-6 md:grid-cols-2">
-                {testimonials.map((t) => (
-                  <div
-                    key={t.author}
-                    className="rounded-[24px] border border-white/10 bg-[#264a3d] p-8"
-                  >
-                    <span className="text-5xl font-serif leading-none text-[#5a8f78]">&ldquo;</span>
-                    <p className="mt-2 text-base italic leading-8 text-white/90">{t.quote}</p>
-                    <div className="mt-8 border-t border-white/10 pt-6">
-                      <p className="font-semibold text-white">{t.author}</p>
-                      <p className="mt-1 text-sm text-white/50">Member since {t.since}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.section>
+              </motion.div>
 
-          {/* Final CTA */}
-          <motion.section
-            className="relative overflow-hidden py-28 md:py-36"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={reveal}
-          >
-            <div
-              className="pointer-events-none absolute inset-0 opacity-40"
-              aria-hidden
-              style={{
-                background:
-                  "radial-gradient(circle at center, transparent 0%, transparent 35%, rgba(47,116,95,0.06) 36%, transparent 37%, rgba(47,116,95,0.04) 50%, transparent 51%)",
-              }}
-            />
-            <div className="relative mx-auto max-w-[720px] px-6 text-center md:px-10">
-              <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2827] md:text-5xl">
-                Your sanctuary awaits.
-              </h2>
-              <p className="mx-auto mt-5 max-w-lg text-base leading-8 text-[#5f6b69]">{finalCtaText}</p>
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              {club.events.length === 0 ? (
+                <p className="mt-12 text-center text-sm text-[#8C867C] font-bold">
+                  New gatherings are being scheduled. Join the sanctuary to be notified first.
+                </p>
+              ) : (
+                <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {club.events.map((gathering, index) => {
+                    const isFull = gathering.seatsRemaining === 0;
+                    const dateParsed = parseGatheringDate(gathering.startsAt);
+                    return (
+                      <motion.div
+                        key={gathering.slug}
+                        initial={{ opacity: 0, y: 15 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.45, delay: Math.min(index, 3) * 0.06 }}
+                        className="h-full"
+                      >
+                        <li className="flex h-full flex-col justify-between rounded-[1.5rem] bg-[#E3ECE5]/30 border border-[#EAE3D8] px-6 py-7 shadow-sm">
+                          <div>
+                            <div className="flex items-start justify-between gap-4">
+                              <p className="text-[0.7rem] uppercase tracking-[0.16em] text-[#6E9179] font-bold">
+                                {gathering.mode === "Virtual" ? "Live session" : "Workshop"}
+                              </p>
+                              <p className="text-right text-[0.72rem] uppercase tracking-[0.14em] text-[#5F5A52] font-semibold">
+                                {dateParsed.day} {dateParsed.month}
+                                <span className="block text-[#8C867C]">{dateParsed.weekday}</span>
+                              </p>
+                            </div>
+
+                            <h3 className="mt-5 font-display text-[1.3rem] leading-snug text-[#2E4739] font-bold">{gathering.title}</h3>
+                            <p className="mt-2.5 text-[0.9rem] leading-relaxed text-[#5F5A52] font-medium">{gathering.description || `Hosted by ${gathering.host}.`}</p>
+                          </div>
+
+                          <div className="mt-auto pt-7">
+                            <p className="border-t border-[#EAE3D8] pt-4 text-xs leading-relaxed text-[#8C867C] font-semibold">
+                              {dateParsed.time} · with {gathering.host}
+                              <span className="mt-1 block">
+                                {isFull ? "Full — waiting list open" : `${gathering.seatsRemaining} seats open`}
+                              </span>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                index === club.events.length - 1 && club.events.length > 1
+                                  ? openJoinModal()
+                                  : joinEventAsGuest(gathering.slug)
+                              }
+                              className={`mt-4 w-full rounded-full px-5 py-3 text-sm font-bold tracking-wide transition duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${isFull
+                                  ? "bg-[#EAE3D8] text-[#2E4739] hover:bg-[#D5CDC0]"
+                                  : "bg-[#2E4739] text-white hover:bg-[#1F3227] focus-visible:outline-[#2E4739]"
+                                }`}
+                            >
+                              {isFull ? "Join the waiting list" : "Sign up"}
+                            </button>
+                          </div>
+                        </li>
+                      </motion.div>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          {/* Voices from the Atrium Testimonial Slider */}
+          <section aria-labelledby="voices-heading" className="bg-[#2E4739] py-20 md:py-28 relative z-10">
+            <div className="mx-auto max-w-[78rem] px-6 lg:px-10">
+              <p id="voices-heading" className="text-[0.7rem] uppercase tracking-[0.18em] text-[#E3ECE5] font-bold">
+                Voices from the atrium
+              </p>
+
+              {voice && (
+                <div className="mt-10 min-h-[13rem] max-w-[52ch]">
+                  <AnimatePresence mode="wait">
+                    <motion.blockquote
+                      key={voice.author}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                      <p className="font-display text-[1.6rem] leading-[1.35] text-white sm:text-[2rem] font-bold">
+                        &ldquo;{voice.quote}&rdquo;
+                      </p>
+                      <footer className="mt-7 text-sm text-[#E3ECE5] font-semibold">
+                        {voice.author} · <span className="text-white/60">Member since {voice.since}</span>
+                      </footer>
+                    </motion.blockquote>
+                  </AnimatePresence>
+                </div>
+              )}
+
+              <div className="mt-10 flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={joinSanctuary}
-                  className="rounded-full bg-[#2f745f] px-8 py-4 text-sm font-semibold text-white shadow-[0_12px_32px_-14px_rgba(47,116,95,0.5)] transition hover:bg-[#245d4c]"
+                  onClick={() => goVoice(-1)}
+                  aria-label="Previous member voice"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white transition hover:bg-white/10"
                 >
-                  Join the Sanctuary
+                  <ArrowLeft className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
                 </button>
-                <Link
-                  href="/clubs"
-                  className="rounded-full border border-[#cfd4d2] px-8 py-4 text-sm font-semibold text-[#2f745f] transition hover:border-[#2f745f]/40"
+                <button
+                  type="button"
+                  onClick={() => goVoice(1)}
+                  aria-label="Next member voice"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white transition hover:bg-white/10"
                 >
-                  Explore the Circles
-                </Link>
+                  <ArrowRight className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
+                </button>
+                <span className="ml-3 text-xs tracking-[0.14em] text-white/50 font-bold">
+                  {voiceIndex + 1} / {testimonials.length}
+                </span>
               </div>
             </div>
-          </motion.section>
+          </section>
+
+          {/* Final CTA */}
+          <section aria-labelledby="invitation-heading" className="bg-[#FBF8F3] relative z-10">
+            <div className="mx-auto max-w-[78rem] px-6 py-24 lg:px-10 lg:py-32">
+              <motion.div initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                <div className="mx-auto max-w-[34rem] text-center">
+                  <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#6E9179] font-bold">The invitation</p>
+                  <h2
+                    id="invitation-heading"
+                    className="mt-6 font-display text-[2.2rem] leading-[1.12] text-[#2E4739] font-bold sm:text-[2.75rem]"
+                  >
+                    There is a cushion here <em className="italic text-[#6E9179] font-medium">with your name on it</em>.
+                  </h2>
+                  <p className="mt-6 text-[1rem] leading-relaxed text-[#5F5A52] font-semibold">
+                    {isMember
+                      ? `Your seat in ${club.title} is waiting. Step inside for this week’s rituals and the gatherings you have booked.`
+                      : "Joining takes a moment. You can stay quiet for as long as you like — being here is enough."}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={joinSanctuary}
+                    className="mt-10 rounded-full bg-[#2E4739] hover:bg-[#1F3227] px-9 py-4 text-sm font-bold tracking-wide text-white transition duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2E4739]"
+                  >
+                    {isMember ? "Enter your club space" : "Join this circle"}
+                  </button>
+
+                  <p className="mt-6 text-sm text-[#8C867C] font-semibold">
+                    Not quite the right room?{" "}
+                    <Link
+                      href="/clubs"
+                      className="border-b border-[#2E4739]/30 pb-0.5 text-[#2E4739] font-bold transition hover:border-[#2E4739] hover:text-[#1F3227]"
+                    >
+                      Explore other circles
+                    </Link>
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          </section>
         </>
       )}
 
       <LandingFooter />
+
+      {club && (
+        <ClubJoinModal
+          club={club}
+          open={isClubJoinModalOpen}
+          onClose={() => setIsClubJoinModalOpen(false)}
+        />
+      )}
 
       <LandingJoinModal
         open={isJoinModalOpen}

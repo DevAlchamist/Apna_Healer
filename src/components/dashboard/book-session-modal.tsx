@@ -23,6 +23,7 @@ import {
   type CalendarAvailabilityEntry,
 } from "@/components/dashboard/booking-calendar";
 import { BookingCalendarSkeleton, ProviderRowSkeleton, TimeSlotGridSkeleton } from "@/components/skeletons";
+import { MatchingLoader } from "@/components/dashboard/matching-loader";
 
 type LiveSlot = { start: string; end: string; isBooked: boolean };
 type BookedRange = { start: string; end: string };
@@ -253,8 +254,10 @@ function BookSessionModal({
   const [selectedBookingOption, setSelectedBookingOption] = useState<"SESSION" | "PACKAGE" >("SESSION");
   const [selectedPackageToBuy, setSelectedPackageToBuy] = useState<any | null>(null);
   const [hasSetInitialPackage, setHasSetInitialPackage] = useState(false);
+  const [showLoaderMode, setShowLoaderMode] = useState<"therapist" | "listener" | null>(null);
 
   const handleClose = useCallback(() => {
+    setShowLoaderMode(null);
     setMood(null);
     setNotes("");
     setStep(0);
@@ -369,10 +372,10 @@ function BookSessionModal({
 
     if (requestedHealer.initialBookingOption === "PACKAGE") {
       setSelectedBookingOption("PACKAGE");
-      setStep(0);
+      setStep(1); // Go directly to Select Package (step 1)
     } else if (requestedHealer.preselection) {
       setSelectedBookingOption("SESSION");
-      setStep(2); // Go directly to Schedule slot page (step 2)
+      setStep(4); // Go directly to Confirm & Pay (step 4)
       skipSlotResetRef.current = true;
       setWeeklyDateKey(requestedHealer.preselection.dateYmd);
       setSelectedTherapistSlot({
@@ -765,10 +768,9 @@ function BookSessionModal({
         !selectedProvider ||
         !selectedTherapistSlot ||
         therapistSlotDuration <= 0 ||
-        sessionAmount <= 0 ||
-        intakeChiefConcern.trim().length < 2
+        sessionAmount <= 0
       ) {
-        throw new Error("Pick a slot, complete intake, and confirm pricing.");
+        throw new Error("Pick a slot and confirm pricing.");
       }
 
       const intakeLines = [
@@ -798,7 +800,7 @@ function BookSessionModal({
     },
     onSuccess: async () => {
       await invalidatePostBookingQueries();
-      handleClose();
+      setShowLoaderMode("therapist");
     },
     onError: () => {
       void queryClient.invalidateQueries({
@@ -828,9 +830,25 @@ function BookSessionModal({
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.35, ease: easeCalm }}
         >
-          <aside
-            className="flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
-          >
+          {showLoaderMode !== null ? (
+            <MatchingLoader
+              open={showLoaderMode !== null}
+              mode={showLoaderMode}
+              inline={true}
+              onCancel={() => {
+                setShowLoaderMode(null);
+                handleClose();
+              }}
+              onComplete={() => {
+                setShowLoaderMode(null);
+                handleClose();
+              }}
+            />
+          ) : (
+            <>
+              <aside
+                className="flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
+              >
             <h2
               id="book-session-title"
               className="font-display text-xl font-semibold text-text-secondary md:text-2xl"
@@ -1817,6 +1835,8 @@ function BookSessionModal({
               </div>
             </motion.div>
           ) : null}
+            </>
+          )}
         </motion.div>
       ) : null}
     </AnimatePresence>

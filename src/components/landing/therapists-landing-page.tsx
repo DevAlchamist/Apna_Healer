@@ -406,11 +406,10 @@ function TherapistFilterBar({ filters, onChange, resultCount }: TherapistFilterB
                     id={`filter-${group.key}`}
                     value={filters[group.key]}
                     onChange={(e) => onChange({ ...filters, [group.key]: e.target.value })}
-                    className={`w-full cursor-pointer appearance-none rounded-full border py-2.5 pl-4 pr-9 text-sm outline-none transition focus:ring-4 focus:ring-sage-100 ${
-                      isActive
-                        ? "border-sage-300 bg-sage-50 text-sage-700"
-                        : "border-cream-300 bg-cream-50 text-ink-500 hover:border-ink-400/30 hover:text-ink-700"
-                    }`}
+                    className={`w-full cursor-pointer appearance-none rounded-full border py-2.5 pl-4 pr-9 text-sm outline-none transition focus:ring-4 focus:ring-sage-100 ${isActive
+                      ? "border-sage-300 bg-sage-50 text-sage-700"
+                      : "border-cream-300 bg-cream-50 text-ink-500 hover:border-ink-400/30 hover:text-ink-700"
+                      }`}
                   >
                     {group.options.map((opt) => (
                       <option key={opt} value={opt}>
@@ -419,9 +418,8 @@ function TherapistFilterBar({ filters, onChange, resultCount }: TherapistFilterB
                     ))}
                   </select>
                   <ChevronDownIcon
-                    className={`pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${
-                      isActive ? "text-sage-600" : "text-ink-400"
-                    }`}
+                    className={`pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isActive ? "text-sage-600" : "text-ink-400"
+                      }`}
                   />
                 </div>
               );
@@ -452,10 +450,11 @@ function TherapistFilterBar({ filters, onChange, resultCount }: TherapistFilterB
 interface TherapistCardProps {
   therapist: EnrichedTherapist;
   index: number;
-  onBook: (therapist: EnrichedTherapist) => void;
+  onBookSession: (therapist: EnrichedTherapist) => void;
+  onBookPackage: (therapist: EnrichedTherapist) => void;
 }
 
-function TherapistCard({ therapist, index, onBook }: TherapistCardProps) {
+function TherapistCard({ therapist, index, onBookSession, onBookPackage }: TherapistCardProps) {
   return (
     <motion.article
       layout
@@ -466,76 +465,136 @@ function TherapistCard({ therapist, index, onBook }: TherapistCardProps) {
       whileHover={{ y: -4 }}
       className="group flex flex-col rounded-4xl border border-cream-300 bg-cream-50 p-5 transition-shadow duration-300 hover:shadow-soft"
     >
-      <div className="relative overflow-hidden rounded-3xl bg-cream-200">
-        <img
-          src={therapist.photo}
-          alt={`Portrait of ${therapist.name}`}
-          loading="lazy"
-          className="aspect-[4/5] w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-        />
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes marquee-exp {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-50%, 0, 0); }
+        }
+        .animate-marquee-exp {
+          display: flex;
+          width: max-content;
+          gap: 8px;
+          animation: marquee-exp 16s linear infinite;
+        }
+        .animate-marquee-exp:hover {
+          animation-play-state: paused;
+        }
+      `}} />
 
-        <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-cream-50/90 px-3 py-1.5 text-[11px] font-medium text-sage-700 backdrop-blur">
-          <BadgeCheckIcon className="h-3.5 w-3.5" />
-          Verified
-        </span>
-        <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-cream-50/90 px-3 py-1.5 text-[11px] font-medium text-ink-700 backdrop-blur">
-          <StarIcon className="h-3.5 w-3.5 fill-peach-400 text-peach-400" />
-          {therapist.rating}
-          <span className="text-ink-400">({therapist.reviews})</span>
-        </span>
+      {/* Top Split Header */}
+      <div className="flex gap-4 sm:gap-5 items-start">
+        {/* Left Video Thumbnail */}
+        <div className="relative aspect-video max:h-[135px] max:w-[240px] sm:w-[150px] shrink-0 overflow-hidden rounded-2xl bg-cream-200">
+          <img
+            src={therapist.photo}
+            alt={`Portrait of ${therapist.name}`}
+            loading="lazy"
+            className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+          />
+          {/* Play button overlay */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition cursor-pointer">
+            <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-white bg-black/45 px-2 py-0.5 rounded-full backdrop-blur">
+              Watch video
+              <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white text-ink-900 shadow-sm shrink-0">
+                <svg className="h-2 w-2 fill-current ml-0.5" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+            </span>
+          </div>
+          {/* Pagination dots bottom left */}
+          <div className="absolute bottom-1.5 left-1.5 flex gap-1">
+            <span className="h-1 w-2 rounded-full bg-white" />
+            <span className="h-1 w-1 rounded-full bg-white/60" />
+          </div>
+        </div>
+
+        {/* Right Info Details */}
+        <div className="min-w-0 flex-1 text-left">
+          <h3 className="font-display text-base sm:text-lg leading-snug text-ink-900 font-bold truncate">
+            {therapist.name}
+          </h3>
+          <p className="mt-0.5 text-xs text-ink-500 font-medium">
+            {therapist.experience} experience
+          </p>
+          <p className="mt-1 text-xs sm:text-sm text-ink-900 font-semibold">
+            ₹{therapist.price} for 50 mins
+          </p>
+        </div>
       </div>
 
-      <div className="mt-5 flex-1">
-        <h3 className="font-display text-lg leading-snug text-ink-900 font-semibold">{therapist.name}</h3>
-        <p className="mt-1 text-xs text-ink-500">
-          {therapist.credential} · {therapist.experience} experience
+      {/* Expertise Infinite Scroll Marquee */}
+      <div className="mt-4 flex items-center gap-2 overflow-hidden border-t border-cream-200 pt-3">
+        <span className="text-[11px] text-ink-400 font-semibold shrink-0">Expertise:</span>
+        <div className="overflow-hidden flex-1 relative">
+          <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-cream-50 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-cream-50 to-transparent z-10 pointer-events-none" />
+
+          <div className="animate-marquee-exp">
+            {[...therapist.specialties, ...therapist.specialties].map((s, idx) => (
+              <span
+                key={`${s}-${idx}`}
+                className="rounded-full bg-cream-200 px-2.5 py-0.5 text-[10px] text-ink-700 font-semibold shrink-0"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Speaks and static availability modes */}
+      <div className="mt-2.5 text-left text-xs font-semibold">
+        <p className="text-ink-500 font-medium">
+          <span className="text-ink-400 font-semibold">Speaks:</span> {therapist.languages.join(", ")}
         </p>
 
-        <div className="mt-3.5 flex flex-wrap gap-1.5">
-          {therapist.specialties.slice(0, 3).map((s) => (
-            <span key={s} className="rounded-full bg-lavender-100 px-2.5 py-1 text-[11px] text-lavender-700 font-medium">
-              {s}
-            </span>
-          ))}
+        <div className="mt-3 flex items-center gap-2">
+          <span className="rounded-full border border-sage-500 bg-white px-2.5 py-0.5 text-[10px] font-bold text-sage-600">
+            Online
+          </span>
+          <span className="rounded-full bg-cream-200 px-2.5 py-0.5 text-[10px] font-semibold text-ink-400">
+            In-person
+          </span>
         </div>
 
-        <div className="mt-4 space-y-1.5 text-xs text-ink-400">
-          <p className="flex items-center gap-1.5">
-            <LanguagesIcon className="h-3.5 w-3.5" />
-            {therapist.languages.join(", ")}
+        <div className="mt-3 space-y-1">
+          <p className="flex items-center gap-1 text-ink-500 font-medium">
+            <svg className="h-3.5 w-3.5 shrink-0 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Video, Voice
           </p>
-          <p className="flex items-center gap-1.5">
-            <MapPinIcon className="h-3.5 w-3.5" />
-            {therapist.city} · {therapist.mode}
-          </p>
-          <p className="flex items-center gap-1.5 text-sage-600 font-medium">
-            <ClockIcon className="h-3.5 w-3.5" />
-            Next slot · {therapist.nextSlot}
+          <p className="text-ink-500 font-medium">
+            Next online slot: <span className="text-lavender-600 font-bold">{therapist.nextSlot}</span>
           </p>
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-3 border-t border-cream-300 pt-4">
-        <div>
-          <p className="font-display text-lg text-ink-900 font-semibold">₹{therapist.price}</p>
-          <p className="text-[11px] text-ink-400">50 min session</p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href={`/therapists/${therapist.id}`}
-            className="rounded-full border border-cream-300 bg-cream-50 hover:bg-cream-100 text-ink-700 hover:text-ink-900 px-4 py-2.5 text-xs font-semibold transition cursor-pointer"
-          >
-            View
-          </Link>
-          <button
-            type="button"
-            onClick={() => onBook(therapist)}
-            className="rounded-full bg-lavender-600 px-5 py-2.5 text-xs font-semibold text-cream-50 transition hover:bg-lavender-700 cursor-pointer"
-          >
-            Book session
-          </button>
-        </div>
+      {/* Action Buttons */}
+      <div className="mt-5 flex gap-2 border-t border-cream-300 pt-4">
+        <button
+          onClick={() => onBookPackage(therapist)}
+          className="flex-1 rounded-full border border-cream-300 bg-cream-50 hover:bg-cream-100 text-ink-700 hover:text-ink-900 py-2.5 text-center text-[10px] sm:text-xs font-bold transition uppercase tracking-wider cursor-pointer truncate"
+        >
+          Book package
+        </button>
+        <button
+          type="button"
+          onClick={() => onBookSession(therapist)}
+          className="flex-1 rounded-full bg-lavender-600 hover:bg-lavender-700 text-cream-50 py-2.5 text-center text-[10px] sm:text-xs font-bold transition uppercase tracking-wider cursor-pointer truncate"
+        >
+          Book
+        </button>
       </div>
+      <Link
+        type="button"
+        href={`/therapists/${therapist.id}`}
+        className="mt-2 rounded-full bg-sage-600 hover:bg-sage-700 text-cream-50 py-2.5 text-center text-[10px] sm:text-xs font-bold transition uppercase tracking-wider cursor-pointer truncate"
+      >
+        View Profile
+      </Link>
     </motion.article>
   );
 }
@@ -604,12 +663,13 @@ function FitQuestionnaireBanner({ onStart }: { onStart: () => void }) {
 
 interface TherapistsGridProps {
   therapists: EnrichedTherapist[];
-  onBook: (therapist: EnrichedTherapist) => void;
+  onBookSession: (therapist: EnrichedTherapist) => void;
+  onBookPackage: (therapist: EnrichedTherapist) => void;
   onStartQuestionnaire: () => void;
   onReset: () => void;
 }
 
-function TherapistsGrid({ therapists, onBook, onStartQuestionnaire, onReset }: TherapistsGridProps) {
+function TherapistsGrid({ therapists, onBookSession, onBookPackage, onStartQuestionnaire, onReset }: TherapistsGridProps) {
   const bannerAfter = Math.min(3, therapists.length);
   const firstGroup = therapists.slice(0, bannerAfter);
   const secondGroup = therapists.slice(bannerAfter);
@@ -639,10 +699,16 @@ function TherapistsGrid({ therapists, onBook, onStartQuestionnaire, onReset }: T
         </motion.div>
       ) : (
         <div className="space-y-10">
-          <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
             <AnimatePresence mode="popLayout">
               {firstGroup.map((t, i) => (
-                <TherapistCard key={t.id} therapist={t} index={i} onBook={onBook} />
+                <TherapistCard
+                  key={t.id}
+                  therapist={t}
+                  index={i}
+                  onBookSession={onBookSession}
+                  onBookPackage={onBookPackage}
+                />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -650,10 +716,16 @@ function TherapistsGrid({ therapists, onBook, onStartQuestionnaire, onReset }: T
           <FitQuestionnaireBanner onStart={onStartQuestionnaire} />
 
           {secondGroup.length > 0 && (
-            <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
               <AnimatePresence mode="popLayout">
                 {secondGroup.map((t, i) => (
-                  <TherapistCard key={t.id} therapist={t} index={i} onBook={onBook} />
+                  <TherapistCard
+                    key={t.id}
+                    therapist={t}
+                    index={i}
+                    onBookSession={onBookSession}
+                    onBookPackage={onBookPackage}
+                  />
                 ))}
               </AnimatePresence>
             </motion.div>
@@ -872,9 +944,8 @@ function TestimonialExperienceCarousel({ stories }: TestimonialExperienceCarouse
                   setIndex(i);
                 }}
                 aria-label={`Story ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all duration-500 ${
-                  i === index ? "w-9 bg-ink-900" : "w-4 bg-ink-400/40 hover:bg-ink-400/70"
-                }`}
+                className={`h-1.5 rounded-full transition-all duration-500 ${i === index ? "w-9 bg-ink-900" : "w-4 bg-ink-400/40 hover:bg-ink-400/70"
+                  }`}
               />
             ))}
           </div>
@@ -1166,6 +1237,23 @@ export function TherapistsLandingPage() {
     }
   };
 
+  const handleBookTherapistPackage = (t: EnrichedTherapist) => {
+    const healer: BookSessionHealer = {
+      providerId: t.rawProvider.id,
+      name: t.name,
+      preferredRole: "THERAPIST",
+      imageSrc: t.photo,
+      specialty: t.specialties[0] || "Therapist",
+      initialBookingOption: "PACKAGE",
+    };
+
+    if (status !== "authenticated") {
+      openJoinModal();
+    } else {
+      openBookSession(healer);
+    }
+  };
+
   const handleBookPackage = (pkg: any) => {
     const healer: BookSessionHealer = {
       preferredRole: "THERAPIST",
@@ -1195,7 +1283,8 @@ export function TherapistsLandingPage() {
 
         <TherapistsGrid
           therapists={visibleTherapists}
-          onBook={handleBookTherapist}
+          onBookSession={handleBookTherapist}
+          onBookPackage={handleBookTherapistPackage}
           onStartQuestionnaire={openJoinModal}
           onReset={() => setFilters(emptyFilters)}
         />

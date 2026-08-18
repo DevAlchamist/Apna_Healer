@@ -14,6 +14,7 @@ import { TimeSlotGridSkeleton } from "@/components/skeletons";
 import { easeCalm, hoverLiftTransition, morphTransition } from "@/components/ui/fade-in";
 import { apiFetch, apiMutation } from "@/lib/api-client";
 import { formatShortDate } from "@/lib/display";
+import { MatchingLoader } from "@/components/dashboard/matching-loader";
 
 type ListenerSupportModalContextValue = {
   open: () => void;
@@ -140,6 +141,7 @@ function ListenerSupportModal({
   const [date, setDate] = useState<string>(dateOptions[0]?.value ?? "");
   const [time, setTime] = useState<string>("");
   const [submittedReference, setSubmittedReference] = useState<string | null>(null);
+  const [showLoader, setShowLoader] = useState(false);
 
   const reset = useCallback(() => {
     setStep(0);
@@ -151,6 +153,7 @@ function ListenerSupportModal({
     setDate(dateOptions[0]?.value ?? "");
     setTime("");
     setSubmittedReference(null);
+    setShowLoader(false);
   }, [dateOptions]);
 
   const handleClose = useCallback(() => {
@@ -183,7 +186,7 @@ function ListenerSupportModal({
       ),
     onSuccess: (data) => {
       setSubmittedReference(data.id);
-      setStep(3);
+      setShowLoader(true);
       queryClient.invalidateQueries({ queryKey: ["user-me"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-listener-requests"] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
@@ -212,7 +215,23 @@ function ListenerSupportModal({
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.35, ease: easeCalm }}
         >
-          <aside className="flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto">
+          {showLoader ? (
+            <MatchingLoader
+              open={showLoader}
+              mode="listener"
+              inline={true}
+              onCancel={() => {
+                setShowLoader(false);
+                handleClose();
+              }}
+              onComplete={() => {
+                setShowLoader(false);
+                setStep(3);
+              }}
+            />
+          ) : (
+            <>
+              <aside className="flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto">
             <h2
               id="listener-support-title"
               className="font-display text-lg font-semibold tracking-tight text-[#045b4f] md:text-xl"
@@ -539,6 +558,8 @@ function ListenerSupportModal({
               )}
             </div>
           </div>
+            </>
+          )}
         </motion.div>
       ) : null}
     </AnimatePresence>
