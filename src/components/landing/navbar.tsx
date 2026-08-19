@@ -3,8 +3,20 @@
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { useListenerSupportModal } from "@/components/dashboard/listener-support-modal";
 import { LandingAuthActions } from "@/components/landing/landing-auth-actions";
-import { HeartHandshakeIcon, XIcon, MenuIcon } from "lucide-react";
+import {
+  HeartHandshakeIcon,
+  XIcon,
+  MenuIcon,
+  HomeIcon,
+  UsersIcon,
+  PhoneCallIcon,
+  CalendarDaysIcon,
+  InfoIcon,
+  MailIcon,
+} from "lucide-react";
 
 const LEFT_NAV_LINKS = [
   { label: "Therapists", href: "/therapists", hasMegamenu: true, type: "therapists" as const },
@@ -22,9 +34,11 @@ type LandingNavbarProps = {
 };
 
 export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
+  const pathname = usePathname();
+  const { open: openListenerModal } = useListenerSupportModal();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<"therapists" | "clubs" | "about" | null>(null);
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navContainerRef = useRef<HTMLDivElement>(null);
 
@@ -482,13 +496,14 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
   );
 
   return (
-    <header
-      ref={navContainerRef}
-      onMouseLeave={startCloseTimeout}
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled ? "border-b border-cream-300 bg-cream-50/85 backdrop-blur-xl" : "border-b border-transparent bg-transparent"
-      }`}
-    >
+    <>
+      <header
+        ref={navContainerRef}
+        onMouseLeave={startCloseTimeout}
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+          scrolled ? "border-b border-cream-300 bg-cream-50/85 backdrop-blur-xl" : "border-b border-transparent bg-transparent"
+        }`}
+      >
       <div className="mx-auto flex h-[72px] w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
         <Link
           href="/"
@@ -610,16 +625,6 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
           </Link>
 
           <LandingAuthActions onJoinClick={onJoinClick} />
-
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            aria-expanded={mobileOpen}
-            className="rounded-full p-2.5 text-ink-700 transition hover:bg-cream-200 lg:hidden"
-          >
-            {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-          </button>
         </div>
       </div>
 
@@ -640,49 +645,167 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
           </motion.div>
         ) : null}
       </AnimatePresence>
-
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.nav
-            aria-label="Mobile"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden border-t border-cream-300 bg-cream-50/95 backdrop-blur-xl lg:hidden"
-          >
-            <div className="flex flex-col gap-1 px-5 py-4 sm:px-8">
-              {LEFT_NAV_LINKS.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-2xl px-4 py-3 text-sm text-ink-700 transition hover:bg-cream-200"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {RIGHT_NAV_LINKS.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-2xl px-4 py-3 text-sm text-ink-700 transition hover:bg-cream-200"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Link
-                href="/#listeners"
-                onClick={() => setMobileOpen(false)}
-                className="mt-2 text-center rounded-full bg-sage-100 px-4 py-3 text-sm font-medium text-sage-700"
-              >
-                Talk to a listener now
-              </Link>
-            </div>
-          </motion.nav>
-        )}
-      </AnimatePresence>
     </header>
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav aria-label="Primary mobile" className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
+        <div className="pb-safe border-t border-cream-300/70 bg-[#faf9f5]/90 shadow-[0_-10px_35px_-15px_rgba(85,118,76,0.3)] backdrop-blur-md">
+          <div className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-2">
+            
+            {/* Tab 1: Home */}
+            <Link
+              href="/"
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
+                pathname === "/" ? "text-[#55764c]" : "text-text-primary/60"
+              }`}
+            >
+              <HomeIcon className="h-5 w-5" />
+              <span>Home</span>
+              <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${pathname === "/" ? "bg-[#55764c]" : "bg-transparent"}`} />
+            </Link>
+
+            {/* Tab 2: Therapists */}
+            <Link
+              href="/therapists"
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
+                pathname === "/therapists" ? "text-[#55764c]" : "text-text-primary/60"
+              }`}
+            >
+              <UsersIcon className="h-5 w-5" />
+              <span>Therapists</span>
+              <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${pathname === "/therapists" ? "bg-[#55764c]" : "bg-transparent"}`} />
+            </Link>
+
+            {/* Tab 3: Talk to Listener (FAB in Center) */}
+            <div className="relative flex items-end justify-center">
+              <motion.button
+                type="button"
+                onClick={openListenerModal}
+                whileTap={{ scale: 0.94 }}
+                transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
+                aria-label="Talk to a Listener"
+                className="absolute -top-6 flex flex-col items-center focus-visible:outline-none"
+              >
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#55764c] to-[#3a5433] text-white shadow-md ring-4 ring-[#faf9f5]">
+                  <PhoneCallIcon className="h-6 w-6" />
+                </span>
+                <span className="mt-1 text-[10px] font-bold text-[#55764c]">Listener</span>
+              </motion.button>
+            </div>
+
+            {/* Tab 4: Events */}
+            <Link
+              href="/events"
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
+                pathname === "/events" ? "text-[#55764c]" : "text-text-primary/60"
+              }`}
+            >
+              <CalendarDaysIcon className="h-5 w-5" />
+              <span>Events</span>
+              <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${pathname === "/events" ? "bg-[#55764c]" : "bg-transparent"}`} />
+            </Link>
+
+            {/* Tab 5: Menu */}
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.94 }}
+              transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
+              onClick={() => setIsMenuOpen(true)}
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
+                isMenuOpen || ["/clubs", "/about", "/contact"].includes(pathname)
+                  ? "text-[#55764c]"
+                  : "text-text-primary/60"
+              }`}
+            >
+              <MenuIcon className="h-5 w-5" />
+              <span>Menu</span>
+              <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${["/clubs", "/about", "/contact"].includes(pathname) ? "bg-[#55764c]" : "bg-transparent"}`} />
+            </motion.button>
+
+          </div>
+        </div>
+      </nav>
+
+      {/* Spacer to push content above mobile tab bar */}
+      <div className="h-16 lg:hidden" aria-hidden="true" />
+
+      {/* Mobile Menu Sheet */}
+      <MobileMenuSheet isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+    </>
+  );
+}
+
+function MobileMenuSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const pathname = usePathname();
+  const sheetLinks = [
+    { label: "Clubs & circles", href: "/clubs", icon: UsersIcon },
+    { label: "Events", href: "/events", icon: CalendarDaysIcon },
+    { label: "About us", href: "/about", icon: InfoIcon },
+    { label: "Contact", href: "/contact", icon: MailIcon },
+  ];
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[150] lg:hidden">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/25 backdrop-blur-xs"
+          />
+          {/* Sheet */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="More navigation"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+            className="absolute inset-x-0 bottom-0 rounded-t-[32px] bg-[#faf9f5] p-5 pb-12 shadow-2xl border-t border-cream-300"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-display text-lg font-bold text-text-secondary">Menu</p>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close menu"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary/50 transition-colors hover:bg-accent/40"
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <ul className="space-y-1">
+              {sheetLinks.map((link) => {
+                const Icon = link.icon;
+                const active = pathname === link.href;
+                return (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                        active 
+                          ? "bg-[#55764c]/20 text-[#55764c]" 
+                          : "text-text-primary hover:bg-accent/30"
+                      }`}
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#55764c]/10 text-[#55764c]">
+                        <Icon className="h-4.5 w-4.5" />
+                      </span>
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

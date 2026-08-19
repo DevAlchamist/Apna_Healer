@@ -8,6 +8,7 @@ describe("serializeListenerBookingRequest", () => {
     userId: "u1",
     preferredDate: new Date(),
     preferredTime: "19:00",
+    isAsap: false,
     duration: 30,
     emotionalTags: [] as string[],
     preferredTone: null,

@@ -250,6 +250,19 @@ function BookSessionModal({
   const [externalPaymentReady, setExternalPaymentReady] = useState(false);
   const [usePackage, setUsePackage] = useState(false);
 
+  const formatWhen = useCallback(() => {
+    if (!selectedTherapistSlot) return "—";
+    try {
+      const d = new Date(`${selectedTherapistSlot.date}T12:00:00`);
+      const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+      const day = d.getDate();
+      const month = d.toLocaleDateString("en-US", { month: "short" });
+      return `${dayName}, ${day} ${month} · ${formatTimeLabel(selectedTherapistSlot.start)} IST`;
+    } catch (e) {
+      return `${selectedTherapistSlot.date} · ${formatTimeLabel(selectedTherapistSlot.start)}`;
+    }
+  }, [selectedTherapistSlot]);
+
   // Selector Option: "SESSION" | "PACKAGE"
   const [selectedBookingOption, setSelectedBookingOption] = useState<"SESSION" | "PACKAGE" >("SESSION");
   const [selectedPackageToBuy, setSelectedPackageToBuy] = useState<any | null>(null);
@@ -820,16 +833,25 @@ function BookSessionModal({
   return (
     <AnimatePresence>
       {open ? (
-        <motion.div
-          className="fixed inset-0 z-100 bg-[#faf9f5] flex flex-col md:flex-row overflow-hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="book-session-title"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.35, ease: easeCalm }}
-        >
+        <>
+          {/* Mobile Backdrop */}
+          <motion.div
+            className="fixed inset-0 z-[99] bg-black/40 backdrop-blur-xs md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+          />
+          <motion.div
+            className="fixed bottom-0 left-0 right-0 md:inset-0 z-[100] bg-[#faf9f5] flex flex-col md:flex-row rounded-t-[32px] md:rounded-none h-[92vh] md:h-full overflow-hidden shadow-2xl md:shadow-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="book-session-title"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.35, ease: easeCalm }}
+          >
           {showLoaderMode !== null ? (
             <MatchingLoader
               open={showLoaderMode !== null}
@@ -847,7 +869,7 @@ function BookSessionModal({
           ) : (
             <>
               <aside
-                className="flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
+                className="hidden md:flex w-full md:w-[280px] shrink-0 flex-col border-r border-accent/80 bg-[#f4f1ec] p-6 md:p-8 overflow-y-auto"
               >
             <h2
               id="book-session-title"
@@ -912,11 +934,58 @@ function BookSessionModal({
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col bg-white overflow-hidden">
+            {/* Mobile Header (sticky at the top, hidden on desktop) */}
+            <div className="flex flex-col border-b border-accent/60 bg-[#f4f1ec] px-5 py-3.5 md:hidden">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-lg font-bold text-text-secondary">
+                  {selectedBookingOption === "PACKAGE" ? "Buy Package" : "Book Session"}
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="rounded-full p-1.5 text-text-primary/45 transition-colors hover:bg-accent/50"
+                  aria-label="Close"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex gap-1.5 w-full mt-3" aria-hidden="true">
+                {stepLabels.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                      idx <= step ? "bg-text-secondary" : "bg-text-primary/10"
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-[10px] font-bold text-text-primary/45 uppercase tracking-wider">
+                  Step {step + 1} of {stepLabels.length}: {stepLabels[step]}
+                </p>
+              </div>
+              
+              {/* Your Healer Banner (shown below the progress bar in mobile header) */}
+              <div className="mt-3 flex items-center gap-3 border-t border-accent/40 pt-2.5">
+                <HealerAvatar healer={modalHealer} size="md" />
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-text-primary/40">
+                    Your Healer
+                  </p>
+                  <p className="truncate text-xs font-bold text-text-secondary">
+                    {modalHealer.name ?? "Choose a provider"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4 md:px-8 md:pt-5">
               <button
                 type="button"
                 onClick={handleClose}
-                className="absolute right-4 top-4 rounded-full p-2 text-text-primary/45 transition-colors hover:bg-accent/50 hover:text-text-primary md:right-5 md:top-5"
+                className="hidden md:block absolute right-4 top-4 rounded-full p-2 text-text-primary/45 transition-colors hover:bg-accent/50 hover:text-text-primary md:right-5 md:top-5"
                 aria-label="Close"
               >
                 <svg
@@ -1536,105 +1605,140 @@ function BookSessionModal({
 
               {/* STEP 4: Confirm & Pay (if SESSION) */}
               {step === 4 && selectedBookingOption === "SESSION" ? (
-                <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
-                  <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
-                    Confirm &amp; pay
-                  </h3>
-                  <p className="mt-2 text-sm text-text-primary/65 md:text-base">
-                    Pay from your wallet or complete a direct QR / card payment before the
-                    booking request is sent to your therapist.
-                  </p>
+                !selectedProvider?.id ? (
+                  <div className="py-10">
+                    <p className="text-center font-display text-lg font-semibold text-text-primary mb-4">
+                      Finding the perfect healer for you...
+                    </p>
+                    <MatchingLoader
+                      open={true}
+                      mode="therapist"
+                      inline={true}
+                      onCancel={() => handleClose()}
+                      onComplete={() => {
+                        handleClose();
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
+                    {/* Green/Cream Details Card */}
+                    <div className="rounded-3xl bg-[#f4f7f4] border border-[#d0e0d0]/40 p-6">
+                      <div className="flex items-center gap-4">
+                        <HealerAvatar healer={modalHealer} size="lg" />
+                        <div className="min-w-0">
+                          <h3 className="font-display text-xl font-bold text-text-secondary">
+                            {selectedProvider.name ?? modalHealer.name ?? "Your Healer"}
+                          </h3>
+                          <p className="text-xs text-text-primary/65 mt-0.5">
+                            {selectedProvider.specializations?.join(", ") ?? modalHealer.specialty ?? "Clinical Psychologist"} · {selectedProvider.languages?.join(" / ") ?? "English"}
+                          </p>
+                        </div>
+                      </div>
 
-                  {activePackage && (
-                    <div className="mt-6 rounded-gentle border border-[#2f745f]/30 bg-[#2f745f]/5 p-4 text-sm text-[#1f2827]">
-                      <p className="font-semibold text-[#2f745f] flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#2f745f] animate-ping" />
-                        Active Wellness Package Available
-                      </p>
-                      <p className="mt-1 text-xs text-[#5c6865]">
-                        You have purchased the package "{activePackage.package.title}" which has {activePackage.allocations.find((a: any) => a.role === "THERAPIST")?.remainingSessions ?? 0} therapist sessions left.
-                      </p>
-                      <div className="mt-4 flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setUsePackage(true)}
-                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition ${
-                            usePackage
-                              ? "bg-[#2f745f] border-[#2f745f] text-white shadow-xs"
-                              : "bg-white border-[#ebe8e2] text-[#1f2827] hover:border-[#2f745f]"
-                          }`}
-                        >
-                          Use Package Session
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUsePackage(false)}
-                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition ${
-                            !usePackage
-                              ? "bg-text-secondary border-text-secondary text-white shadow-xs"
-                              : "bg-white border-[#ebe8e2] text-[#1f2827] hover:border-[#2f745f]"
-                          }`}
-                        >
-                          Pay Standard Price
-                        </button>
+                      <hr className="border-[#d0e0d0]/60 my-4" />
+
+                      <div className="space-y-3.5 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-text-primary/65">Session</span>
+                          <span className="font-semibold text-text-secondary">
+                            {usePackage ? "Package session" : "One session"} · {therapistSlotDuration > 0 ? `${therapistSlotDuration} minutes` : "50 minutes"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-text-primary/65">When</span>
+                          <span className="font-semibold text-text-secondary">
+                            {formatWhen()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <hr className="border-[#d0e0d0]/60 my-4" />
+
+                      <div className="flex justify-between items-center">
+                        <span className="font-display text-base font-semibold text-text-secondary">Total</span>
+                        <span className="font-display text-2xl font-bold text-text-secondary">
+                          {usePackage ? (
+                            "Covered"
+                          ) : (
+                            formatCurrency(sessionAmount)
+                          )}
+                        </span>
                       </div>
                     </div>
-                  )}
 
-                  {usePackage ? (
-                    <div className="mt-6 rounded-gentle border border-accent/80 bg-background/80 px-4 py-4 text-sm text-text-primary/70">
-                      <p className="font-medium text-text-secondary">
-                        ✓ Payment is fully covered by your wellness package.
-                      </p>
-                      <p className="mt-1 text-xs text-text-primary/55">
-                        1 session will be deducted from "{activePackage?.package.title}" allocations upon booking completion.
-                      </p>
-                    </div>
-                  ) : (
-                    <motion.div className="mt-6 space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-primary/45">
-                        Payment method
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {(
-                          [
-                            { id: "WALLET" as const, label: "Wallet", hint: "Uses healing points" },
-                            { id: "QR" as const, label: "UPI / QR", hint: "Pay directly" },
-                            { id: "CARD" as const, label: "Card", hint: "Pay directly" },
-                          ] as const
-                        ).map((option) => {
-                          const active = therapistPaymentMethod === option.id;
-                          return (
-                            <button
-                              key={option.id}
-                              type="button"
-                              onClick={() => {
+                    {/* Pay with Options */}
+                    {!usePackage && (
+                      <div className="mt-6">
+                        <h4 className="font-semibold text-sm text-text-primary">Pay with</h4>
+                        <div className="grid grid-cols-3 gap-3 mt-3">
+                          {(
+                            [
+                              { 
+                                id: "WALLET" as const, 
+                                label: "Apna Wallet", 
+                                hint: `Balance ${formatCurrency(walletAvailable)}`,
+                                icon: (
+                                  <svg className="w-5 h-5 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                    <path d="M16 10h4v4h-4z" />
+                                  </svg>
+                                )
+                              },
+                              { 
+                                id: "CARD" as const, 
+                                label: "Card", 
+                                hint: "Visa •••• 4218",
+                                icon: (
+                                  <svg className="w-5 h-5 text-text-primary/65" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                                    <line x1="2" y1="10" x2="22" y2="10" />
+                                  </svg>
+                                )
+                              },
+                              { 
+                                id: "QR" as const, 
+                                label: "UPI / QR", 
+                                hint: "Scan to pay",
+                                icon: (
+                                  <svg className="w-5 h-5 text-text-primary/65" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="3" y="3" width="7" height="7" />
+                                    <rect x="14" y="3" width="7" height="7" />
+                                    <rect x="3" y="14" width="7" height="7" />
+                                    <rect x="14" y="14" width="7" height="7" />
+                                  </svg>
+                                )
+                              },
+                            ] as const
+                          ).map((option) => {
+                            const active = therapistPaymentMethod === option.id;
+                            return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => {
                                   setTherapistPaymentMethod(option.id);
                                   setExternalPaymentReady(option.id !== "WALLET");
-                              }}
-                              className={`rounded-gentle border px-4 py-3 text-left transition ${
-                                active
-                                  ? "border-text-secondary bg-text-secondary/10 ring-2 ring-text-secondary/20"
-                                  : "border-accent/80 bg-white hover:border-primary/40"
-                              }`}
-                            >
-                              <p className="text-sm font-semibold text-text-primary">{option.label}</p>
-                              <p className="mt-1 text-xs text-text-primary/55">{option.hint}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
+                                }}
+                                className={`flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left cursor-pointer transition ${
+                                  active
+                                    ? "border-emerald-600 bg-emerald-50/10 ring-2 ring-emerald-600/10"
+                                    : "border-accent/80 bg-white hover:border-emerald-600/50"
+                                }`}
+                              >
+                                {option.icon}
+                                <div>
+                                  <p className="text-xs font-bold text-text-primary">{option.label}</p>
+                                  <p className="mt-0.5 text-[10px] text-text-primary/50 font-medium">{option.hint}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
 
-                      {therapistPaymentMethod === "WALLET" ? (
-                        <div className="rounded-gentle border border-accent/80 bg-background/80 px-4 py-3 text-sm text-text-primary/70">
-                          <p>
-                            Wallet balance:{" "}
-                            <span className="font-semibold text-text-secondary">
-                              {formatCurrency(walletAvailable)}
-                            </span>
-                          </p>
-                          {walletAvailable < sessionAmount ? (
-                            <p className="mt-2 text-[#cf4f45]">
+                        {therapistPaymentMethod === "WALLET" ? (
+                          walletAvailable < sessionAmount && (
+                            <div className="mt-4 rounded-2xl bg-[#fdf0ee] border border-red-200 px-4 py-3 text-xs text-[#cf4f45]">
                               You need {formatCurrency(sessionAmount - walletAvailable)} more.{" "}
                               <Link
                                 href="/dashboard/wallet"
@@ -1642,105 +1746,48 @@ function BookSessionModal({
                               >
                                 Top up wallet
                               </Link>
-                            </p>
-                          ) : (
-                            <p className="mt-2 text-text-primary/55">
-                              {formatCurrency(sessionAmount)} will be held until your session is
-                              completed or cancelled.
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="rounded-gentle border border-accent/80 bg-background/80 px-4 py-4 text-sm text-text-primary/70">
-                          <p>
-                            {therapistPaymentMethod === "QR"
-                              ? `Scan the sanctuary QR to pay ${formatCurrency(sessionAmount)}.`
-                              : `Card checkout for ${formatCurrency(sessionAmount)}.`}{" "}
-                            Confirm below once payment is complete (demo gateway).
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setExternalPaymentReady(true)}
-                            className="mt-3 rounded-full bg-text-secondary px-4 py-2 text-xs font-semibold text-white"
-                          >
-                            Confirm payment received
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
+                            </div>
+                          )
+                        ) : (
+                          <div className="mt-4 rounded-2xl bg-[#faf9f6] border border-accent/80 px-4 py-4 text-xs text-text-primary/70 flex justify-between items-center">
+                            <span>
+                              {therapistPaymentMethod === "QR"
+                                ? `Scan the sanctuary QR to pay ${formatCurrency(sessionAmount)}.`
+                                : `Card checkout for ${formatCurrency(sessionAmount)}.`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setExternalPaymentReady(true)}
+                              className="rounded-full bg-text-secondary px-3.5 py-1.5 text-[10px] font-bold text-white shadow-xs cursor-pointer hover:bg-text-secondary/90 transition"
+                            >
+                              {externalPaymentReady ? "Payment confirmed" : "Confirm payment"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  <div className="mt-8 space-y-3 rounded-gentle border border-accent/80 bg-background/80 p-5 text-sm text-text-primary/70">
-                    <p>
-                      <span className="font-semibold text-text-secondary">With:</span>{" "}
-                      {selectedProvider?.name ?? modalHealer.name ?? "Choose a provider"}
-                    </p>
-                    <p>
-                      <span className="font-semibold text-text-secondary">Role:</span>{" "}
-                      {selectedProvider
-                        ? toSentenceCase(selectedProvider.role)
-                        : (modalHealer.specialty ?? "Therapist")}
-                    </p>
-                    {selectedTherapistSlot ? (
-                      <p>
-                        <span className="font-semibold text-text-secondary">Date:</span>{" "}
-                        {formatShortDate(`${selectedTherapistSlot.date}T12:00:00`)}
-                      </p>
-                    ) : null}
-                    {selectedTherapistSlot ? (
-                      <p>
-                        <span className="font-semibold text-text-secondary">Time:</span>{" "}
-                        {formatTimeLabel(selectedTherapistSlot.start)} —{" "}
-                        {formatTimeLabel(selectedTherapistSlot.end)}
-                      </p>
-                    ) : null}
-                    <p>
-                      <span className="font-semibold text-text-secondary">Duration:</span>{" "}
-                      {therapistSlotDuration > 0 ? `${therapistSlotDuration} min` : "—"}
-                    </p>
-                    <p>
-                      <span className="font-semibold text-text-secondary">Amount:</span>{" "}
-                      {usePackage ? (
-                        <span className="text-[#2f745f] font-semibold">Covered by package (0 points)</span>
-                      ) : sessionAmount > 0 ? (
-                        formatCurrency(sessionAmount)
-                      ) : selectedProvider?.hourlyRate ? (
-                        formatCurrency(selectedProvider.hourlyRate)
-                      ) : (
-                        "Pricing unavailable"
-                      )}
-                    </p>
-                    {intakeChiefConcern.trim() ? (
-                      <p>
-                        <span className="font-semibold text-text-secondary">Chief concern:</span>{" "}
-                        {intakeChiefConcern.trim()}
-                      </p>
-                    ) : null}
-                    {notes.trim() ? (
-                      <p>
-                        <span className="font-semibold text-text-secondary">Notes:</span>{" "}
-                        {notes}
-                      </p>
+                    {/* Disclaimer */}
+                    <div className="flex items-center gap-2 mt-5 text-[11px] text-text-primary/50 justify-center">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0110 0v4" />
+                      </svg>
+                      <span>Payments are encrypted. Your intake notes stay between you and your therapist.</span>
+                    </div>
+
+                    {bookingMutation.error ? (
+                      <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
+                        {bookingMutation.error.message}
+                      </div>
                     ) : null}
                   </div>
-
-                  {!selectedProvider?.hourlyRate ? (
-                    <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm text-[#cf4f45]">
-                      This provider has not configured session pricing yet, so direct booking is
-                      disabled for now.
-                    </div>
-                  ) : null}
-
-                  {bookingMutation.error ? (
-                    <div className="mt-4 rounded-gentle bg-[#fdf0ee] px-4 py-4 text-sm font-medium text-[#cf4f45]">
-                      {bookingMutation.error.message}
-                    </div>
-                  ) : null}
-                </div>
+                )
               ) : null}
             </div>
 
-            <div className="flex items-center justify-between gap-4 border-t border-accent/70 bg-white px-5 py-4 md:px-8">
+            {!(step === 4 && selectedBookingOption === "SESSION" && !selectedProvider?.id) && (
+              <div className="flex items-center justify-between gap-4 border-t border-accent/70 bg-white px-5 py-4 md:px-8">
               <button
                 type="button"
                 onClick={handleClose}
@@ -1796,6 +1843,7 @@ function BookSessionModal({
                 </motion.button>
               </div>
             </div>
+            )}
           </div>
 
           {!isListenerCheckIn ? (
@@ -1838,7 +1886,7 @@ function BookSessionModal({
             </>
           )}
         </motion.div>
-      ) : null}
+      </> ) : null}
     </AnimatePresence>
   );
 }

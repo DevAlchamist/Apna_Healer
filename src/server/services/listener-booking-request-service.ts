@@ -85,13 +85,15 @@ export async function createListenerBookingRequest(
   const holdAmount = toDecimal(LISTENER_REQUEST_HOLD_AMOUNT);
   const preferredDate = new Date(`${input.preferredDate}T00:00:00`);
 
-  const slots = await getAggregatedListenerSlots(preferredDate);
-  if (!slots.includes(input.preferredTime)) {
-    throw new ApiError(
-      400,
-      "That time is not available for listener support right now.",
-      "LISTENER_SLOT_UNAVAILABLE",
-    );
+  if (!input.isAsap) {
+    const slots = await getAggregatedListenerSlots(preferredDate);
+    if (!slots.includes(input.preferredTime)) {
+      throw new ApiError(
+        400,
+        "That time is not available for listener support right now.",
+        "LISTENER_SLOT_UNAVAILABLE",
+      );
+    }
   }
 
   if (input.duration !== LISTENER_SLOT_DURATION_MIN) {
@@ -124,6 +126,7 @@ export async function createListenerBookingRequest(
         userId,
         preferredDate,
         preferredTime: input.preferredTime,
+        isAsap: input.isAsap,
         duration: input.duration,
         emotionalTags: input.emotionalTags,
         preferredTone: input.preferredTone ?? undefined,

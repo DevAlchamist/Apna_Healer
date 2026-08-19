@@ -6,6 +6,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -140,6 +141,7 @@ function ListenerSupportModal({
   const dateOptions = useMemo(() => buildDateOptions(7), []);
   const [date, setDate] = useState<string>(dateOptions[0]?.value ?? "");
   const [time, setTime] = useState<string>("");
+  const [timeOption, setTimeOption] = useState<"asap" | "slot">("asap");
   const [submittedReference, setSubmittedReference] = useState<string | null>(null);
   const [showLoader, setShowLoader] = useState(false);
 
@@ -152,6 +154,7 @@ function ListenerSupportModal({
     setNote("");
     setDate(dateOptions[0]?.value ?? "");
     setTime("");
+    setTimeOption("asap");
     setSubmittedReference(null);
     setShowLoader(false);
   }, [dateOptions]);
@@ -164,10 +167,28 @@ function ListenerSupportModal({
   const slotsQuery = useQuery({
     queryKey: ["listener-slots", date],
     queryFn: () => apiFetch<SlotResponse>(`/api/listener-slots?date=${date}`),
-    enabled: open && step === 2 && !!date,
+    enabled: open && (step === 2 || timeOption === "asap") && !!date,
   });
 
   const slots = slotsQuery.data?.slots ?? [];
+
+  // Auto-select first available slot when in ASAP mode
+  useEffect(() => {
+    if (!open || timeOption !== "asap" || step !== 2) return;
+    
+    if (slots.length > 0) {
+      if (!time || !slots.includes(time)) {
+        setTime(slots[0]);
+      }
+      return;
+    }
+    
+    // If the currently selected date has no slots, try the next date
+    const currentIndex = dateOptions.findIndex((d) => d.value === date);
+    if (currentIndex !== -1 && currentIndex < dateOptions.length - 1) {
+      setDate(dateOptions[currentIndex + 1].value);
+    }
+  }, [open, timeOption, step, slots, date, dateOptions, time]);
 
   const submitMutation = useMutation({
     mutationFn: () =>
@@ -182,6 +203,7 @@ function ListenerSupportModal({
           preferredTone: tone || null,
           preferredLanguage: language || null,
           note: note.trim() || null,
+          isAsap: timeOption === "asap",
         },
       ),
     onSuccess: (data) => {
@@ -205,16 +227,25 @@ function ListenerSupportModal({
   return (
     <AnimatePresence>
       {open ? (
-        <motion.div
-          className="fixed inset-0 z-100 bg-[#faf9f5] flex flex-col md:flex-row overflow-hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="listener-support-title"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.35, ease: easeCalm }}
-        >
+        <>
+          {/* Mobile Backdrop */}
+          <motion.div
+            className="fixed inset-0 z-[99] bg-black/40 backdrop-blur-xs md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+          />
+          <motion.div
+            className="fixed bottom-0 left-0 right-0 md:inset-0 z-[100] bg-[#faf9f5] flex flex-col md:flex-row rounded-t-[32px] md:rounded-none h-[92vh] md:h-full overflow-hidden shadow-2xl md:shadow-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="listener-support-title"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.35, ease: easeCalm }}
+          >
           {showLoader ? (
             <MatchingLoader
               open={showLoader}
@@ -231,7 +262,7 @@ function ListenerSupportModal({
             />
           ) : (
             <>
-              <aside className="flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto">
+              <aside className="hidden md:flex w-full md:w-[300px] shrink-0 flex-col border-r border-[#e8e4dc] bg-[#f7f7f2] p-6 md:p-7 overflow-y-auto">
             <h2
               id="listener-support-title"
               className="font-display text-lg font-semibold tracking-tight text-[#045b4f] md:text-xl"
@@ -274,9 +305,41 @@ function ListenerSupportModal({
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col bg-white overflow-hidden">
+            {/* Mobile Header (sticky at the top, hidden on desktop) */}
+            <div className="flex flex-col border-b border-accent/60 bg-[#f7f7f2] px-5 py-3.5 md:hidden">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-lg font-bold text-[#045b4f]">
+                  Talk to a Listener
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="rounded-full p-1.5 text-text-primary/45 transition-colors hover:bg-accent/50"
+                  aria-label="Close"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex gap-1.5 w-full mt-3" aria-hidden="true">
+                {STEP_LABELS.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                      idx <= step ? "bg-[#045b4f]" : "bg-text-primary/10"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-[10px] font-bold text-text-primary/45 mt-2 uppercase tracking-wider">
+                Step {step + 1} of {STEP_LABELS.length}: {STEP_LABELS[step]}
+              </p>
+            </div>
+
             <div className="relative flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4 md:px-8 md:pt-5">
               {/* Close Button */}
-              <div className="flex justify-end">
+              <div className="hidden md:flex justify-end">
                 <button
                   type="button"
                   onClick={handleClose}
@@ -409,98 +472,203 @@ function ListenerSupportModal({
                   </div>
                 ) : step === 2 ? (
                   <div className="space-y-5">
-                    <div>
-                      <p className="text-sm font-semibold text-text-primary">When would you like to talk?</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {dateOptions.map((option) => {
-                          const active = date === option.value;
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => {
-                                setDate(option.value);
-                                setTime("");
-                              }}
-                              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                                active
-                                  ? "border-[#045b4f] bg-[#045b4f] text-white"
-                                  : "border-accent bg-white text-text-primary/70 hover:border-[#045b4f]/60"
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    <p className="text-sm font-semibold text-text-primary">When would you like to talk?</p>
+                    
+                    {/* Time Selection Options */}
+                    <div className="mt-2 grid grid-cols-2 gap-2 border border-accent/60 p-1 rounded-2xl bg-neutral-50">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTimeOption("asap");
+                          const now = new Date();
+                          const y = now.getFullYear();
+                          const m = (now.getMonth() + 1).toString().padStart(2, "0");
+                          const d = now.getDate().toString().padStart(2, "0");
+                          setDate(`${y}-${m}-${d}`);
+                          setTime("");
+                        }}
+                        className={`rounded-xl py-2.5 px-3 text-xs font-bold text-center cursor-pointer transition ${
+                          timeOption === "asap"
+                            ? "bg-[#045b4f] text-white shadow-sm"
+                            : "text-text-primary/75 hover:bg-accent/40"
+                        }`}
+                      >
+                        As soon as someone is free
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTimeOption("slot");
+                          setDate(dateOptions[0]?.value ?? "");
+                          setTime("");
+                        }}
+                        className={`rounded-xl py-2.5 px-3 text-xs font-bold text-center cursor-pointer transition ${
+                          timeOption === "slot"
+                            ? "bg-[#045b4f] text-white shadow-sm"
+                            : "text-text-primary/75 hover:bg-accent/40"
+                        }`}
+                      >
+                        Pick a slot
+                      </button>
                     </div>
 
-                    <div>
-                      <p className="text-sm font-semibold text-text-primary">Pick a time slot</p>
-                      <p className="text-xs text-text-primary/55">
-                        Listener support is anonymous and lasts 30 minutes. We&apos;ll match you with an
-                        available listener after a quick review.
-                      </p>
-                      {slotsQuery.isLoading ? (
-                        <TimeSlotGridSkeleton count={6} />
-                      ) : slots.length === 0 ? (
-                        <div className="mt-3 rounded-calm border border-accent bg-background/60 px-4 py-3 text-sm text-text-primary/60">
-                          No listeners are available for this date. Try another day.
+                    {timeOption === "slot" ? (
+                      <div className="space-y-5 mt-4">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-primary/45">Date Options</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {dateOptions.map((option) => {
+                              const active = date === option.value;
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setDate(option.value);
+                                    setTime("");
+                                  }}
+                                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                    active
+                                      ? "border-[#045b4f] bg-[#045b4f] text-white"
+                                      : "border-accent bg-white text-text-primary/70 hover:border-[#045b4f]/60"
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-primary/45">Pick a time slot</p>
+                          <p className="text-xs text-text-primary/55 mt-1">
+                            Listener support is anonymous and lasts 30 minutes. We&apos;ll match you with an
+                            available listener after a quick review.
+                          </p>
+                          {slotsQuery.isLoading ? (
+                            <TimeSlotGridSkeleton count={6} />
+                          ) : slots.length === 0 ? (
+                            <div className="mt-3 rounded-calm border border-accent bg-background/60 px-4 py-3 text-sm text-text-primary/60">
+                              No listeners are available for this date. Try another day.
+                            </div>
+                          ) : (
+                            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                              {slots.map((slot) => {
+                                const active = time === slot;
+                                return (
+                                  <button
+                                    key={slot}
+                                    type="button"
+                                    onClick={() => setTime(slot)}
+                                    className={`rounded-calm border px-3 py-2 text-sm font-semibold transition ${
+                                      active
+                                        ? "border-[#045b4f] bg-[#045b4f] text-white"
+                                        : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
+                                    }`}
+                                  >
+                                    {formatTimeLabel(slot)}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      time ? (
+                        <div className="rounded-calm bg-[#e7f5ee] border border-[#045b4f]/25 px-4 py-3.5 text-xs text-[#0f5147]">
+                          <p className="font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#045b4f] animate-ping" />
+                            Earliest match auto-selected
+                          </p>
+                          <p className="mt-1 text-text-primary/65">
+                            Earliest available slot found: <span className="font-bold">{formatShortDate(new Date(date))} at {formatTimeLabel(time)}</span>
+                          </p>
                         </div>
                       ) : (
-                        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                          {slots.map((slot) => {
-                            const active = time === slot;
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                onClick={() => setTime(slot)}
-                                className={`rounded-calm border px-3 py-2 text-sm font-semibold transition ${
-                                  active
-                                    ? "border-[#045b4f] bg-[#045b4f] text-white"
-                                    : "border-accent bg-white text-text-primary/75 hover:border-[#045b4f]/60"
-                                }`}
-                              >
-                                {formatTimeLabel(slot)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                        slotsQuery.isLoading ? (
+                          <p className="text-xs text-text-primary/55 animate-pulse">Scanning available listener calendar slots...</p>
+                        ) : (
+                          <div className="rounded-calm bg-[#fdf0ee] border border-red-200 px-4 py-3 text-xs text-[#cf4f45]">
+                            No volunteer listeners are currently active or have open slots for the next 7 days.
+                          </div>
+                        )
+                      )
+                    )}
 
                     <div className="rounded-calm bg-background/60 px-4 py-3 text-xs text-text-primary/60">
-                      A hold of <span className="font-semibold text-text-primary">50 healing points</span>
+                      A hold of <span className="font-semibold text-[#045b4f]">50 healing points</span>
                       {" "}will be placed on your wallet while admins review and a listener confirms.
                       The amount is fully refunded if the request is declined.
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4 text-center">
-                    <motion.div
-                      className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#e7f5ee] text-[#045b4f]"
-                      initial={{ scale: 0.85, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={hoverLiftTransition}
-                    >
-                      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                    </motion.div>
-                    <p className="font-display text-2xl font-semibold text-text-primary">
-                      Request sent
-                    </p>
-                    <p className="mx-auto max-w-md text-sm text-text-primary/70">
-                      Thanks for opening up. Admins will match you with a listener shortly. You&apos;ll
-                      see this conversation in your dashboard once it&apos;s confirmed — your listener&apos;s
-                      identity stays private until after the session.
-                    </p>
-                    {submittedReference ? (
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/45">
-                        Reference: {submittedReference.slice(-8)}
+                  <div className="space-y-6 text-left">
+                    <div className="text-center">
+                      <motion.div
+                        className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sage-100 text-sage-700"
+                        initial={{ scale: 0.85, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={hoverLiftTransition}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </motion.div>
+                      <h3 className="mt-5 font-display text-2xl font-semibold text-text-primary">
+                        A listener is on the way
+                      </h3>
+                      <p className="mt-2 text-sm text-text-primary/70 max-w-md mx-auto leading-relaxed">
+                        Reaching out took the hardest part. We'll let you know the moment someone is ready for you.
                       </p>
-                    ) : null}
+                    </div>
+
+                    {/* Lavender Request Details Card */}
+                    <div className="rounded-3xl bg-[#f3f0fc] p-5 shadow-xs border border-violet-100">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-violet-600">
+                        <span>Request</span>
+                        <span>
+                          #AH-LS-{submittedReference ? submittedReference.slice(-4) : "3086"}
+                        </span>
+                      </div>
+                      <h4 className="font-display text-xl font-bold text-text-secondary mt-2.5">
+                        {timeOption === "asap" ? (
+                          "As soon as a listener is free"
+                        ) : (
+                          `${formatShortDate(new Date(date))} at ${formatTimeLabel(time)}`
+                        )}
+                      </h4>
+                      <p className="text-xs text-text-primary/60 mt-1 font-medium">
+                        {[mood, ...topics].filter((t) => t !== mood).join(", ") || "General support"} · {language}
+                      </p>
+                    </div>
+
+                    {/* Bullet List points */}
+                    <ul className="space-y-3 text-sm text-text-primary/80 pl-1">
+                      <li className="flex items-start gap-3">
+                        <span className="flex h-2 w-2 rounded-full bg-[#1f8a6e] mt-2 shrink-0" />
+                        <span>We notify listeners who match your topics and tone.</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex h-2 w-2 rounded-full bg-[#1f8a6e] mt-2 shrink-0" />
+                        <span>You get a ping here as soon as one accepts.</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex h-2 w-2 rounded-full bg-[#1f8a6e] mt-2 shrink-0" />
+                        <span>Nothing starts until you open the chat yourself.</span>
+                      </li>
+                    </ul>
+
+                    {/* Anonymous privacy note */}
+                    <div className="flex gap-3 rounded-2xl bg-[#eef6eb]/50 p-4 border border-[#e8e4dc]">
+                      <svg className="h-5 w-5 text-sage-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                      </svg>
+                      <p className="text-xs leading-relaxed text-text-primary/75">
+                        You appear only as your nickname. Your listener never sees your name, number, or profile, and you can end the conversation at any time.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -561,7 +729,7 @@ function ListenerSupportModal({
             </>
           )}
         </motion.div>
-      ) : null}
+      </> ) : null}
     </AnimatePresence>
   );
 }

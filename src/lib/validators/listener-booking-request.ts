@@ -10,6 +10,7 @@ export const createListenerBookingRequestSchema = z.object({
   preferredTone: z.string().min(1).max(120).optional().nullable(),
   preferredLanguage: z.string().min(1).max(80).optional().nullable(),
   note: z.string().max(2000).optional().nullable(),
+  isAsap: z.boolean().optional().default(false),
 });
 
 export const adminListenerRequestPatchSchema = z.discriminatedUnion("action", [

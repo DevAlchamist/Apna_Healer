@@ -603,6 +603,7 @@ model ListenerBookingRequest {
   userId               String
   preferredDate        DateTime
   preferredTime        String
+  isAsap               Boolean               @default(false)
   duration             Int                   @default(30)
   emotionalTags        String[]
   preferredTone        String?

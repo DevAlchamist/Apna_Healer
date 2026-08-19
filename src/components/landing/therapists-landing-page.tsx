@@ -463,7 +463,7 @@ function TherapistCard({ therapist, index, onBookSession, onBookPackage }: Thera
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.45, delay: Math.min(index, 5) * 0.05, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -4 }}
-      className="group flex flex-col rounded-4xl border border-cream-300 bg-cream-50 p-5 transition-shadow duration-300 hover:shadow-soft"
+      className="group flex flex-col w-full max-w-full overflow-hidden rounded-4xl border border-cream-300 bg-cream-50 p-5 transition-shadow duration-300 hover:shadow-soft"
     >
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -483,9 +483,9 @@ function TherapistCard({ therapist, index, onBookSession, onBookPackage }: Thera
       `}} />
 
       {/* Top Split Header */}
-      <div className="flex gap-4 sm:gap-5 items-start">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-start">
         {/* Left Video Thumbnail */}
-        <div className="relative aspect-video max:h-[135px] max:w-[240px] sm:w-[150px] shrink-0 overflow-hidden rounded-2xl bg-cream-200">
+        <div className="relative aspect-video w-full sm:w-[150px] max-h-[150px] max-w-[340px] shrink-0 overflow-hidden rounded-2xl bg-cream-200">
           <img
             src={therapist.photo}
             alt={`Portrait of ${therapist.name}`}
@@ -525,9 +525,9 @@ function TherapistCard({ therapist, index, onBookSession, onBookPackage }: Thera
       </div>
 
       {/* Expertise Infinite Scroll Marquee */}
-      <div className="mt-4 flex items-center gap-2 overflow-hidden border-t border-cream-200 pt-3">
+      <div className="mt-4 flex items-center gap-2 overflow-hidden border-t border-cream-200 pt-3 w-full min-w-0">
         <span className="text-[11px] text-ink-400 font-semibold shrink-0">Expertise:</span>
-        <div className="overflow-hidden flex-1 relative">
+        <div className="overflow-hidden flex-1 relative min-w-0">
           <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-cream-50 to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-cream-50 to-transparent z-10 pointer-events-none" />
 
@@ -573,7 +573,7 @@ function TherapistCard({ therapist, index, onBookSession, onBookPackage }: Thera
       </div>
 
       {/* Action Buttons */}
-      <div className="mt-5 flex gap-2 border-t border-cream-300 pt-4">
+      <div className="mt-5 flex flex-col sm:flex-row gap-2 border-t border-cream-300 pt-4">
         <button
           onClick={() => onBookPackage(therapist)}
           className="flex-1 rounded-full border border-cream-300 bg-cream-50 hover:bg-cream-100 text-ink-700 hover:text-ink-900 py-2.5 text-center text-[10px] sm:text-xs font-bold transition uppercase tracking-wider cursor-pointer truncate"
@@ -591,7 +591,7 @@ function TherapistCard({ therapist, index, onBookSession, onBookPackage }: Thera
       <Link
         type="button"
         href={`/therapists/${therapist.id}`}
-        className="mt-2 rounded-full bg-sage-600 hover:bg-sage-700 text-cream-50 py-2.5 text-center text-[10px] sm:text-xs font-bold transition uppercase tracking-wider cursor-pointer truncate"
+        className="mt-2 block rounded-full bg-sage-600 hover:bg-sage-700 text-cream-50 py-2.5 text-center text-[10px] sm:text-xs font-bold transition uppercase tracking-wider cursor-pointer truncate"
       >
         View Profile
       </Link>
