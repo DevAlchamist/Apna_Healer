@@ -98,7 +98,7 @@ export type BookSessionHealer = {
   /** When set, schedule step opens with this slot already chosen. */
   preselection?: BookSessionPreselection;
   initialNote?: string;
-  initialBookingOption?: "SESSION" | "PACKAGE";
+  initialBookingOption?: "SESSION" | "PACKAGE" | "MATCHMAKING";
   initialPackageId?: string;
 };
 
@@ -263,11 +263,12 @@ function BookSessionModal({
     }
   }, [selectedTherapistSlot]);
 
-  // Selector Option: "SESSION" | "PACKAGE"
-  const [selectedBookingOption, setSelectedBookingOption] = useState<"SESSION" | "PACKAGE" >("SESSION");
+  // Selector Option: "SESSION" | "PACKAGE" | "MATCHMAKING"
+  const [selectedBookingOption, setSelectedBookingOption] = useState<"SESSION" | "PACKAGE" | "MATCHMAKING">("SESSION");
   const [selectedPackageToBuy, setSelectedPackageToBuy] = useState<any | null>(null);
   const [hasSetInitialPackage, setHasSetInitialPackage] = useState(false);
   const [showLoaderMode, setShowLoaderMode] = useState<"therapist" | "listener" | null>(null);
+  const [isMatchmakingLoading, setIsMatchmakingLoading] = useState(false);
 
   const handleClose = useCallback(() => {
     setShowLoaderMode(null);
@@ -288,8 +289,16 @@ function BookSessionModal({
     setUsePackage(false);
     setSelectedBookingOption("SESSION");
     setSelectedPackageToBuy(null);
+    setIsMatchmakingLoading(false);
     onClose();
   }, [onClose]);
+
+  const handleMatchmakingComplete = useCallback(() => {
+    setIsMatchmakingLoading(false);
+    setSelectedBookingOption("SESSION");
+    setSelectedPackageToBuy(null);
+    setStep(1);
+  }, []);
 
   const providersQuery = useQuery({
     queryKey: ["book-session-modal-providers"],
@@ -1000,16 +1009,27 @@ function BookSessionModal({
               </button>
 
               {/* STEP 0: Selection / Choice */}
-              {step === 0 ? (
+              {isMatchmakingLoading ? (
+                <MatchingLoader
+                  open={isMatchmakingLoading}
+                  mode="therapist"
+                  onCancel={() => {
+                    setIsMatchmakingLoading(false);
+                    setSelectedBookingOption("SESSION");
+                  }}
+                  onComplete={handleMatchmakingComplete}
+                  inline={true}
+                />
+              ) : step === 0 ? (
                 <div className="mx-auto max-w-2xl pr-2 pt-2 text-left">
                   <h3 className="font-display text-3xl font-semibold text-text-primary md:text-4xl">
                     Choose booking type
                   </h3>
                   <p className="mt-2 text-sm text-text-primary/65 md:text-base">
-                    Would you like to book a single one-on-one session or purchase a wellness package?
+                    Would you like to book a single session, purchase a wellness package, or use our smart matchmaking tool?
                   </p>
 
-                  <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                  <div className="mt-8 grid gap-6 sm:grid-cols-3">
                     {/* Option 1: Book Individually */}
                     <button
                       type="button"
@@ -1074,6 +1094,36 @@ function BookSessionModal({
                       </p>
                       <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[#2f745f]">
                         View Available Packages →
+                      </span>
+                    </button>
+
+                    {/* Option 3: Matchmaking */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedBookingOption("MATCHMAKING");
+                        setSelectedPackageToBuy(null);
+                        setIsMatchmakingLoading(true);
+                      }}
+                      className={`flex flex-col items-start rounded-3xl border p-6 text-left transition duration-300 shadow-soft cursor-pointer ${
+                        selectedBookingOption === "MATCHMAKING"
+                          ? "border-[#b25f3c] bg-[#b25f3c]/[0.03] ring-2 ring-[#b25f3c]/20 shadow-soft-hover"
+                          : "border-accent/80 bg-white hover:border-[#b25f3c]/30 hover:shadow-soft-hover"
+                      }`}
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fdf2eb] text-[#b25f3c]">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                      </span>
+                      <h4 className="font-display text-lg font-bold text-text-primary mt-5">
+                        Smart Matchmaking
+                      </h4>
+                      <p className="mt-2 text-xs text-text-primary/60 leading-relaxed">
+                        Let our intelligent matching system find the most compatible therapist based on your wellness goals.
+                      </p>
+                      <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[#b25f3c]">
+                        Find My Match →
                       </span>
                     </button>
                   </div>

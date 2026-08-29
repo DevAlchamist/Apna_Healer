@@ -246,9 +246,9 @@ function ListenerSupportModal({
             exit={{ y: "100%" }}
             transition={{ duration: 0.35, ease: easeCalm }}
           >
-          {showLoader ? (
+          {showLoader || submitMutation.isPending ? (
             <MatchingLoader
-              open={showLoader}
+              open={showLoader || submitMutation.isPending}
               mode="listener"
               inline={true}
               onCancel={() => {
@@ -256,8 +256,10 @@ function ListenerSupportModal({
                 handleClose();
               }}
               onComplete={() => {
-                setShowLoader(false);
-                setStep(3);
+                if (submittedReference) {
+                  setShowLoader(false);
+                  setStep(3);
+                }
               }}
             />
           ) : (

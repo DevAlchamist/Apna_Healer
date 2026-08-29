@@ -120,13 +120,13 @@ const accentText: Record<string, string> = {
 
 const serviceMatchCards = [
   {
-    key: "peer",
+    key: "Available 24/7",
     icon: HeartHandshakeIcon,
     label: "Peer support",
-    price: "Always free",
+    price: "First 2 session free",
     title: "I just want someone to listen",
-    body: "Trained peer listeners who have been through it too. Anonymous chat or voice, no appointment, no clock ticking.",
-    points: ["Available in under 5 minutes", "Completely anonymous", "Unlimited conversations", "No diagnosis, no advice unless asked"],
+    body: "Get matched with a trained listener who understands. Talk privately, without judgment, at a time that works for you.",
+    points: ["Available in under 5 minutes", "Completely anonymous", "100% Anonymous", "No diagnosis, no advice unless asked"],
     cta: "Talk to a listener",
     wrap: "bg-sage-50 border-sage-100",
     glow: "bg-[radial-gradient(circle_at_center,rgba(169,200,160,0.45),transparent_65%)]",
@@ -136,14 +136,14 @@ const serviceMatchCards = [
     tick: "text-sage-600",
   },
   {
-    key: "professional",
+    key: "VERIFIED PROFESSIONALS",
     icon: ClockIcon, // matches template generic medical icon replacement
     label: "Professional guidance",
-    price: "From ₹850 / session",
+    price: "as per professionals",
     title: "I’m ready to work with an expert",
-    body: "Verified psychologists, counsellors and psychiatrists for structured therapy. Choose by specialty, language and price.",
-    points: ["Licence-verified professionals", "50-minute private sessions", "Switch anytime, no awkwardness", "Free cancellation up to 4 hrs"],
-    cta: "Browse experts",
+    body: "Verified psychologists, counsellors & psychiatrists for professional support. Find the right expert based on your concern, specialty, language, budget or package.",
+    points: ["Licence-verified professionals", "Match with your emotions", "Switch anytime, no awkwardness", "Free cancellation up to 4 hrs"],
+    cta: "Find an Expert",
     wrap: "bg-lavender-50 border-lavender-100",
     glow: "bg-[radial-gradient(circle_at_center,rgba(192,178,229,0.45),transparent_65%)]",
     iconWrap: "bg-lavender-500 text-cream-50",
@@ -843,7 +843,7 @@ function HomePage() {
 
                   <button
                     type="button"
-                    onClick={card.key === "peer" ? openListenerBooking : () => scrollToSection("experts")}
+                    onClick={card.key === "peer" ? openListenerBooking : () => openTherapistBooking()}
                     className={`mt-9 inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-cream-50 transition cursor-pointer ${card.button}`}
                   >
                     {card.cta}

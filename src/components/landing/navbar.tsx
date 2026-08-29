@@ -500,164 +500,158 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
       <header
         ref={navContainerRef}
         onMouseLeave={startCloseTimeout}
-        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-          scrolled ? "border-b border-cream-300 bg-cream-50/85 backdrop-blur-xl" : "border-b border-transparent bg-transparent"
-        }`}
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ${scrolled ? "border-b border-cream-300 bg-cream-50/85 backdrop-blur-xl" : "border-b border-transparent bg-transparent"
+          }`}
       >
-      <div className="mx-auto flex h-[72px] w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
-        <Link
-          href="/"
-          onClick={() => setActiveDropdown(null)}
-          className="flex items-center gap-2.5 shrink-0"
-          aria-label="Apna Healer home"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl">
-            <img
-              src="/logo.svg"
-              alt=""
-              width={84}
-              height={80}
-              className="h-full w-full object-cover  object-center"
-              draggable={false}
-            />
-          </span>
-          <span className="font-display text-lg tracking-tight text-ink-900">
-            Apna<span className="text-sage-600">Healer</span>
-          </span>
-        </Link>
-
-        <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
-          {LEFT_NAV_LINKS.map((link) => {
-            const active = activeDropdown === link.type;
-            if (link.hasMegamenu) {
-              return (
-                <div
-                  key={link.label}
-                  className="relative py-2"
-                  onMouseEnter={() => handleOpenDropdown(link.type)}
-                >
-                  <button
-                    onClick={(e) => handleToggleDropdown(link.type, e)}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold focus:outline-none ${
-                      active ? "bg-cream-200/85 text-[#55764c]" : "text-ink-500"
-                    }`}
-                  >
-                    {link.label}
-                    <svg
-                      className={`h-3 w-3 transition-transform duration-300 ${
-                        active ? "rotate-180 text-sage-600" : "text-ink-400"
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-              );
-            }
-            return (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="rounded-full px-4 py-2 text-sm text-ink-500 transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold"
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-          {RIGHT_NAV_LINKS.map((link) => {
-            const active = activeDropdown === link.type;
-            if (link.hasMegamenu) {
-              return (
-                <div
-                  key={link.label}
-                  className="relative py-2"
-                  onMouseEnter={() => handleOpenDropdown(link.type)}
-                >
-                  <button
-                    onClick={(e) => handleToggleDropdown(link.type, e)}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold focus:outline-none ${
-                      active ? "bg-cream-200/85 text-[#55764c]" : "text-ink-500"
-                    }`}
-                  >
-                    {link.label}
-                    <svg
-                      className={`h-3 w-3 transition-transform duration-300 ${
-                        active ? "rotate-180 text-sage-600" : "text-ink-400"
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-              );
-            }
-            return (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="rounded-full px-4 py-2 text-sm text-ink-500 transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold"
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2">
+        <div className="mx-auto flex h-[72px] w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
           <Link
-            href="/#listeners"
+            href="/"
             onClick={() => setActiveDropdown(null)}
-            className="hidden items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-4 py-2.5 text-sm font-medium text-sage-700 transition hover:border-sage-300 hover:bg-sage-100 sm:inline-flex"
+            className="flex items-center gap-2.5 shrink-0"
+            aria-label="Apna Healer home"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-sage-500" />
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl">
+              <img
+                src="/logo.svg"
+                alt=""
+                width={84}
+                height={80}
+                className="h-full w-full object-cover  object-center"
+                draggable={false}
+              />
             </span>
-            Listeners online
+            <span className="font-display text-lg tracking-tight text-ink-900">
+              Apna<span className="text-sage-600">Healer</span>
+            </span>
           </Link>
 
-          <LandingAuthActions onJoinClick={onJoinClick} />
-        </div>
-      </div>
+          <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+            {LEFT_NAV_LINKS.map((link) => {
+              const active = activeDropdown === link.type;
+              if (link.hasMegamenu) {
+                return (
+                  <div
+                    key={link.label}
+                    className="relative py-2"
+                    onMouseEnter={() => handleOpenDropdown(link.type)}
+                  >
+                    <button
+                      onClick={(e) => handleToggleDropdown(link.type, e)}
+                      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold focus:outline-none ${active ? "bg-cream-200/85 text-[#55764c]" : "text-ink-500"
+                        }`}
+                    >
+                      {link.label}
+                      <svg
+                        className={`h-3 w-3 transition-transform duration-300 ${active ? "rotate-180 text-sage-600" : "text-ink-400"
+                          }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="rounded-full px-4 py-2 text-sm text-ink-500 transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold"
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            {RIGHT_NAV_LINKS.map((link) => {
+              const active = activeDropdown === link.type;
+              if (link.hasMegamenu) {
+                return (
+                  <div
+                    key={link.label}
+                    className="relative py-2"
+                    onMouseEnter={() => handleOpenDropdown(link.type)}
+                  >
+                    <button
+                      onClick={(e) => handleToggleDropdown(link.type, e)}
+                      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold focus:outline-none ${active ? "bg-cream-200/85 text-[#55764c]" : "text-ink-500"
+                        }`}
+                    >
+                      {link.label}
+                      <svg
+                        className={`h-3 w-3 transition-transform duration-300 ${active ? "rotate-180 text-sage-600" : "text-ink-400"
+                          }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="rounded-full px-4 py-2 text-sm text-ink-500 transition hover:bg-cream-200/85 hover:text-ink-900 font-semibold"
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-      {/* Megamenu dropdown panel container */}
-      <AnimatePresence>
-        {activeDropdown ? (
-          <motion.div
-            className="absolute left-0 right-0 top-full w-full bg-[#fdfcf9]/98 backdrop-blur-md border-b border-cream-300 shadow-lift overflow-hidden z-25"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            onMouseEnter={clearCloseTimeout}
-          >
-            {activeDropdown === "therapists" ? renderTherapistsMegamenu() : null}
-            {activeDropdown === "clubs" ? renderClubsMegamenu() : null}
-            {activeDropdown === "about" ? renderAboutMegamenu() : null}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </header>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/#listeners"
+              onClick={() => setActiveDropdown(null)}
+              className="hidden items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-4 py-2.5 text-sm font-medium text-sage-700 transition hover:border-sage-300 hover:bg-sage-100 sm:inline-flex"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-sage-500" />
+              </span>
+              Listeners online
+            </Link>
+
+            <LandingAuthActions onJoinClick={onJoinClick} />
+          </div>
+        </div>
+
+        {/* Megamenu dropdown panel container */}
+        <AnimatePresence>
+          {activeDropdown ? (
+            <motion.div
+              className="absolute left-0 right-0 top-full w-full bg-[#fdfcf9]/98 backdrop-blur-md border-b border-cream-300 shadow-lift overflow-hidden z-25"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              onMouseEnter={clearCloseTimeout}
+            >
+              {activeDropdown === "therapists" ? renderTherapistsMegamenu() : null}
+              {activeDropdown === "clubs" ? renderClubsMegamenu() : null}
+              {activeDropdown === "about" ? renderAboutMegamenu() : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </header>
 
       {/* Mobile Bottom Tab Bar */}
       <nav aria-label="Primary mobile" className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
         <div className="pb-safe border-t border-cream-300/70 bg-[#faf9f5]/90 shadow-[0_-10px_35px_-15px_rgba(85,118,76,0.3)] backdrop-blur-md">
           <div className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-2">
-            
+
             {/* Tab 1: Home */}
             <Link
               href="/"
-              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
-                pathname === "/" ? "text-[#55764c]" : "text-text-primary/60"
-              }`}
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${pathname === "/" ? "text-[#55764c]" : "text-text-primary/60"
+                }`}
             >
               <HomeIcon className="h-5 w-5" />
               <span>Home</span>
@@ -667,9 +661,8 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
             {/* Tab 2: Therapists */}
             <Link
               href="/therapists"
-              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
-                pathname === "/therapists" ? "text-[#55764c]" : "text-text-primary/60"
-              }`}
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${pathname === "/therapists" ? "text-[#55764c]" : "text-text-primary/60"
+                }`}
             >
               <UsersIcon className="h-5 w-5" />
               <span>Therapists</span>
@@ -684,10 +677,15 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
                 whileTap={{ scale: 0.94 }}
                 transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
                 aria-label="Talk to a Listener"
-                className="absolute -top-6 flex flex-col items-center focus-visible:outline-none"
+                className="absolute -top-6 flex flex-col items-center "
               >
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#55764c] to-[#3a5433] text-white shadow-md ring-4 ring-[#faf9f5]">
-                  <PhoneCallIcon className="h-6 w-6" />
+                <span className="flex h-13 w-13 items-center justify-center rounded-full">
+                  <img
+                    src="/logo.svg"
+                    alt=""
+                    className=" object-contain"
+                    draggable={false}
+                  />
                 </span>
                 <span className="mt-1 text-[10px] font-bold text-[#55764c]">Listener</span>
               </motion.button>
@@ -696,9 +694,8 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
             {/* Tab 4: Events */}
             <Link
               href="/events"
-              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
-                pathname === "/events" ? "text-[#55764c]" : "text-text-primary/60"
-              }`}
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${pathname === "/events" ? "text-[#55764c]" : "text-text-primary/60"
+                }`}
             >
               <CalendarDaysIcon className="h-5 w-5" />
               <span>Events</span>
@@ -711,11 +708,10 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
               whileTap={{ scale: 0.94 }}
               transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
               onClick={() => setIsMenuOpen(true)}
-              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${
-                isMenuOpen || ["/clubs", "/about", "/contact"].includes(pathname)
-                  ? "text-[#55764c]"
-                  : "text-text-primary/60"
-              }`}
+              className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${isMenuOpen || ["/clubs", "/about", "/contact"].includes(pathname)
+                ? "text-[#55764c]"
+                : "text-text-primary/60"
+                }`}
             >
               <MenuIcon className="h-5 w-5" />
               <span>Menu</span>
@@ -727,7 +723,7 @@ export function LandingNavbar({ onJoinClick }: LandingNavbarProps) {
       </nav>
 
       {/* Spacer to push content above mobile tab bar */}
-      <div className="h-16 lg:hidden" aria-hidden="true" />
+      {/* <div className="h-16 lg:hidden" aria-hidden="true" /> */}
 
       {/* Mobile Menu Sheet */}
       <MobileMenuSheet isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
@@ -788,11 +784,10 @@ function MobileMenuSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                     <Link
                       href={link.href}
                       onClick={onClose}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
-                        active 
-                          ? "bg-[#55764c]/20 text-[#55764c]" 
-                          : "text-text-primary hover:bg-accent/30"
-                      }`}
+                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${active
+                        ? "bg-[#55764c]/20 text-[#55764c]"
+                        : "text-text-primary hover:bg-accent/30"
+                        }`}
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#55764c]/10 text-[#55764c]">
                         <Icon className="h-4.5 w-4.5" />

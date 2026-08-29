@@ -2,9 +2,34 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, Fragment, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  CalendarCheckIcon,
+  HeadphonesIcon,
+  HomeIcon,
+  MenuIcon,
+  UserRoundIcon,
+  XIcon,
+  CalendarPlusIcon,
+  LifeBuoyIcon,
+  LogOutIcon,
+  WalletIcon,
+  BellIcon,
+  HouseIcon,
+  SearchIcon,
+  ChevronRightIcon,
+  SproutIcon,
+  BookOpenIcon,
+  NotebookPenIcon,
+  UsersRoundIcon,
+  FeatherIcon,
+  CoinsIcon,
+  PhoneCallIcon,
+  UsersIcon,
+  CalendarDaysIcon,
+} from "lucide-react";
 import { ActivityFeedSkeleton } from "@/components/skeletons";
 import { apiFetch } from "@/lib/api-client";
 import {
@@ -24,6 +49,9 @@ import type { ApiCareSession, ApiTransaction, ApiUser } from "@/types/api";
 import {
   useBookSessionModal,
 } from "./book-session-modal";
+import {
+  useListenerSupportModal,
+} from "./listener-support-modal";
 import { ListenerAvailabilityChip } from "./listener-availability-chip";
 import { SessionDetailsModalProvider } from "./session-details-modal";
 import { SignOutDialog } from "@/components/auth/sign-out-dialog";
@@ -32,6 +60,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { dashboardSuggestedEvents } from "@/data/events";
 import { morphTransition } from "@/components/ui/fade-in";
 import { RoleThemeProvider } from "@/components/providers/role-theme-provider";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -40,170 +69,113 @@ type DashboardShellProps = {
 export function SidebarIcon({
   icon,
 }: {
-  icon:
-    | "reports"
-    | "profile"
-    | "settings"
-    | "plans"
-    | "packages"
-    | "currency"
-    | "dashboard"
-    | "blog"
-    | "journal"
-    | "circle"
-    | "social";
+  icon: string;
 }) {
-  if (icon === "social") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <circle cx="9" cy="9" r="2.5" />
-        <circle cx="15" cy="9" r="2.5" />
-        <path d="M5 17a4 4 0 0 1 8 0M11 17a4 4 0 0 1 8 0" strokeLinecap="round" />
-      </svg>
-    );
-  }
+  if (icon === "dashboard") return <HomeIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "blog") return <BookOpenIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "journal") return <NotebookPenIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "circle") return <UsersRoundIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "plans") return <CalendarCheckIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "profile") return <UserRoundIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "currency") return <WalletIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "packages") return <CoinsIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "reports") return <FeatherIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "social") return <UsersRoundIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  if (icon === "settings") return <LifeBuoyIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+  return <HomeIcon className="h-[18px] w-[18px]" aria-hidden="true" />;
+}
 
-  if (icon === "dashboard") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <rect x="3" y="3" width="8" height="8" rx="1.5" />
-        <rect x="13" y="3" width="8" height="5" rx="1.5" />
-        <rect x="13" y="10" width="8" height="11" rx="1.5" />
-        <rect x="3" y="13" width="8" height="8" rx="1.5" />
-      </svg>
-    );
-  }
+export function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sage-100 text-forest-500 ring-1 ring-sage-200">
+        <SproutIcon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-display text-[17px] font-bold leading-tight text-forest-600">
+          Apna Healer
+        </span>
+        {!compact && (
+          <span className="block truncate text-[11px] italic tracking-wide text-charcoal-400">
+            Feel Together, Heal Together
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
 
-  if (icon === "blog") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <path d="M5 5h14v14H5z" />
-        <path d="M8 9h8M8 13h8M8 17h5" strokeLinecap="round" />
-      </svg>
-    );
-  }
+export function SupportBar({ onContactListener }: { onContactListener?: () => void }) {
+  const { forest: FOREST } = useThemePalette();
+  return (
+    <div className="w-full bg-forest-600 text-cream-100" style={{ backgroundColor: FOREST }}>
+      <div className="mx-auto flex h-9 max-w-[1600px] items-center justify-center gap-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.14em]">
+        <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage-300 opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-sage-300" />
+        </span>
+        <span className="truncate">
+          Instant support: online
+          <span className="mx-2 text-sage-300/70">·</span>
+          <button
+            type="button"
+            onClick={onContactListener}
+            className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors duration-150 ease-out hover:text-white hover:underline cursor-pointer"
+          >
+            <PhoneCallIcon className="h-3 w-3" aria-hidden="true" />
+            Speak to a certified healer now
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+}
 
-  if (icon === "journal") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6z" />
-        <path d="M9 4v16M12 8h4M12 12h4" strokeLinecap="round" />
-      </svg>
-    );
-  }
+interface NavSectionProps {
+  label?: string;
+  items: DashboardModule[];
+  onNavigate?: () => void;
+}
 
-  if (icon === "circle") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <circle cx="8" cy="10" r="2.5" />
-        <circle cx="16" cy="10" r="2.5" />
-        <path
-          d="M3.5 18a4.5 4.5 0 0 1 9 0M11.5 18a4.5 4.5 0 0 1 9 0"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
-  if (icon === "reports") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <rect x="4" y="3" width="16" height="18" rx="2" />
-        <path d="M8 16V12M12 16V8M16 16v-5" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (icon === "profile") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <circle cx="12" cy="8" r="3.5" />
-        <path d="M5.5 19a6.5 6.5 0 0 1 13 0" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (icon === "settings") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        aria-hidden
-      >
-        <circle cx="12" cy="12" r="3.2" />
-        <path
-          d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-1.6a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-1.6a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1.1-1.1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.9.6Z"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
+export function NavSection({ label, items, onNavigate }: NavSectionProps) {
+  const pathname = usePathname();
 
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      aria-hidden
-    >
-      <rect x="3" y="7" width="18" height="10" rx="2" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
+    <div className="space-y-1.5">
+      {label && (
+        <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-text opacity-60">
+          {label}
+        </p>
+      )}
+      <ul className="space-y-0.5">
+        {items.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+          return (
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 ease-out ${isActive
+                  ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
+                  : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
+                  }`}
+              >
+                <span
+                  className={`transition-colors duration-150 ease-out ${isActive ? "text-sidebar-active-text" : "text-sidebar-text opacity-85 group-hover:text-sidebar-active-text"
+                    }`}
+                >
+                  <SidebarIcon icon={item.icon ?? "dashboard"} />
+                </span>
+                <span className="truncate">{item.label}</span>
+                {isActive && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-active-text" aria-hidden="true" />
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -214,11 +186,10 @@ export function NavItem({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className={`rounded-soft px-3 py-2 text-sm font-medium transition-colors duration-300 ease-(--ease-calm) ${
-        isActive
-          ? "bg-primary/15 text-text-secondary"
-          : "text-text-primary/70 hover:bg-accent/50"
-      }`}
+      className={`rounded-soft px-3 py-2 text-sm font-medium transition-colors duration-300 ease-(--ease-calm) ${isActive
+        ? "bg-primary/15 text-text-secondary"
+        : "text-text-primary/70 hover:bg-accent/50"
+        }`}
     >
       {label}
     </Link>
@@ -232,7 +203,7 @@ export function SidebarItem({
 }: {
   href: string;
   label: string;
-  icon: Parameters<typeof SidebarIcon>[0]["icon"];
+  icon: string;
 }) {
   const pathname = usePathname();
   const isActive = pathname === href;
@@ -240,11 +211,10 @@ export function SidebarItem({
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
-        isActive
-          ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
-          : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
-      }`}
+      className={`flex items-center justify-between rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${isActive
+        ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
+        : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
+        }`}
     >
       <span className="flex items-center gap-3">
         <SidebarIcon icon={icon} />
@@ -254,90 +224,6 @@ export function SidebarItem({
         <span className="h-6 w-1 rounded-full bg-sidebar-active-text" aria-hidden />
       ) : null}
     </Link>
-  );
-}
-
-function isNavPathActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function SidebarDropdown({
-  label,
-  icon,
-  items,
-}: {
-  label: string;
-  icon: Parameters<typeof SidebarIcon>[0]["icon"];
-  items: DashboardModule[];
-}) {
-  const pathname = usePathname();
-  const isChildActive = items.some((item) => isNavPathActive(pathname, item.href));
-  const [open, setOpen] = useState(isChildActive);
-
-  useEffect(() => {
-    if (isChildActive) setOpen(true);
-  }, [isChildActive]);
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-        className={`flex w-full items-center justify-between rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
-          isChildActive
-            ? "bg-sidebar-active-bg/40 font-semibold text-sidebar-active-text"
-            : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
-        }`}
-      >
-        <span className="flex items-center gap-3">
-          <SidebarIcon icon={icon} />
-          {label}
-        </span>
-        <span className="flex items-center gap-2">
-          {isChildActive ? (
-            <span className="h-6 w-1 rounded-full bg-sidebar-active-text" aria-hidden />
-          ) : null}
-          <svg
-            viewBox="0 0 24 24"
-            className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden
-          >
-            <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-      </button>
-      {open ? (
-        <div className="mt-1 grid gap-1 pl-3">
-          {items.map((item) => {
-            if (!item.icon) return null;
-            const isActive = isNavPathActive(pathname, item.href);
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={`flex items-center justify-between rounded-gentle px-4 py-2.5 text-sm transition-colors duration-300 ease-(--ease-calm) ${
-                  isActive
-                    ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
-                    : "text-sidebar-text/80 hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <SidebarIcon icon={item.icon} />
-                  {item.label}
-                </span>
-                {isActive ? (
-                  <span className="h-5 w-1 rounded-full bg-sidebar-active-text" aria-hidden />
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -393,6 +279,280 @@ function describeSession(
     title: `Session with ${sessionCounterpartyLabel(session, viewerUserId)}`,
     detail: `${session.duration} mins • ${toSentenceCase(session.status)}`,
   };
+}
+
+function Sidebar({
+  role,
+  user,
+  sidebarName,
+  sidebarSubtitle,
+  overviewItems,
+  roleItems,
+  socialItems,
+  personalItems,
+  onNavigate,
+  openBookSession,
+  setIsSupportOpen,
+  setIsSignOutOpen,
+}: {
+  role: string | null;
+  user: ApiUser | undefined;
+  sidebarName: string;
+  sidebarSubtitle: string;
+  overviewItems: DashboardModule[];
+  roleItems: DashboardModule[];
+  socialItems: DashboardModule[];
+  personalItems: DashboardModule[];
+  onNavigate?: () => void;
+  openBookSession: () => void;
+  setIsSupportOpen: (open: boolean) => void;
+  setIsSignOutOpen: (open: boolean) => void;
+}) {
+  const roleLabel = useMemo(() => {
+    if (role === "USER") return "My Care";
+    if (role === "THERAPIST") return "Practice";
+    if (role === "LISTENER") return "Listening";
+    return undefined;
+  }, [role]);
+
+  return (
+    <div className="flex h-full flex-col bg-sidebar-bg text-sidebar-text">
+      <div className="px-5 pb-4 pt-5 flex items-center gap-2.5">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl shrink-0">
+          <img
+            src="/logo.svg"
+            alt=""
+            width={84}
+            height={80}
+            className="h-full w-full object-cover object-center"
+            draggable={false}
+          />
+        </span>
+        <div>
+          <h2 className="font-display text-2xl font-bold tracking-tight" style={{ color: "var(--theme-sidebar-active-text)" }}>
+            Apna Healer
+          </h2>
+          <p className="text-[10px] uppercase tracking-[0.16em] opacity-80" style={{ color: "var(--theme-sidebar-text)" }}>
+            Feel Together, Heal Together
+          </p>
+        </div>
+      </div>
+
+      <nav
+        aria-label="Main"
+        className="scrollbar-slim flex-1 space-y-5 overflow-y-auto px-2 pb-4"
+      >
+        <NavSection items={overviewItems} onNavigate={onNavigate} />
+        {socialItems.length > 0 && (
+          <NavSection label="Social" items={socialItems} onNavigate={onNavigate} />
+        )}
+        {roleItems.length > 0 && roleLabel && (
+          <NavSection label={roleLabel} items={roleItems} onNavigate={onNavigate} />
+        )}
+        {personalItems.length > 0 && (
+          <NavSection label="Personal" items={personalItems} onNavigate={onNavigate} />
+        )}
+      </nav>
+
+      {/* Sidebar Footer */}
+      <div className="space-y-3 border-t border-sidebar-active-bg/50 px-4 py-4">
+        {role === "USER" && (
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate?.();
+              openBookSession();
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-text-secondary px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,transform] duration-150 ease-out hover:bg-text-secondary/95 active:scale-[0.98] cursor-pointer"
+          >
+            <CalendarPlusIcon className="h-4 w-4" aria-hidden="true" />
+            Book Session
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            setIsSupportOpen(true);
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-text/25 bg-transparent px-3 py-2 text-sm text-sidebar-text transition-colors duration-150 ease-out hover:bg-sidebar-active-bg/30 cursor-pointer font-medium"
+        >
+          <LifeBuoyIcon className="h-4 w-4" aria-hidden="true" />
+          Support
+        </button>
+
+        <div className="flex items-center gap-2.5 rounded-2xl bg-sidebar-active-bg/30 p-2 border border-sidebar-active-bg/25">
+          <UserAvatarCircle
+            name={user?.name}
+            email={user?.email}
+            image={user?.image}
+            className="h-9 w-9 ring-1 ring-sidebar-active-bg/35"
+            fallbackClassName="bg-text-secondary text-xs text-white"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-sidebar-active-text">{sidebarName}</p>
+            <p className="truncate text-[11px] text-sidebar-text opacity-75">{sidebarSubtitle}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate?.();
+              setIsSignOutOpen(true);
+            }}
+            aria-label="Sign out"
+            className="rounded-lg p-1.5 text-sidebar-text transition-colors duration-150 ease-out hover:bg-sidebar-active-bg hover:text-sidebar-active-text cursor-pointer shrink-0"
+          >
+            <LogOutIcon className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileTabBar({
+  role,
+  onOpenMore,
+  onSupportClick,
+}: {
+  role: string | null;
+  onOpenMore: () => void;
+  onSupportClick: () => void;
+}) {
+  const pathname = usePathname();
+  const { open: openListenerModal } = useListenerSupportModal();
+
+  const sessionsHref = useMemo(() => {
+    if (role === "THERAPIST") return "/dashboard/consultations";
+    if (role === "LISTENER") return "/dashboard/listener-inbox";
+    return "/dashboard/my-sessions";
+  }, [role]);
+
+  return (
+    <nav aria-label="Primary mobile" className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
+      <div className="pb-safe border-t border-cream-300/70 bg-[#faf9f5]/90 shadow-[0_-10px_35px_-15px_rgba(85,118,76,0.3)] backdrop-blur-md">
+        <div className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-2">
+
+          {/* Tab 1: Home */}
+          <Link
+            href="/dashboard"
+            className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${pathname === "/dashboard" ? "text-[#55764c]" : "text-text-primary/60"
+              }`}
+          >
+            <HomeIcon className="h-5 w-5" />
+            <span>Home</span>
+            <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${pathname === "/dashboard" ? "bg-[#55764c]" : "bg-transparent"}`} />
+          </Link>
+
+          {/* Tab 2: Sessions */}
+          <Link
+            href={sessionsHref}
+            className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${pathname.startsWith(sessionsHref) ? "text-[#55764c]" : "text-text-primary/60"
+              }`}
+          >
+            <CalendarCheckIcon className="h-5 w-5" />
+            <span>Sessions</span>
+            <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${pathname.startsWith(sessionsHref) ? "bg-[#55764c]" : "bg-transparent"}`} />
+          </Link>
+
+          {/* Tab 3: Talk to Listener (FAB in Center) */}
+          <div className="relative flex items-end justify-center">
+            <motion.button
+              type="button"
+              onClick={openListenerModal}
+              whileTap={{ scale: 0.94 }}
+              transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
+              aria-label="Talk to a Listener"
+              className="absolute -top-6 flex flex-col items-center "
+            >
+              <span className="flex h-13 w-13 items-center justify-center rounded-full">
+                <img
+                  src="/logo.svg"
+                  alt=""
+                  className=" object-contain"
+                  draggable={false}
+                />
+              </span>
+              <span className="mt-1 text-[10px] font-bold text-[#55764c]">Listener</span>
+            </motion.button>
+          </div>
+
+          {/* Tab 4: Profile */}
+          <Link
+            href="/dashboard/profile"
+            className={`flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold transition-colors ${pathname.startsWith("/dashboard/profile") ? "text-[#55764c]" : "text-text-primary/60"
+              }`}
+          >
+            <UserRoundIcon className="h-5 w-5" />
+            <span>Profile</span>
+            <span className={`h-1.5 w-1.5 rounded-full mt-0.5 ${pathname.startsWith("/dashboard/profile") ? "bg-[#55764c]" : "bg-transparent"}`} />
+          </Link>
+
+          {/* Tab 5: Menu */}
+          <button
+            type="button"
+            onClick={onOpenMore}
+            className="flex h-full flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-bold text-text-primary/60 transition-colors hover:text-[#55764c] cursor-pointer"
+          >
+            <MenuIcon className="h-5 w-5" />
+            <span>Menu</span>
+            <span className="h-1.5 w-1.5 rounded-full mt-0.5 bg-transparent" />
+          </button>
+
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function MobileNavDrawer({
+  isOpen,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            onClick={onClose}
+            className="absolute inset-0 bg-[#425d3b]/25 backdrop-blur-[2px]"
+          />
+          {/* Drawer content */}
+          <motion.div
+            role="dialog"
+            aria-label="Navigation"
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+            className="absolute inset-y-0 left-0 flex w-[86%] max-w-[320px] flex-col border-r border-sidebar-active-bg/30 bg-sidebar-bg text-sidebar-text shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close navigation"
+              className="absolute right-3 top-4 z-10 rounded-lg p-2 text-sidebar-text opacity-70 transition-colors duration-150 ease-out hover:bg-sidebar-active-bg/40 hover:text-sidebar-active-text cursor-pointer"
+            >
+              <XIcon className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <div className="flex h-full flex-col overflow-y-auto">
+              {children}
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 function DashboardShellContent({ children }: DashboardShellProps) {
@@ -499,281 +659,281 @@ function DashboardShellContent({ children }: DashboardShellProps) {
   ).length;
   const totalTrackedSessions = Math.max((sessionsQuery.data ?? []).length, 1);
 
+  const overviewItems = useMemo(
+    () => standaloneSideNavItems.filter((item) => item.id === "dashboard.side.home"),
+    [standaloneSideNavItems],
+  );
+  const roleItems = useMemo(
+    () => standaloneSideNavItems.filter((item) => item.id !== "dashboard.side.home"),
+    [standaloneSideNavItems],
+  );
+  const socialItems = useMemo(
+    () => sidebarMenus.find((menu) => menu.id === "social")?.items ?? [],
+    [sidebarMenus],
+  );
+
+  const [navOpen, setNavOpen] = useState(false);
+  const { open: openListenerSupport } = useListenerSupportModal();
+
+  const sidebarContent = (
+    <Sidebar
+      role={role}
+      user={user}
+      sidebarName={sidebarName}
+      sidebarSubtitle={sidebarSubtitle}
+      overviewItems={overviewItems}
+      roleItems={roleItems}
+      socialItems={socialItems}
+      personalItems={personalNavItems}
+      openBookSession={openBookSession}
+      setIsSupportOpen={setIsSupportOpen}
+      setIsSignOutOpen={setIsSignOutOpen}
+    />
+  );
+
+  const percent = Math.min(
+    100,
+    Math.round((completedSessions / totalTrackedSessions) * 100),
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-text-secondary px-4 py-1.5 text-center text-xs font-semibold tracking-wide text-white/95 md:px-8">
-        INSTANT SUPPORT: ONLINE | SPEAK TO A CERTIFIED HEALER NOW
-      </div>
+    <div className="min-h-screen w-full bg-[#fdfcf9] font-sans text-charcoal-700">
+      <SupportBar onContactListener={role === "USER" ? openListenerSupport : undefined} />
+      <div className="grid w-full grid-cols-1 lg:h-[calc(100vh-36px)] lg:grid-cols-[288px_1fr] lg:overflow-hidden">
+        {/* Desktop Sidebar */}
+        <aside className="hidden border-r border-cream-200 bg-sidebar-bg text-sidebar-text lg:flex lg:h-[calc(100vh-36px)] lg:flex-col lg:overflow-y-auto shrink-0">
+          {sidebarContent}
+        </aside>
 
-      <div className="grid w-full grid-cols-1 md:h-[calc(100vh-36px)] md:grid-cols-[300px_1fr] md:overflow-hidden">
-        <aside className="hidden border-r border-accent/70 bg-sidebar-bg text-sidebar-text p-5 md:flex md:h-[calc(100vh-36px)] md:flex-col md:overflow-y-auto">
-          <div>
-            <h2 className="font-display text-3xl font-semibold" style={{ color: "var(--theme-sidebar-active-text)" }}>
-              Apna Healer
-            </h2>
-            <p className="text-xs uppercase tracking-[0.22em] opacity-80">
-              Feel Together, Heal Together
-            </p>
-          </div>
+        <div className="min-w-0 flex-1 lg:h-[calc(100vh-36px)] lg:overflow-y-auto">
+          {/* WorkspaceHeader */}
+          <header className="sticky top-0 z-30 border-b border-cream-200/80 bg-cream-50/80 backdrop-blur-xl">
+            <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+              <button
+                type="button"
+                onClick={() => setNavOpen(true)}
+                aria-label="Open navigation"
+                className="rounded-xl border border-cream-200 bg-white/70 p-2 text-charcoal-500 transition-colors duration-150 ease-out hover:text-[#55764c] lg:hidden cursor-pointer"
+              >
+                <MenuIcon className="h-4 w-4" aria-hidden="true" />
+              </button>
 
-          <div className="mt-8 grid gap-2">
-            {standaloneSideNavItems.map((item) =>
-              item.icon ? (
-                <SidebarItem
-                  key={item.id}
-                  href={item.href}
-                  label={item.label}
-                  icon={item.icon}
-                />
-              ) : null,
-            )}
-            {sidebarMenus.map((menu) => (
-              <SidebarDropdown
-                key={menu.id}
-                label={menu.label}
-                icon={menu.icon}
-                items={menu.items}
-              />
-            ))}
-          </div>
+              <nav aria-label="Breadcrumb" className="min-w-0">
+                <ol className="flex items-center gap-1.5 text-sm">
+                  <li>
+                    <Link
+                      href="/dashboard"
+                      className="text-charcoal-400 transition-colors duration-150 ease-out hover:text-[#55764c]"
+                    >
+                      Home
+                    </Link>
+                  </li>
+                  {breadcrumbSegments.length === 0 ? (
+                    <>
+                      <ChevronRightIcon className="h-3.5 w-3.5 text-charcoal-400/60" aria-hidden="true" />
+                      <li className="font-medium text-[#55764c]" aria-current="page">
+                        Dashboard
+                      </li>
+                    </>
+                  ) : (
+                    breadcrumbSegments.map((segment, index) => (
+                      <Fragment key={segment}>
+                        <ChevronRightIcon className="h-3.5 w-3.5 text-charcoal-400/60" aria-hidden="true" />
+                        <li
+                          className={
+                            index === breadcrumbSegments.length - 1
+                              ? "truncate font-medium text-[#55764c]"
+                              : "truncate text-charcoal-400"
+                          }
+                          aria-current={index === breadcrumbSegments.length - 1 ? "page" : undefined}
+                        >
+                          {segment}
+                        </li>
+                      </Fragment>
+                    ))
+                  )}
+                </ol>
+              </nav>
 
-          {personalNavItems.length > 0 ? (
-            <div className="mt-8">
-              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
-                Personal
-              </p>
-              <div className="mt-3 grid gap-1">
-                {personalNavItems.map((item) =>
-                  item.icon ? (
+              <div className="ml-auto flex items-center gap-2">
+                <nav aria-label="Quick links" className="hidden items-center gap-1 xl:flex">
+                  {topNavItems.map((item) => (
                     <Link
                       key={item.id}
                       href={item.href}
-                      className={`flex items-center gap-3 rounded-gentle px-4 py-3 text-sm transition-colors duration-300 ease-(--ease-calm) ${
-                        pathname === item.href
-                          ? "bg-sidebar-active-bg font-semibold text-sidebar-active-text"
-                          : "text-sidebar-text hover:bg-sidebar-active-bg/25 hover:text-sidebar-active-text"
-                      }`}
+                      className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm text-charcoal-500 transition-colors duration-150 ease-out hover:bg-cream-100 hover:text-[#55764c]"
                     >
-                      <SidebarIcon icon={item.icon} />
-                      <span>{item.label}</span>
+                      {item.label}
                     </Link>
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ) : null}
+                  ))}
+                  <span className="mx-1 h-5 w-px bg-cream-200" aria-hidden="true" />
+                </nav>
 
-          <div className="mt-auto space-y-5">
-            {role === "USER" ? (
-              <button
-                type="button"
-                onClick={() => openBookSession()}
-                className="w-full rounded-full bg-text-secondary px-5 py-3 text-sm font-semibold text-white shadow-sm transition-shadow duration-300 ease-(--ease-calm) hover:shadow-soft-hover"
-              >
-                Book Session
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={() => setIsSupportOpen(true)}
-              className="w-full rounded-full border border-accent/80 bg-white px-5 py-3 text-sm font-semibold text-text-primary/75 transition-colors duration-300 ease-(--ease-calm) hover:bg-accent/40"
-            >
-              Support ?
-            </button>
-
-            <div className="flex items-center justify-between gap-3 rounded-gentle bg-accent/35 px-3 py-2.5 transition-colors duration-300 hover:bg-accent/45">
-              <div className="flex min-w-0 items-center gap-3">
-                <UserAvatarCircle
-                  name={user?.name}
-                  email={user?.email}
-                  image={user?.image}
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-text-primary">
-                    {sidebarName}
-                  </p>
-                  <p className="truncate text-xs text-text-primary/60">{sidebarSubtitle}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSignOutOpen(true)}
-                className="shrink-0 rounded-full border border-accent/90 bg-white px-3 py-1.5 text-xs font-semibold text-text-primary/70 transition-colors hover:bg-accent/40"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <div className="min-w-0 md:h-[calc(100vh-36px)] md:overflow-y-auto">
-          <header className="sticky top-0 z-30 mb-5 border-y border-accent/80 bg-white/80 px-5 py-3 backdrop-blur md:px-8">
-            <div className="flex items-center justify-between gap-6">
-              <nav className="flex items-center gap-1 md:gap-2">
-                {topNavItems.map((item) => (
-                  <NavItem
-                    key={item.id}
-                    href={item.href}
-                    label={item.label}
+                <label className="relative hidden md:block">
+                  <span className="sr-only">Search Apna Healer</span>
+                  <SearchIcon
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal-400"
+                    aria-hidden="true"
                   />
-                ))}
-              </nav>
-
-              <div className="flex items-center gap-3 text-sm text-text-primary/75">
-                <label className="flex items-center gap-2 rounded-full border border-accent/80 bg-white px-3 py-2 text-text-primary/60">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-                  </svg>
                   <input
                     type="search"
                     placeholder="Search"
-                    aria-label="Search dashboard"
-                    className="w-32 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-primary/45 md:w-44"
+                    className="h-9 w-44 rounded-xl border border-cream-200 bg-white/70 pl-9 pr-3 text-sm text-charcoal-700 placeholder:text-charcoal-400 transition-[width,border-color] duration-200 ease-out focus:w-56 focus:border-sage-300 focus:outline-none lg:w-52 lg:focus:w-64"
                   />
                 </label>
-                <button
-                  type="button"
-                  className="inline-flex items-center rounded-full bg-[#e9e3da] px-4 py-2 font-semibold text-text-primary/85 transition-colors hover:bg-[#dfd7cc]"
-                  aria-label="Wallet balance"
-                >
+
+                <span className="hidden items-center gap-1.5 rounded-xl border border-sage-200 bg-sage-50 px-2.5 py-1.5 text-sm font-medium text-[#55764c] sm:inline-flex">
+                  <WalletIcon className="h-4 w-4 text-sage-600" aria-hidden="true" />
                   {walletBalance}
-                </button>
+                </span>
+
                 <NotificationBell />
 
                 <Link
                   href="/"
-                  className="rounded-full border border-accent/80 bg-white px-4 py-2 font-medium text-text-primary transition-colors hover:bg-accent/35"
+                  aria-label="Go to homepage"
+                  className="hidden rounded-xl border border-cream-200 bg-white/70 p-2 text-charcoal-500 transition-colors duration-150 ease-out hover:text-[#55764c] sm:block"
                 >
-                  Go to Homepage
+                  <HouseIcon className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
             </div>
           </header>
 
-          <main className="px-5 pb-5 md:px-8 md:pb-8">
-            <p className="mb-4 text-sm font-medium text-text-primary/55">
-              {breadcrumbSegments.join(" > ")}
-            </p>
+          {/* Main workspace */}
+          <main className="px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
             <div
               className={
                 isDashboardHome
-                  ? "grid min-h-0 gap-5 xl:grid-cols-[1fr_280px] xl:items-start"
+                  ? "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]"
                   : "grid grid-cols-1"
               }
             >
-              <div className="min-h-0">{children}</div>
+              <div className="min-w-0">{children}</div>
 
-              {isDashboardHome ? (
-                <aside className="scrollbar-hide hidden min-h-0 self-start rounded-calm border border-accent/70 bg-white/88 p-5 xl:sticky xl:top-24 xl:block xl:max-h-[min(calc(100vh-7rem),calc(100dvh-7rem))] xl:overflow-y-auto xl:overscroll-y-contain">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-primary/45">
-                    Recent Activity
-                  </p>
-
-                  <div className="mt-6 space-y-5">
-                    {transactionsQuery.isLoading || sessionsQuery.isLoading ? (
-                      <ActivityFeedSkeleton />
-                    ) : recentActivity.length > 0 ? (
-                      recentActivity.map((activity, index) => (
-                        <div key={activity.id} className="relative pl-5">
-                          <span
-                            className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${
-                              index === 0 ? "bg-primary" : "bg-primary/70"
-                            }`}
-                          />
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-primary/45">
-                            {activity.date}
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-text-primary">
-                            {activity.title}
-                          </p>
-                          <p className="text-xs text-text-primary/60">{activity.detail}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-text-primary/55">
-                        Your recent wallet and session activity will appear here once you start
-                        using the platform.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-8 rounded-[1rem] bg-[#f9f7f2] p-4 ring-1 ring-black/[0.04]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-primary/40">
-                      Suggested events
-                    </p>
-                    <div className="mt-4 space-y-5">
-                      {dashboardSuggestedEvents.map((event, index) => (
-                        <motion.div
-                          key={event.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ ...morphTransition, delay: 0.04 + index * 0.06 }}
-                        >
-                          <Link
-                            href={`/dashboard/events/${event.id}`}
-                            className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2"
-                          >
-                            <div className="relative overflow-hidden rounded-2xl">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={event.image}
-                                alt={event.title}
-                                className="aspect-[16/10] w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.03]"
-                              />
-                              <span className="absolute bottom-2.5 left-2.5 rounded-md bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-text-primary/75 shadow-sm">
-                                {event.dateBadge}
-                              </span>
-                            </div>
-                            <h3 className="mt-3 text-[15px] font-semibold leading-snug text-text-primary group-hover:text-text-secondary">
-                              {event.title}
-                            </h3>
-                            <p className="mt-1 text-xs font-medium text-text-primary/55">{event.metaLine}</p>
-                          </Link>
-                        </motion.div>
-                      ))}
+              {isDashboardHome && (
+                <aside className="space-y-6 lg:pt-1">
+                  {/* Recent Activity */}
+                  <section aria-labelledby="activity-heading">
+                    <h2 id="activity-heading" className="px-1 font-display text-[17px] text-[#55764c] font-bold">
+                      Recent Activity
+                    </h2>
+                    <div className="mt-3 space-y-3 bg-white/70 border border-cream-200 rounded-2xl p-4">
+                      {transactionsQuery.isLoading || sessionsQuery.isLoading ? (
+                        <ActivityFeedSkeleton />
+                      ) : recentActivity.length > 0 ? (
+                        <ul className="space-y-3">
+                          {recentActivity.map((activity, index) => {
+                            const isTxn = activity.id.startsWith("txn-");
+                            const dotColor = index === 0 ? "bg-sage-500" : isTxn ? "bg-peach-300" : "bg-lavender-400";
+                            return (
+                              <li key={activity.id} className="flex gap-3 px-1">
+                                <span
+                                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotColor}`}
+                                  aria-hidden="true"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-[13.5px] font-semibold text-charcoal-700">{activity.title}</p>
+                                  <p className="truncate text-[13px] text-charcoal-500">{activity.detail}</p>
+                                  <p className="mt-0.5 text-[11px] text-charcoal-400">{activity.date}</p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-charcoal-500 px-1">
+                          Your recent wallet and session activity will appear here once you start using the platform.
+                        </p>
+                      )}
                     </div>
-                    <Link
-                      href="/dashboard/events"
-                      className="mt-6 flex w-full items-center justify-center rounded-full border border-text-primary/15 bg-transparent py-2.5 text-center text-xs font-semibold text-text-primary/65 transition hover:border-text-primary/25 hover:bg-white/60 hover:text-text-primary"
-                    >
-                      View all events
-                    </Link>
-                  </div>
+                  </section>
 
-                  <div className="mt-8 rounded-calm bg-text-secondary p-4 text-white shadow-soft transition-shadow duration-500 hover:shadow-[0_12px_40px_-16px_rgb(47_93_80/55%)]">
-                    <p className="font-display text-2xl font-semibold">
-                      Weekly Goal
-                    </p>
-                    <p className="mt-2 text-sm text-white/85">
-                      {completedSessions}/{totalTrackedSessions} Sessions Completed
-                    </p>
-                    <div className="mt-3 h-2 rounded-full bg-white/25">
+                  {/* Suggested Events */}
+                  <section aria-labelledby="events-heading">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 id="events-heading" className="font-display text-[17px] text-[#55764c] font-bold">
+                        Suggested Events
+                      </h2>
+                      <Link
+                        href="/dashboard/events"
+                        className="inline-flex items-center gap-1 text-[12px] text-charcoal-400 transition-colors duration-150 ease-out hover:text-[#55764c]"
+                      >
+                        All
+                      </Link>
+                    </div>
+                    <ul className="mt-3 space-y-2.5">
+                      {dashboardSuggestedEvents.map((event, index) => {
+                        const toneClass = index % 3 === 0
+                          ? "bg-sage-50 border-sage-200/70 text-[#55764c]"
+                          : index % 3 === 1
+                            ? "bg-lavender-50 border-lavender-200/70 text-lavender-700"
+                            : "bg-[#fdf6f1] border-peach-200/70 text-[#b25f3c]";
+                        return (
+                          <li key={event.id}>
+                            <Link
+                              href={`/dashboard/events/${event.id}`}
+                              className={`block rounded-2xl border px-4 py-3 transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md ${toneClass}`}
+                            >
+                              <p className="text-[14px] font-semibold font-bold">{event.title}</p>
+                              <p className="text-[12.5px] opacity-80">{event.metaLine}</p>
+                              <p className="mt-1.5 text-[12px] opacity-60">
+                                {event.dateBadge}
+                              </p>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+
+                  {/* Weekly Goal */}
+                  <section
+                    aria-labelledby="goal-heading"
+                    className="rounded-2xl border border-cream-200 bg-white/70 px-4 py-4"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h2 id="goal-heading" className="font-display text-[17px] text-[#55764c] font-bold">
+                        Weekly Goal
+                      </h2>
+                      <span className="text-[12px] text-charcoal-400 font-semibold">
+                        {completedSessions} of {totalTrackedSessions}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[13px] text-charcoal-500">Sessions Completed</p>
+                    <div
+                      className="mt-3 h-2 w-full overflow-hidden rounded-full bg-cream-200"
+                      role="progressbar"
+                      aria-valuenow={percent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-labelledby="goal-heading"
+                    >
                       <div
-                        className="h-full rounded-full bg-white/90"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.round((completedSessions / totalTrackedSessions) * 100),
-                          )}%`,
-                        }}
+                        className="h-full rounded-full bg-sage-400 transition-[width] duration-300 ease-out"
+                        style={{ width: `${percent}%` }}
                       />
                     </div>
-                  </div>
+                  </section>
                 </aside>
-              ) : null}
+              )}
             </div>
           </main>
         </div>
       </div>
+
+      <MobileTabBar
+        role={role}
+        onOpenMore={() => setNavOpen(true)}
+        onSupportClick={() => setIsSupportOpen(true)}
+      />
+
+      <MobileNavDrawer isOpen={navOpen} onClose={() => setNavOpen(false)}>
+        {sidebarContent}
+      </MobileNavDrawer>
+
       <ListenerAvailabilityChip />
+
       {isSupportOpen ? (
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/35 px-4 py-6">
           <div className="w-full max-w-[420px] rounded-calm bg-white p-6 shadow-[0_20px_64px_-20px_rgb(0_0_0/40%)]">
@@ -812,11 +972,10 @@ function DashboardShellContent({ children }: DashboardShellProps) {
                     key={type.id}
                     type="button"
                     onClick={() => setReportType(type.id)}
-                    className={`rounded-gentle border px-2 py-3 text-center text-xs font-semibold transition-colors ${
-                      selected
-                        ? "border-text-secondary bg-primary/10 text-text-secondary"
-                        : "border-transparent bg-background text-text-primary/70 hover:bg-accent/45"
-                    }`}
+                    className={`rounded-gentle border px-2 py-3 text-center text-xs font-semibold transition-colors ${selected
+                      ? "border-text-secondary bg-primary/10 text-text-secondary"
+                      : "border-transparent bg-background text-text-primary/70 hover:bg-accent/45"
+                      }`}
                   >
                     <span className="mb-1 inline-flex items-center justify-center text-text-secondary/90">
                       {type.id === "technical" ? (
