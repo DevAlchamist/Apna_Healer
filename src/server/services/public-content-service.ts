@@ -74,16 +74,43 @@ export async function getPublicStats(): Promise<PublicStats> {
   };
 }
 
+type CacheEntry<T> = { data: T; expiresAt: number };
+const publicProvidersCache = new Map<string, CacheEntry<ApiProvider[]>>();
+const PUBLIC_PROVIDERS_CACHE_TTL_MS = 30_000; // 30 seconds
+
+export function invalidatePublicProvidersCache() {
+  publicProvidersCache.clear();
+}
+
 export async function getPublicProviders(filters: {
   role?: "THERAPIST" | "LISTENER";
   take?: number;
   query?: string;
 }): Promise<ApiProvider[]> {
-  return listProviders({
+  const cacheKey = JSON.stringify({
+    role: filters.role ?? "ALL",
+    take: filters.take ?? 6,
+    query: (filters.query ?? "").trim().toLowerCase(),
+  });
+
+  const now = Date.now();
+  const cached = publicProvidersCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
+  const providers = await listProviders({
     role: filters.role,
     take: filters.take ?? 6,
     query: filters.query,
   });
+
+  publicProvidersCache.set(cacheKey, {
+    data: providers,
+    expiresAt: now + PUBLIC_PROVIDERS_CACHE_TTL_MS,
+  });
+
+  return providers;
 }
 
 export async function getPublicEvents(filters: {

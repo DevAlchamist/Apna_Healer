@@ -2,6 +2,7 @@ import { Role, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-errors";
 import {
+  batchFindNextOpenAvailabilityDates,
   buildWeeklyProviderAvailability,
   findNextOpenAvailabilityDate,
   type DynamicAvailabilityDay,
@@ -171,25 +172,21 @@ export async function listProviders(filters: {
 
   const today = startOfToday();
 
-  const enriched = await Promise.all(
-    records.map(async (record) => {
-      let nextAvailabilityDate: string | null = null;
-      if (record.role === Role.THERAPIST || record.role === Role.LISTENER) {
-        const next = await findNextOpenAvailabilityDate({
-          providerId: record.id,
-          role: record.role,
-          fromDate: today,
-          dayCount: 30,
-        });
-        nextAvailabilityDate = next?.toISOString() ?? null;
-      }
-      const mapped = mapProvider(record, {
-        includeAvailability: false,
-        nextAvailabilityDate,
-      });
-      return { ...mapped, nextAvailabilityDate };
-    }),
-  );
+  const availabilityMap = await batchFindNextOpenAvailabilityDates({
+    providers: records.map((record) => ({ id: record.id, role: record.role })),
+    fromDate: today,
+    dayCount: 30,
+  });
+
+  const enriched = records.map((record) => {
+    const nextDate = availabilityMap.get(record.id);
+    const nextAvailabilityDate = nextDate ? nextDate.toISOString() : null;
+    const mapped = mapProvider(record, {
+      includeAvailability: false,
+      nextAvailabilityDate,
+    });
+    return { ...mapped, nextAvailabilityDate };
+  });
 
   return enriched;
 }

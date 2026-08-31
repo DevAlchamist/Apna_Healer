@@ -27,17 +27,17 @@ export const DEFAULT_TIMEZONE = "Asia/Kolkata";
 
 const TIME_PATTERN = /^([0-9]{1,2}):([0-9]{2})$/;
 
-const ACTIVE_BOOKING_STATUSES = new Set<BookingStatus>([
+export const ACTIVE_BOOKING_STATUSES = new Set<BookingStatus>([
   BookingStatus.PENDING,
   BookingStatus.ACCEPTED,
 ]);
 
-const ACTIVE_SESSION_STATUSES = new Set<CareSessionStatus>([
+export const ACTIVE_SESSION_STATUSES = new Set<CareSessionStatus>([
   CareSessionStatus.UPCOMING,
   CareSessionStatus.ONGOING,
 ]);
 
-const ACTIVE_REQUEST_STATUSES = new Set<ListenerRequestStatus>([
+export const ACTIVE_REQUEST_STATUSES = new Set<ListenerRequestStatus>([
   ListenerRequestStatus.PENDING,
   ListenerRequestStatus.ASSIGNED,
   ListenerRequestStatus.APPROVED,
@@ -214,7 +214,7 @@ export function listenerBusyRangesForDate(input: {
   return ranges;
 }
 
-function markListenerSlotsBooked(
+export function markListenerSlotsBooked(
   date: Date,
   slots: SlotTimeRange[],
   busy: Array<{ startMinutes: number; endMinutes: number }>,

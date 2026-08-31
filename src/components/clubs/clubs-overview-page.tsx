@@ -12,7 +12,7 @@ export function ClubsOverviewPage() {
 
   const discoverQuery = useQuery({
     queryKey: ["clubs"],
-    queryFn: () => apiFetch<ApiClubListResponse>("/api/clubs?take=24"),
+    queryFn: () => apiFetch<ApiClubListResponse>("/api/clubs?take=10"),
   });
 
   const myQuery = useQuery({

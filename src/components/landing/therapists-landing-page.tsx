@@ -1061,7 +1061,7 @@ export function TherapistsLandingPage() {
   // APIs data queries
   const providersQuery = useQuery({
     queryKey: ["public-therapists-landing"],
-    queryFn: () => apiFetch<ApiProvider[]>("/api/public/providers?role=THERAPIST&take=24"),
+    queryFn: () => apiFetch<ApiProvider[]>("/api/public/providers?role=THERAPIST&take=10"),
   });
 
   const packagesQuery = useQuery({

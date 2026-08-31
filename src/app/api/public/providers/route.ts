@@ -9,7 +9,11 @@ export async function GET(request: NextRequest) {
       Object.fromEntries(request.nextUrl.searchParams),
     );
     const providers = await getPublicProviders(filters);
-    return ok(providers);
+    return ok(providers, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     return handleApiError(error);
   }
