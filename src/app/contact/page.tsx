@@ -144,7 +144,7 @@ export default function ContactPage() {
               transition={{ duration: 0.2 }}
             >
               <h2 className="text-[34px] font-semibold tracking-[-0.02em]">
-                Sanctuary Support
+                Apna healer Support
               </h2>
               <p className="mt-4 text-sm leading-7 text-[#cde4dc]">
                 Our care team typically responds within one business day. For urgent
