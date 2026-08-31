@@ -318,7 +318,7 @@ function SacredSpacesHero({ upcomingCount }: { upcomingCount: number }) {
           </span>
 
           <h1 id="events-title" className="mt-7 font-display text-[2.75rem] leading-[1.05] tracking-tight text-ink-900 sm:text-6xl font-semibold">
-            Sacred <span className="italic text-sage-600 font-normal">Spaces</span>
+            Event <span className="italic text-sage-600 font-normal">Spaces</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink-500 sm:text-lg">
             Small gatherings where healing happens sideways — through breath, movement, silence and the simple relief of being in a room

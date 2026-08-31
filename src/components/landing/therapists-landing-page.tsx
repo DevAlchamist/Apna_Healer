@@ -336,7 +336,7 @@ function WelcomeHeaderBanner({ therapistCount, onLearn }: WelcomeHeaderBannerPro
           </span>
 
           <h1 id="discovery-title" className="mt-6 font-display text-4xl leading-[1.1] tracking-tight text-ink-900 sm:text-5xl font-semibold">
-            Verifiable & <span className="italic text-sage-600 font-normal">Empathetic Guides</span>
+            Professional guidance
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-500 sm:text-lg">
             Every therapist here is licence-checked, interviewed for warmth, and reviewed by real members. Take your time — browsing is
