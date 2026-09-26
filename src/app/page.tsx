@@ -123,7 +123,7 @@ const serviceMatchCards = [
     key: "Available 24/7",
     icon: HeartHandshakeIcon,
     label: "Peer support",
-    price: "First 1 session free",
+    price: "Available 24/7",
     title: "I just want someone to listen",
     body: "Get matched with a trained listener who understands. Talk privately, without judgment, at a time that works for you.",
     points: ["Available in under 5 minutes", "Completely Confidential", "100% Anonymous", "No diagnosis, no advice unless asked"],
@@ -139,8 +139,8 @@ const serviceMatchCards = [
     key: "VERIFIED PROFESSIONALS",
     icon: ClockIcon, // matches template generic medical icon replacement
     label: "Professional guidance",
-    price: "as per professionals",
-    title: "I’m ready to work with an expert",
+    price: "Verified Professionals",
+    title: "I want to talk to an expert",
     body: "Verified psychologists, counsellors & psychiatrists for professional support. Find the right expert based on your concern, specialty, language, budget or package.",
     points: ["Licence-verified professionals", "Match with your emotions", "Switch anytime, no awkwardness", "Free cancellation up to 4 hrs"],
     cta: "Find an Expert",
@@ -726,7 +726,7 @@ function HomePage() {
                 </button>
                 <span className="flex items-center gap-1.5 text-xs text-ink-400">
                   <ShieldCheckIcon className="h-3.5 w-3.5 text-sage-500" />
-                  APH Acceptance. Presence. Hope
+                  APH ➝ Acceptance. Presence. Hope.
                 </span>
               </div>
             </div>
@@ -883,8 +883,8 @@ function HomePage() {
           <SectionHeading
             align="left"
             eyebrow="Verified listeners"
-            title="Real people, trained to hold space"
-            description="Every listener completes 30 hours of active-listening training and a supervised trial. They stay anonymous too — first names only."
+            title="Real people. Trained to listen. Here to understand."
+            description="Every listener is trained in active listening and guided by empathy, patience and confidentiality."
             action={null}
           />
 
@@ -972,7 +972,7 @@ function HomePage() {
               align="left"
               eyebrow="Verified experts"
               title="Therapists who feel like people first"
-              description="Licence-verified psychologists, counsellors and psychiatrists. Transparent pricing, no packages, and you can switch whenever the fit isn’t right."
+              description="Licence-verified psychologists, counsellors and psychiatrists offering compassionate, confidential support tailored to your needs — with transparent pricing, flexible packages and the freedom to switch anytime."
               action={
                 <div className="flex gap-2">
                   <button
