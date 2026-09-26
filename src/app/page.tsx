@@ -58,7 +58,7 @@ const heroSlides = [
     body: "Connecting individuals, corporates, and nonprofits to make emotional support more accessible, affordable, and human.",
     image: "/fbdca7fe-2733-4317-8c9e-00aba2767d1f.jpg",
     imageAlt: "Soft overlapping sage, lavender and peach shapes on a cream background",
-    primaryCta: "Find your support",
+    primaryCta: "Get Matched",
     secondaryCta: "How it works",
     accent: "sage" as const,
   },
@@ -123,7 +123,7 @@ const serviceMatchCards = [
     key: "Available 24/7",
     icon: HeartHandshakeIcon,
     label: "Peer support",
-    price: "First 2 session free",
+    price: "First 1 session free",
     title: "I just want someone to listen",
     body: "Get matched with a trained listener who understands. Talk privately, without judgment, at a time that works for you.",
     points: ["Available in under 5 minutes", "Completely anonymous", "100% Anonymous", "No diagnosis, no advice unless asked"],
@@ -726,7 +726,7 @@ function HomePage() {
                 </button>
                 <span className="flex items-center gap-1.5 text-xs text-ink-400">
                   <ShieldCheckIcon className="h-3.5 w-3.5 text-sage-500" />
-                  12,400+ conversations held this month
+                  APH Acceptance. Presence. Hope
                 </span>
               </div>
             </div>
@@ -754,11 +754,11 @@ function HomePage() {
                 className="absolute -bottom-6 left-4 flex items-center gap-3 rounded-3xl border border-cream-300 bg-cream-50/90 px-5 py-4 shadow-soft backdrop-blur sm:left-8"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-100 text-sm font-semibold text-sage-700">
-                  4m
+                  100%
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-ink-900">Average wait time</p>
-                  <p className="text-xs text-ink-400">To be heard by a real person</p>
+                  <p className="text-sm font-semibold text-ink-900">Human Support</p>
+                  <p className="text-xs text-ink-400">Accessible. Affordable. Human</p>
                 </div>
               </motion.div>
             </div>
@@ -775,7 +775,7 @@ function HomePage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-sage-500" />
               </span>
-              {mappedListeners.filter((l) => l.isOnline).length} online now
+              {mappedListeners.filter((l) => l.isOnline).length} People ready to listen
             </p>
             <div className="relative flex-1 overflow-hidden">
               <div className="flex w-max animate-marquee items-center gap-3">
