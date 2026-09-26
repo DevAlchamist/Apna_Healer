@@ -126,7 +126,7 @@ const serviceMatchCards = [
     price: "First 1 session free",
     title: "I just want someone to listen",
     body: "Get matched with a trained listener who understands. Talk privately, without judgment, at a time that works for you.",
-    points: ["Available in under 5 minutes", "Completely anonymous", "100% Anonymous", "No diagnosis, no advice unless asked"],
+    points: ["Available in under 5 minutes", "Completely Confidential", "100% Anonymous", "No diagnosis, no advice unless asked"],
     cta: "Talk to a listener",
     wrap: "bg-sage-50 border-sage-100",
     glow: "bg-[radial-gradient(circle_at_center,rgba(169,200,160,0.45),transparent_65%)]",
