@@ -753,7 +753,7 @@ function HomePage() {
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="absolute -bottom-6 left-4 flex items-center gap-3 rounded-3xl border border-cream-300 bg-cream-50/90 px-5 py-4 shadow-soft backdrop-blur sm:left-8"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-100 text-sm font-semibold text-sage-700">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-sage-100 text-sm font-semibold text-sage-700">
                   100%
                 </span>
                 <div>
@@ -805,7 +805,7 @@ function HomePage() {
           <SectionHeading
             eyebrow="Two ways in"
             title="What would feel right, right now?"
-            description="There is no wrong door. Start with a free conversation, or go straight to a professional — you can move between the two whenever you like."
+            description=""
           />
 
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
