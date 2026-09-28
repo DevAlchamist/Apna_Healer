@@ -884,7 +884,7 @@ function HomePage() {
             align="left"
             eyebrow="Verified listeners"
             title="Real people. Trained to listen. Here to understand."
-            description="Every listener is trained in active listening and guided by empathy, patience and confidentiality."
+            description=""
             action={null}
           />
 
