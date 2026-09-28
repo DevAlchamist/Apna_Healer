@@ -805,7 +805,7 @@ function HomePage() {
           <SectionHeading
             eyebrow="Two ways in"
             title="What would feel right, right now?"
-            description="There is no wrong door. Start with a free conversation, or go straight to a professional — you can move between the two whenever you like."
+            description="sdf"
           />
 
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
