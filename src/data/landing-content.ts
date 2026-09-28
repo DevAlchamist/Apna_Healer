@@ -5,24 +5,24 @@ export type LandingFaqItem = {
 
 export const landingFaq: LandingFaqItem[] = [
   {
+    question: "⁠What is Apna Healer, and how can it support me?",
+    answer:
+      "Apna Healer is a safe, judgment-free space. You can instantly connect with an empathetic listener to talk things out, or begin a structured healing journey with licensed experts—entirely at your convenience.",
+  },
+  {
+    question: "How does your matchmaking process work?",
+    answer:
+      "Our matchmaking system takes the guesswork out of finding help. It starts with you answering a few quick questions. Based on your responses, we recommend a listener, therapist, or expert. We then personalize your match—connecting you with a listener based on your emotions, or a professional based on your concern, language, and budget.",
+  },
+  {
     question: "How do I know if I need a therapist or a listener?",
     answer:
-      "Therapists are trained professionals for deep clinical work. Listeners provide peer support and empathy for everyday challenges.",
+      "If you just need to vent, feel heard, or discuss current stress without receiving advice, a Listener is the best fit. If you need help managing deep-rooted issues, anxiety, or depression, and require structured professional guidance, you should choose a Therapist.",
   },
   {
     question: "Is my data private and secure?",
     answer:
-      "Yes. We follow strong data protection practices, secure storage, and strict access controls to keep your information safe.",
-  },
-  {
-    question: "How are listeners vetted?",
-    answer:
-      "Listeners go through screening, empathy assessments, and platform onboarding before they are made available for sessions.",
-  },
-  {
-    question: "Can I switch therapists if it's not a match?",
-    answer:
-      "Absolutely. You can request a new therapist anytime so you can find the support relationship that feels right for you.",
+      "Absolutely. Your privacy is our top priority. You can be part of the community and receive support completely anonymously, without ever sharing your real identity or personal details.",
   },
 ];
 

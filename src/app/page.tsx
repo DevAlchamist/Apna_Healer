@@ -1196,7 +1196,7 @@ function HomePage() {
             ========================================== */}
         <section id="faqs" className="mx-auto w-full max-w-4xl px-5 py-20 sm:px-8 lg:py-28">
           <SectionHeading
-            eyebrow="Good questions"
+            eyebrow="FAQ"
             title="The things people quietly wonder"
             description="If something isn’t here, our care team answers every message within a day."
           />
