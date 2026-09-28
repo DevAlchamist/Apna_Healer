@@ -803,9 +803,9 @@ function HomePage() {
             ========================================== */}
         <section id="services" className="mx-auto w-full max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
           <SectionHeading
-            eyebrow="Two ways in"
+            eyebrow=""
             title="What would feel right, right now?"
-            description="sdf"
+            description=""
           />
 
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
