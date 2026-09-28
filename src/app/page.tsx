@@ -1077,8 +1077,8 @@ function HomePage() {
         <section id="circles" className="mx-auto w-full max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
           <SectionHeading
             eyebrow="Community circles"
-            title="Small circles, moderated with care"
-            description="Find your people around what you’re actually going through. Every circle is capped, moderated and free to leave — lurking is completely allowed."
+            title="Your Circle. Your Space. Your People."
+            description="A place to connect, express, reflect, and belong."
           />
 
           <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
