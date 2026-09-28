@@ -805,7 +805,7 @@ function HomePage() {
           <SectionHeading
             eyebrow="Two ways in"
             title="What would feel right, right now?"
-            description=""
+            description="sdf"
           />
 
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
