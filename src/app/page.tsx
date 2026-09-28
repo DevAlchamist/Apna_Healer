@@ -803,7 +803,7 @@ function HomePage() {
             ========================================== */}
         <section id="services" className="mx-auto w-full max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
           <SectionHeading
-            eyebrow=""
+            eyebrow="Two ways in"
             title="What would feel right, right now?"
             description=""
           />
